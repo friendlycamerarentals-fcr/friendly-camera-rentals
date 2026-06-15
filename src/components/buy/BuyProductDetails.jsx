@@ -77,7 +77,7 @@ Please provide more details.`;
                     whileHover={{ scale: 1.04 }}
                     whileTap={{ scale: 0.96 }}
                     onClick={() => setSelectedImage(index)}
-                    className={`overflow-hidden rounded-lg border transition-all duration-300 ${
+                    className={`overflow-hidden rounded-lg border transition-all duration-300 cursor-pointer ${
                       selectedImage === index
                         ? "border-[#F5A623] ring-2 ring-[#F5A623]/30"
                         : "border-white/10 hover:border-[#F5A623]/40"
@@ -154,7 +154,7 @@ Please provide more details.`;
                         whileTap={{ scale: 0.9 }}
                         onClick={prevImage}
                         aria-label="Previous image"
-                        className="absolute left-3 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-black/60 text-lg text-white backdrop-blur-md hover:bg-black/80 transition"
+                        className="absolute font-extrabold left-3 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-black/60 text-lg text-white backdrop-blur-md hover:bg-black/80 transition cursor-pointer"
                       >
                         ‹
                       </motion.button>
@@ -163,7 +163,7 @@ Please provide more details.`;
                         whileTap={{ scale: 0.9 }}
                         onClick={nextImage}
                         aria-label="Next image"
-                        className="absolute right-3 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-black/60 text-lg text-white backdrop-blur-md hover:bg-black/80 transition"
+                        className="absolute font-extrabold right-3 top-1/2 z-10 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-black/60 text-lg text-white backdrop-blur-md hover:bg-black/80 transition cursor-pointer"
                       >
                         ›
                       </motion.button>
@@ -299,15 +299,26 @@ Please provide more details.`;
 
               {/* CTA */}
               <motion.button
-                whileHover={{
-                  scale: 1.015,
-                  boxShadow: "0 12px 32px rgba(245,166,35,0.35)",
-                }}
-                whileTap={{ scale: 0.975 }}
-                onClick={handleWhatsApp}
-                className="mt-6 w-full rounded-2xl bg-[#F5A623] py-4 font-semibold text-black shadow-[0_8px_24px_rgba(245,166,35,0.25)] transition-colors hover:bg-amber-400"
+                whileHover={
+                  product.stock
+                    ? {
+                        scale: 1.015,
+                        boxShadow: "0 12px 32px rgba(245,166,35,0.35)",
+                      }
+                    : {}
+                }
+                whileTap={product.stock ? { scale: 0.975 } : {}}
+                onClick={product.stock ? handleWhatsApp : undefined}
+                disabled={!product.stock}
+                className={`mt-6 w-full rounded-2xl py-4 font-semibold transition-all duration-300
+                ${
+                  product.stock
+                    ? "cursor-pointer bg-[#F5A623] text-black shadow-[0_8px_24px_rgba(245,166,35,0.25)] hover:bg-amber-400"
+                    : "cursor-not-allowed bg-zinc-800 text-zinc-500 opacity-60"
+                }
+              `}
               >
-                Buy via WhatsApp
+                {product.stock ? "Buy via WhatsApp" : "Out of Stock"}
               </motion.button>
             </motion.div>
           </div>

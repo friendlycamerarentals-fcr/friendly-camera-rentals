@@ -51,7 +51,7 @@ export default function ConditionSelector({ value, onChange }) {
             whileHover={{ y: -4 }}
             whileTap={{ scale: 0.97 }}
             onClick={() => onChange(condition.value)}
-            className={`rounded-2xl border p-3 text-left transition-all duration-300 ${
+            className={`rounded-2xl border p-3 text-left transition-all duration-300 cursor-pointer ${
               isSelected
                 ? "border-[#F5A623] bg-[#F5A623]/10 shadow-[0_10px_30px_rgba(245,166,35,0.2)]"
                 : "border-white/10 bg-white/[0.04] hover:border-[#F5A623]/40"

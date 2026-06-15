@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { FaWhatsapp, FaInstagram, FaPhoneAlt } from "react-icons/fa";
+import { FaWhatsapp, FaInstagram, FaPhoneAlt, FaFacebook } from "react-icons/fa";
 import { MdLocationOn } from "react-icons/md";
 
 const links = [
@@ -8,6 +8,7 @@ const links = [
   { name: "Rental", href: "/rental" },
   { name: "Buy", href: "/buy" },
   { name: "Sell", href: "/sell" },
+  { name: "Services", href: "/services" },
   { name: "Contact", href: "/contact" },
 ];
 
@@ -94,21 +95,22 @@ export default function Footer() {
               </a>
 
               <a
-                href="https://wa.me/918639852224"
-                target="_blank"
-                className="flex items-center gap-3 hover:text-white"
-              >
-                <FaWhatsapp className="text-[#25D366]" />
-                <span>WhatsApp</span>
-              </a>
-
-              <a
                 href="https://instagram.com/friendly_camera_rentals"
                 target="_blank"
                 className="flex items-center gap-3 hover:text-white"
               >
                 <FaInstagram className="text-pink-500" />
                 <span>Instagram</span>
+              </a>
+
+              <a
+                href="https://facebook.com/friendly_camera_rentals"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-3 hover:text-white"
+              >
+                <FaFacebook className="text-blue-500" />
+                <span>Facebook</span>
               </a>
             </div>
           </div>

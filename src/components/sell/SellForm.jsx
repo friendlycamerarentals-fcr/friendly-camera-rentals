@@ -166,7 +166,7 @@ ${formData.description || "N/A"}
           name="name"
           placeholder="Full Name *"
           value={formData.name}
-          onChange={handleChange}
+          onChange={handleChange} 
           className="rounded-2xl border border-white/10 bg-black/30 px-5 py-4 outline-none transition focus:border-[#F5A623]"
         />
 
@@ -219,7 +219,7 @@ ${formData.description || "N/A"}
           name="purchaseYear"
           value={formData.purchaseYear}
           onChange={handleChange}
-          className="rounded-2xl border border-white/10 bg-black/30 px-5 py-4 text-white outline-none transition-all duration-300 focus:border-[#F5A623] focus:ring-2 focus:ring-[#F5A623]/20"
+          className="rounded-2xl border border-white/10 bg-black/30 px-5 py-4 text-white outline-none transition-all duration-300 focus:border-[#F5A623] focus:ring-2 focus:ring-[#F5A623]/20 cursor-pointer"
         >
           <option value="" className="bg-black">
             Purchase Year
@@ -240,7 +240,7 @@ ${formData.description || "N/A"}
           name="warranty"
           value={formData.warranty}
           onChange={handleChange}
-          className="rounded-2xl border border-white/10 bg-black/30 px-5 py-4 text-white outline-none transition-all duration-300 focus:border-[#F5A623] focus:ring-2 focus:ring-[#F5A623]/20"
+          className="rounded-2xl border border-white/10 bg-black/30 px-5 py-4 text-white outline-none transition-all duration-300 focus:border-[#F5A623] focus:ring-2 focus:ring-[#F5A623]/20 cursor-pointer"
         >
           <option value="" className="bg-black">
             Warranty Status
@@ -342,7 +342,7 @@ ${formData.description || "N/A"}
       <button
         type="submit"
         disabled={loading}
-        className="mt-8 w-full rounded-2xl bg-[#F5A623] py-4 font-semibold text-black transition-all duration-300 hover:bg-amber-400 hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-50"
+        className="mt-8 w-full rounded-2xl bg-[#F5A623] py-4 font-semibold text-black transition-all duration-300 hover:bg-amber-400 hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
       >
         {loading ? "Opening WhatsApp..." : "Submit Sell Request"}
       </button>

@@ -35,8 +35,8 @@ export default function FloatingWhatsApp() {
       className="group fixed bottom-10 right-10 z-[999] flex items-center"
     >
       {/* Tooltip */}
-      <div className="mr-3 rounded-full border border-white/10 bg-black/90 px-4 py-2 text-sm text-white backdrop-blur-xl opacity-0 transition-all duration-300 group-hover:opacity-100">
-        Chat with us
+      <div className="mr-3 rounded-full border border-white/10 bg-black/90 px-4 py-2 text-sm text-white backdrop-blur-xl opacity-0 transition-all duration-300 group-hover:opacity-100 shadow-[0_0px_25px_rgba(37,211,102,0.4)]">
+        Chat with FCR
       </div>
 
       <div className="relative">

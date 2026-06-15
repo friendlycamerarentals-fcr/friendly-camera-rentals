@@ -146,7 +146,7 @@ export default function ImageUploader({ images, setImages, maxImages = 5 }) {
                 <button
                   type="button"
                   onClick={() => removeImage(index)}
-                  className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-red-500 text-white opacity-0 transition-all duration-300 group-hover:opacity-100"
+                  className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-red-500 text-white opacity-0 transition-all duration-300 group-hover:opacity-100 cursor-pointer"
                 >
                   <FiX size={18} />
                 </button>
