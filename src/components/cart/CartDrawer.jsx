@@ -5,45 +5,23 @@ import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { FaWhatsapp } from "react-icons/fa";
 import { FiShoppingBag, FiX } from "react-icons/fi";
+import { useCart } from "@/context/CartContext";
 
 import CartItem from "./CartItem";
 
 export default function CartDrawer({ open, onClose }) {
-  const [cart, setCart] = useState([]);
+  const { cart, removeFromCart } = useCart();
   const router = useRouter();
 
-  useEffect(() => {
-    loadCart();
-
-    const handleStorage = () => {
-      loadCart();
-    };
-
-    window.addEventListener("storage", handleStorage);
-
-    return () => {
-      window.removeEventListener("storage", handleStorage);
-    };
-  }, []);
-
-  const loadCart = () => {
-    const items = JSON.parse(localStorage.getItem("cart")) || [];
-
-    setCart(items);
-  };
-
-  const removeItem = (index) => {
-    const updated = cart.filter((_, i) => i !== index);
-
-    setCart(updated);
-
-    localStorage.setItem("cart", JSON.stringify(updated));
-
-    window.dispatchEvent(new Event("storage"));
+  const removeItem = (item) => {
+    removeFromCart(item.id, item.duration);
   };
 
   const total = useMemo(() => {
-    return cart.reduce((sum, item) => sum + item.price, 0);
+    return cart.reduce(
+      (sum, item) => sum + item.price * (item.quantity || 1),
+      0,
+    );
   }, [cart]);
 
   const handleWhatsApp = () => {
@@ -127,11 +105,11 @@ export default function CartDrawer({ open, onClose }) {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {cart.map((item, index) => (
+                  {cart.map((item) => (
                     <CartItem
                       key={`${item.id}-${item.duration}`}
                       item={item}
-                      onRemove={() => removeItem(index)}
+                      onRemove={() => removeFromCart(item.id, item.duration)}
                     />
                   ))}
                 </div>
