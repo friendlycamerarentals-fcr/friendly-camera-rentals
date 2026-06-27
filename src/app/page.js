@@ -4,7 +4,24 @@ import Categories from "@/components/home/Categories";
 import WhyChooseUs from "@/components/home/WhyChooseUs";
 import CTA from "@/components/home/CTA";
 
-export default function HomePage() {
+import Testimonials from "@/components/testimonials/Testimonials";
+import prisma from "@/lib/prisma";
+
+export default async function HomePage() {
+  let approvedTestimonials = [];
+  try {
+    approvedTestimonials = await prisma.testimonial.findMany({
+      where: {
+        status: "approved",
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+  } catch (error) {
+    console.error("Failed to query testimonials:", error);
+  }
+
   return (
     <>
       <Hero />
@@ -12,6 +29,7 @@ export default function HomePage() {
       <Categories />
       <WhyChooseUs />
       <CTA />
+      <Testimonials testimonials={approvedTestimonials} />
     </>
   );
 }

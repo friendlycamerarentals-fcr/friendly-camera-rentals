@@ -1,12 +1,16 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import { useState } from "react";
 import { FaWhatsapp } from "react-icons/fa";
 import { toast } from "sonner";
+import { useAuth } from "@/context/AuthContext";
 
 export default function BookSlotSection() {
+  const router = useRouter();
+  const { user, profile, profileComplete } = useAuth();
   const [loading, setLoading] = useState(false);
   const [selectedDate, setSelectedDate] = useState(null);
 
@@ -26,11 +30,33 @@ export default function BookSlotSection() {
     }));
   };
 
+  useEffect(() => {
+    if (profile) {
+      setFormData((prev) => ({
+        ...prev,
+        name: profile.name || prev.name,
+        phone: profile.phoneNumber || prev.phone,
+      }));
+    }
+  }, [profile]);
+
   const formattedDate = selectedDate
     ? selectedDate.toLocaleDateString("en-GB")
     : "Not Selected";
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
+    if (!user) {
+      toast.error("Please log in before booking.");
+      router.push("/");
+      return;
+    }
+
+    if (!profileComplete) {
+      toast.error("Please complete your profile before booking.");
+      router.push("/profile");
+      return;
+    }
+
     if (
       !formData.name ||
       !formData.phone ||
@@ -51,7 +77,38 @@ export default function BookSlotSection() {
       return;
     }
 
-    const message = `
+    try {
+      setLoading(true);
+
+      // Save to database
+      const response = await fetch("/api/services", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          userId: user.uid,
+          name: formData.name,
+          phone: formData.phone,
+          email: profile?.email || "",
+          service: formData.service,
+          date: formattedDate,
+          location: formData.location,
+          message: formData.message,
+          description: formData.message,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to save booking to database");
+      }
+
+      const result = await response.json();
+      if (!result.success) {
+        throw new Error("Failed to save booking to database");
+      }
+
+      const message = `
 📸 *New Service Booking*
 
 👤 Name: ${formData.name}
@@ -61,18 +118,33 @@ export default function BookSlotSection() {
 📅 Event Date: ${formattedDate}
 📍 Location: ${formData.location}
 
-
-
 📝 Message:
 ${formData.message || "N/A"}
-    `;
+      `;
 
-    const whatsappUrl = `https://wa.me/918639852224?text=${encodeURIComponent(
-      message,
-    )}`;
+      const whatsappUrl = `https://wa.me/918639852224?text=${encodeURIComponent(
+        message,
+      )}`;
 
-    window.open(whatsappUrl, "_blank");
-    toast.success("Opening WhatsApp...");
+      window.open(whatsappUrl, "_blank");
+      toast.success("Booking saved and opening WhatsApp...");
+
+      // Reset form
+      setFormData({
+        name: "",
+        phone: "",
+        service: "",
+        date: "",
+        location: "",
+        message: "",
+      });
+      setSelectedDate(null);
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to process booking. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

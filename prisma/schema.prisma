@@ -1,0 +1,138 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model RentalProduct {
+  id             String   @id @default(cuid())
+  name           String
+  slug           String   @unique
+  category       String
+  brand          String
+  model          String
+  description    String?
+  megapixels     String?
+  batteries      Int      @default(0)
+  available      Boolean  @default(true)
+  image          String?
+  images         Json?
+  pricing        Json?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  rentalPrice    Json?
+  specifications Json?
+  display_order  Int      @default(0)
+}
+
+model BuyProduct {
+  id             String   @id @default(cuid())
+  name           String
+  slug           String   @unique
+  brand          String
+  model          String
+  category       String
+  condition      String?
+  warranty       String?
+  status         String   @default("In Stock")
+  description    String?
+  image          String?
+  images         Json?
+  price          Float
+  discountPrice  Float?
+  specifications Json?
+  accessories    Json?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  display_order  Int      @default(0)
+}
+
+model SellRequest {
+  id             String   @id @default(cuid())
+  fullName       String
+  mobile         String
+  email          String?
+  city           String
+  category       String
+  brand          String
+  model          String
+  purchaseYear   String?
+  warrantyStatus String?
+  expectedPrice  Float?
+  condition      String
+  accessories    String?
+  description    String?
+  images         Json?
+  status         String   @default("pending")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model ServiceBooking {
+  id          String   @id @default(cuid())
+  fullName    String
+  phone       String
+  shootType   String
+  eventDate   String
+  eventTime   String?
+  location    String
+  description String?
+  message     String?
+  notes       String?
+  status      String   @default("pending")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Customer {
+  id           String   @id @default(cuid())
+  customerId   String   @unique
+  name         String
+  email        String   @unique
+  profileImage String?
+  phoneNumber  String?
+  address      String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model RentalRequest {
+  id             String   @id @default(cuid())
+  requestId      String   @unique
+  customerId     String?
+  userId         String?
+  fullName       String
+  email          String?
+  phone          String
+  address        String?
+  productId      String
+  productName    String
+  productImage   String?
+  rentalDuration String
+  quantity       Int      @default(1)
+  rentalPrice    Float    @default(0)
+  totalAmount    Float    @default(0)
+  bookingDate    String
+  pickupTime     String?
+  notes          String?
+  status         String   @default("Pending")
+  paymentStatus  String   @default("Pending")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model Testimonial {
+  id          String   @id @default(cuid())
+  name        String
+  designation String?
+  image       String?
+  rating      Int      @default(5)
+  review      String
+  status      String   @default("pending")
+  featured    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}

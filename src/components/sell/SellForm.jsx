@@ -1,13 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import CategorySelector from "./CategorySelector";
 import ConditionSelector from "./ConditionSelector";
 import ImageUploader from "./ImageUploader";
+import SellSuccessModal from "./SellSuccessModal";
+import { useAuth } from "@/context/AuthContext";
 
 export default function SellForm() {
+  const router = useRouter();
+  const { user, profile } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -34,6 +40,17 @@ export default function SellForm() {
       [e.target.name]: e.target.value,
     }));
   };
+
+  useEffect(() => {
+    if (profile) {
+      setFormData((prev) => ({
+        ...prev,
+        name: profile.name || prev.name,
+        phone: profile.phoneNumber || prev.phone,
+        email: profile.email || prev.email,
+      }));
+    }
+  }, [profile]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -81,76 +98,105 @@ export default function SellForm() {
     try {
       setLoading(true);
 
-      const message = `
-📸 *New Sell Request*
+      // 1. Upload Images to Cloudinary via /api/upload
+      const uploadedUrls = [];
+      toast.info("Uploading product images...");
 
-👤 Name: ${formData.name}
-📞 Phone: ${formData.phone}
-📧 Email: ${formData.email}
+      for (let i = 0; i < images.length; i++) {
+        const fileObj = images[i].file;
+        const uploadForm = new FormData();
+        uploadForm.append("file", fileObj);
 
-📍 City: ${formData.city}
-
-📦 Category: ${formData.category}
-🏷 Brand: ${formData.brand}
-📸 Model: ${formData.model}
-
-⭐ Condition: ${formData.condition}
-📅 Purchase Year: ${formData.purchaseYear}
-🛡 Warranty: ${formData.warranty}
-
-${
-  formData.warranty === "Under Warranty"
-    ? `📆 Warranty Expiry: ${formData.warrantyExpiry}`
-    : ""
-}
-
-💰 Expected Price: ₹${formData.expectedPrice}
-
-🎁 Accessories:
-${formData.accessories || "N/A"}
-
-📝 Description:
-${formData.description || "N/A"}
-
-🖼 Images Uploaded: ${images.length}
-      `;
-
-      toast.success("Opening WhatsApp to submit your sell request...");
-
-      const whatsappUrl = `https://wa.me/918639852224?text=${encodeURIComponent(
-        message,
-      )}`;
-
-      setTimeout(() => {
-        window.open(whatsappUrl, "_blank");
-
-        setFormData({
-          name: "",
-          phone: "",
-          email: "",
-          city: "",
-          category: "",
-          brand: "",
-          model: "",
-          purchaseYear: "",
-          condition: "",
-          warranty: "",
-          warrantyExpiry: "",
-          accessories: "",
-          expectedPrice: "",
-          description: "",
+        const uploadResponse = await fetch("/api/upload", {
+          method: "POST",
+          body: uploadForm,
         });
 
-        setImages([]);
+        if (!uploadResponse.ok) {
+          throw new Error(`Failed to upload image ${i + 1}`);
+        }
 
-        setLoading(false);
+        const uploadResult = await uploadResponse.json();
+        if (!uploadResult.success || !uploadResult.url) {
+          throw new Error(
+            uploadResult.error || `Failed to upload image ${i + 1}`,
+          );
+        }
 
-        toast.success("WhatsApp opened successfully.");
-      }, 1000);
+        uploadedUrls.push(uploadResult.url);
+      }
+
+      // 2. Submit Sell Request payload to /api/sell-requests
+      toast.info("Submitting request...");
+
+      const payload = {
+        fullName: formData.name,
+        mobile: formData.phone,
+        email: formData.email || "",
+        city: formData.city,
+        category: formData.category,
+        brand: formData.brand,
+        model: formData.model,
+        purchaseYear: formData.purchaseYear,
+        warrantyStatus:
+          formData.warranty +
+          (formData.warranty === "Under Warranty"
+            ? ` (Expires: ${formData.warrantyExpiry})`
+            : ""),
+        expectedPrice: Number(formData.expectedPrice),
+        condition: formData.condition,
+        accessories: formData.accessories || "",
+        description: formData.description || "",
+        images: uploadedUrls,
+      };
+
+      const response = await fetch("/api/sell-requests", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          userId: user?.uid || null,
+          ...payload,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.message || "Failed to submit sell request.");
+      }
+
+      if (!result.success) {
+        throw new Error(result.message || "Failed to submit sell request.");
+      }
+
+      toast.success("Request submitted successfully!");
+      setShowSuccess(true);
+
+      // Reset form
+      setFormData({
+        name: "",
+        phone: "",
+        email: "",
+        city: "",
+        category: "",
+        brand: "",
+        model: "",
+        purchaseYear: "",
+        condition: "",
+        warranty: "",
+        warrantyExpiry: "",
+        accessories: "",
+        expectedPrice: "",
+        description: "",
+      });
+      setImages([]);
     } catch (error) {
       console.error(error);
+      toast.error(error.message || "Failed to submit request.");
+    } finally {
       setLoading(false);
-      toast.error("Failed to submit request.");
     }
   };
 
@@ -166,7 +212,7 @@ ${formData.description || "N/A"}
           name="name"
           placeholder="Full Name *"
           value={formData.name}
-          onChange={handleChange} 
+          onChange={handleChange}
           className="rounded-2xl border border-white/10 bg-black/30 px-5 py-4 outline-none transition focus:border-[#F5A623]"
         />
 
@@ -344,8 +390,14 @@ ${formData.description || "N/A"}
         disabled={loading}
         className="mt-8 w-full rounded-2xl bg-[#F5A623] py-4 font-semibold text-black transition-all duration-300 hover:bg-amber-400 hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
       >
-        {loading ? "Opening WhatsApp..." : "Submit Sell Request"}
+        {loading ? "Submitting..." : "Submit Sell Request"}
       </button>
+
+      {/* Success Modal */}
+      <SellSuccessModal
+        open={showSuccess}
+        onClose={() => setShowSuccess(false)}
+      />
     </form>
   );
 }

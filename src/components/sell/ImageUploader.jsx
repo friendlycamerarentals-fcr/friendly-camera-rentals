@@ -139,6 +139,7 @@ export default function ImageUploader({ images, setImages, maxImages = 5 }) {
                     src={image.preview}
                     alt={`Preview ${index + 1}`}
                     fill
+                    sizes="100px"
                     className="object-cover"
                   />
                 </div>

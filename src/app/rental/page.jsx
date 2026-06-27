@@ -1,47 +1,71 @@
 "use client";
 
-import { useMemo, useState } from "react";
-
-import rentalProducts from "@/data/rentalProducts";
+import { useMemo, useState, useEffect, useCallback } from "react";
 
 import SearchBar from "@/components/rental/SearchBar";
 import CategoryFilter from "@/components/rental/CategoryFilter";
 import ProductCard from "@/components/rental/ProductCard";
 
 export default function RentalPage() {
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [query, setQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
+
+  const fetchProducts = useCallback(async () => {
+    setLoading(true);
+    setError("");
+
+    try {
+      const params = new URLSearchParams();
+
+      if (query) {
+        params.set("search", query);
+      }
+
+      if (selectedCategory !== "all") {
+        params.set("category", selectedCategory);
+      }
+
+      const response = await fetch(
+        `/api/rental-products?${params.toString()}`,
+        {
+          cache: "no-store",
+        },
+      );
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.message || "Failed to load rental products.");
+      }
+
+      setProducts(result.data || []);
+    } catch (fetchError) {
+      console.error("Failed to fetch rental products:", fetchError);
+      setError(fetchError.message || "Unable to load rental products.");
+      setProducts([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [query, selectedCategory]);
+
+  useEffect(() => {
+    fetchProducts();
+  }, [fetchProducts]);
 
   const handleSearch = () => {
     setQuery(searchTerm.trim());
   };
 
-  // Fetch unique categories dynamically
   const categories = useMemo(() => {
     return [
       "all",
-      ...new Set(rentalProducts.map((product) => product.category)),
+      ...new Set(products.map((product) => product.category).filter(Boolean)),
     ];
-  }, []);
-
-  // Filter products
-  const filteredProducts = useMemo(() => {
-    const search = query.toLowerCase().trim();
-
-    return rentalProducts.filter((product) => {
-      const matchesSearch =
-        search === "" ||
-        product.name.toLowerCase().includes(search) ||
-        product.brand.toLowerCase().includes(search) ||
-        product.model.toLowerCase().includes(search);
-
-      const matchesCategory =
-        selectedCategory === "all" || product.category === selectedCategory;
-
-      return matchesSearch && matchesCategory;
-    });
-  }, [query, selectedCategory]);
+  }, [products]);
 
   return (
     <main className="min-h-screen bg-black text-white">
@@ -100,12 +124,28 @@ export default function RentalPage() {
               Available Products
             </h2>
 
-            <p className="text-zinc-400">
-              {filteredProducts.length} Products Found
-            </p>
+            <p className="text-zinc-400">{products.length} Products Found</p>
           </div>
 
-          {filteredProducts.length === 0 ? (
+          {loading ? (
+            <div className="rounded-[2rem] border border-white/10 bg-white/5 py-20 text-center backdrop-blur-xl">
+              <h3 className="font-heading text-4xl text-white">
+                Loading Products...
+              </h3>
+
+              <p className="mt-4 text-zinc-400">
+                Please wait while we load the latest rental gear.
+              </p>
+            </div>
+          ) : error ? (
+            <div className="rounded-[2rem] border border-red-500/20 bg-red-500/5 py-20 text-center backdrop-blur-xl">
+              <h3 className="font-heading text-4xl text-white">
+                Failed to load products
+              </h3>
+
+              <p className="mt-4 text-zinc-400">{error}</p>
+            </div>
+          ) : products.length === 0 ? (
             <div className="rounded-[2rem] border border-white/10 bg-white/5 py-20 text-center backdrop-blur-xl">
               <h3 className="font-heading text-4xl text-white">
                 No Products Found
@@ -117,7 +157,7 @@ export default function RentalPage() {
             </div>
           ) : (
             <div className="grid gap-8 md:grid-cols-2 xl:grid-cols-3">
-              {filteredProducts.map((product) => (
+              {products.map((product) => (
                 <ProductCard key={product.id} product={product} />
               ))}
             </div>

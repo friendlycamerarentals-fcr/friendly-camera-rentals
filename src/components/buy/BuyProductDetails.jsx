@@ -4,11 +4,17 @@ import { useState, useRef } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
+import { useAuth } from "@/context/AuthContext";
+import { buildGalleryArray } from "@/lib/imageUtils";
 
 export default function BuyProductDetails({ product }) {
   const [selectedImage, setSelectedImage] = useState(0);
 
-  const images = product.images?.length > 0 ? product.images : [product.image];
+  // Build gallery: thumbnail first, then remaining images (no duplicates)
+  const images = buildGalleryArray(product);
+  const status =
+    product.status || (product.stock ? "In Stock" : "Out of Stock");
+  const isInStock = status === "In Stock";
 
   const touchStartX = useRef(null);
   const mouseStartX = useRef(null);
@@ -43,10 +49,19 @@ export default function BuyProductDetails({ product }) {
     delta > 0 ? nextImage() : prevImage();
   };
 
+  const { profile } = useAuth();
+
   const handleWhatsApp = () => {
+    const customerInfo = profile
+      ? `👤 Name: ${profile.name}
+📧 Email: ${profile.email}
+📞 Phone: ${profile.phoneNumber}
+`
+      : "";
+
     const message = `Hi Friendly Camera Rentals,
 
-I'm interested in purchasing:
+${customerInfo}I'm interested in purchasing:
 
 📸 Product: ${product.name}
 🏷 Brand: ${product.brand}
@@ -133,12 +148,12 @@ Please provide more details.`;
                   {/* Stock badge */}
                   <div
                     className={`absolute left-3 top-3 z-10 rounded-full px-3 py-1 text-xs font-semibold backdrop-blur-sm ${
-                      product.stock
+                      isInStock
                         ? "bg-green-500/20 text-green-400 border border-green-500/20"
                         : "bg-red-500/20 text-red-400 border border-red-500/20"
                     }`}
                   >
-                    {product.stock ? "in stock" : "Sold"}
+                    {status}
                   </div>
 
                   {/* Image counter */}
@@ -261,9 +276,9 @@ Please provide more details.`;
                   </h3>
                   <div className="mt-4 space-y-0">
                     {Object.entries(product.specifications).map(
-                      ([key, value]) => (
+                      ([key, value], idx) => (
                         <div
-                          key={key}
+                          key={`${key || "spec"}-${idx}`}
                           className="flex justify-between border-b border-white/5 py-2.5 text-sm last:border-0"
                         >
                           <span className="capitalize text-zinc-400">
@@ -284,9 +299,9 @@ Please provide more details.`;
                     Included Accessories
                   </h3>
                   <ul className="mt-3 space-y-2">
-                    {product.accessories.map((item) => (
+                    {product.accessories.map((item, idx) => (
                       <li
-                        key={item}
+                        key={`${item || "accessory"}-${idx}`}
                         className="flex items-start gap-2 text-sm text-zinc-300"
                       >
                         <span className="mt-0.5 text-[#F5A623]">•</span>
@@ -300,25 +315,25 @@ Please provide more details.`;
               {/* CTA */}
               <motion.button
                 whileHover={
-                  product.stock
+                  isInStock
                     ? {
                         scale: 1.015,
                         boxShadow: "0 12px 32px rgba(245,166,35,0.35)",
                       }
                     : {}
                 }
-                whileTap={product.stock ? { scale: 0.975 } : {}}
-                onClick={product.stock ? handleWhatsApp : undefined}
-                disabled={!product.stock}
+                whileTap={isInStock ? { scale: 0.975 } : {}}
+                onClick={isInStock ? handleWhatsApp : undefined}
+                disabled={!isInStock}
                 className={`mt-6 w-full rounded-2xl py-4 font-semibold transition-all duration-300
                 ${
-                  product.stock
+                  isInStock
                     ? "cursor-pointer bg-[#F5A623] text-black shadow-[0_8px_24px_rgba(245,166,35,0.25)] hover:bg-amber-400"
                     : "cursor-not-allowed bg-zinc-800 text-zinc-500 opacity-60"
                 }
               `}
               >
-                {product.stock ? "Buy via WhatsApp" : "Out of Stock"}
+                {isInStock ? "Buy via WhatsApp" : "Out of Stock"}
               </motion.button>
             </motion.div>
           </div>

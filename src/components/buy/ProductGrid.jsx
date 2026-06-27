@@ -2,24 +2,96 @@
 
 import { useMemo, useState } from "react";
 import ProductCard from "./ProductCard";
-import buyProducts from "@/data/buyProducts";
+import { useFetchData } from "@/hooks/useFetchData";
 import CategoryFilter from "./CategoryFilter";
+import { Loader } from "lucide-react";
 
 export default function ProductGrid() {
+  const {
+    data: allProducts,
+    loading,
+    error,
+  } = useFetchData("/api/buy-products");
   const [selectedCategory, setSelectedCategory] = useState("All");
+  const [searchQuery, setSearchQuery] = useState("");
 
+  // Use all products so out-of-stock and sold items remain visible
+  const allVisibleProducts = useMemo(() => allProducts, [allProducts]);
+
+  // Get unique categories from all visible products
+  const categories = useMemo(() => {
+    const uniqueCategories = [
+      "All",
+      ...new Set(allVisibleProducts.map((p) => p.category).filter(Boolean)),
+    ];
+    return uniqueCategories;
+  }, [allVisibleProducts]);
+
+  // Filter by category and search
   const filteredProducts = useMemo(() => {
-    if (selectedCategory === "All") return buyProducts;
+    let filtered = allVisibleProducts;
 
-    return buyProducts.filter(
-      (product) => product.category === selectedCategory,
+    // Filter by category
+    if (selectedCategory !== "All") {
+      filtered = filtered.filter(
+        (product) =>
+          product.category?.toLowerCase() === selectedCategory.toLowerCase(),
+      );
+    }
+
+    // Filter by search query
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(
+        (product) =>
+          product.name?.toLowerCase().includes(query) ||
+          product.brand?.toLowerCase().includes(query) ||
+          product.model?.toLowerCase().includes(query),
+      );
+    }
+
+    return filtered;
+  }, [allVisibleProducts, selectedCategory, searchQuery]);
+
+  if (loading) {
+    return (
+      <section className="mx-auto max-w-7xl px-4 py-16 md:px-6 lg:px-8">
+        <div className="flex justify-center py-20">
+          <Loader className="h-8 w-8 animate-spin text-[#F5A623]" />
+        </div>
+      </section>
     );
-  }, [selectedCategory]);
+  }
+
+  if (error) {
+    return (
+      <section className="mx-auto max-w-7xl px-4 py-16 md:px-6 lg:px-8">
+        <div className="rounded-[32px] border border-red-500/20 bg-red-500/5 p-12 text-center">
+          <h3 className="text-2xl font-semibold text-white">Error</h3>
+          <p className="mt-3 text-zinc-400">
+            Failed to load products. Please try again later.
+          </p>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="mx-auto max-w-7xl px-4 py-16 md:px-6 lg:px-8">
+      {/* Search Bar */}
+      <div className="mb-8">
+        <input
+          type="text"
+          placeholder="Search by product name, brand, or model..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="w-full rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-white placeholder-zinc-500 outline-none transition-all duration-300 focus:border-[#F5A623] focus:bg-white/5"
+        />
+      </div>
+
       {/* Filter */}
       <CategoryFilter
+        categories={categories}
         selected={selectedCategory}
         onSelect={setSelectedCategory}
       />
@@ -36,21 +108,21 @@ export default function ProductGrid() {
       </div>
 
       {/* Products Grid */}
-      <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {filteredProducts.map((product) => (
-          <ProductCard key={product.id} product={product} />
-        ))}
-      </div>
-
-      {/* Empty State */}
-      {filteredProducts.length === 0 && (
+      {filteredProducts.length > 0 ? (
+        <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {filteredProducts.map((product) => (
+            <ProductCard key={product.id} product={product} />
+          ))}
+        </div>
+      ) : (
         <div className="mt-20 rounded-[32px] border border-white/10 bg-white/[0.03] p-12 text-center">
           <h3 className="text-2xl font-semibold text-white">
-            No Products Found
+            No Buy Products Available
           </h3>
-
           <p className="mt-3 text-zinc-400">
-            Products for this category will be added soon.
+            {searchQuery
+              ? "No products match your search. Try different keywords."
+              : "New products coming soon!"}
           </p>
         </div>
       )}

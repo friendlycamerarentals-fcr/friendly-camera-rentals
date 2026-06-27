@@ -1,11 +1,24 @@
 import { notFound } from "next/navigation";
-import buyProducts from "@/data/buyProducts";
 import BuyProductDetails from "@/components/buy/BuyProductDetails";
+import prisma from "@/lib/prisma";
+
+async function getProductBySlug(slug) {
+  try {
+    const product = await prisma.buyProduct.findUnique({
+      where: {
+        slug,
+      },
+    });
+    return product;
+  } catch (error) {
+    console.error("Failed to query buy product from DB:", error);
+    return null;
+  }
+}
 
 export async function generateMetadata({ params }) {
   const { slug } = await params;
-
-  const product = buyProducts.find((item) => item.slug === slug);
+  const product = await getProductBySlug(slug);
 
   if (!product) {
     return {
@@ -15,14 +28,13 @@ export async function generateMetadata({ params }) {
 
   return {
     title: `${product.name} | Friendly Camera Rentals`,
-    description: product.description,
+    description: product.description || "",
   };
 }
 
 export default async function BuyProductPage({ params }) {
   const { slug } = await params;
-
-  const product = buyProducts.find((item) => item.slug === slug);
+  const product = await getProductBySlug(slug);
 
   if (!product) {
     notFound();

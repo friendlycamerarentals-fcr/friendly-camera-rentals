@@ -1,12 +1,22 @@
 import { notFound } from "next/navigation";
 
-import rentalProducts from "@/data/rentalProducts";
 import ProductDetails from "@/components/rental/ProductDetails";
+import prisma from "@/lib/prisma";
 
 export default async function ProductDetailsPage({ params }) {
   const { id } = await params;
 
-  const product = rentalProducts.find((item) => item.id === id);
+  let product = null;
+
+  try {
+    product = await prisma.rentalProduct.findFirst({
+      where: {
+        OR: [{ id }, { slug: id }],
+      },
+    });
+  } catch (error) {
+    console.error("Failed to fetch rental product from database:", error);
+  }
 
   if (!product) {
     notFound();

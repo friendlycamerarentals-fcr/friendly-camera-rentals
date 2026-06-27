@@ -7,9 +7,9 @@ export default function CategoryFilter({
 }) {
   return (
     <div className="flex flex-wrap justify-center gap-3">
-      {categories.map((category) => (
+      {categories.map((category, index) => (
         <button
-          key={category}
+          key={`${category || "category"}-${index}`}
           onClick={() => setSelectedCategory(category)}
           className={`cursor-pointer rounded-full px-6 py-3 text-sm font-semibold capitalize transition-all duration-300 hover:scale-105 ${
             selectedCategory === category

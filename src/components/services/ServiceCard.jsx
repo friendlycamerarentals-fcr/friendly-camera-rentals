@@ -21,13 +21,18 @@ export default function ServiceCard({ service, active = false }) {
     >
       {/* Image */}
       <div className="relative h-[200px] overflow-hidden">
-        <Image
-          src={service.image}
-          alt={service.title}
-          fill
-          className="object-cover transition duration-700 group-hover:scale-110"
-          unoptimized
-        />
+        {service.image?.trim() ? (
+          <Image
+            src={service.image}
+            alt={service.title}
+            fill
+            sizes="(max-width: 768px) 100vw, 33vw"
+            className="object-cover transition duration-700 group-hover:scale-110"
+            unoptimized
+          />
+        ) : (
+          <div className="h-full w-full bg-white/5" />
+        )}
 
         {/* Dark Overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />

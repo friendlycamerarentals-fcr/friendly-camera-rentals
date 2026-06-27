@@ -1,12 +1,10 @@
 import { Inter, Cormorant_Garamond } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "sonner";
-
+import { AuthProvider } from "@/context/AuthContext";
 import { CartProvider } from "@/context/CartContext";
-import Navbar from "@/components/layout/Navbar";
-import Footer from "@/components/layout/Footer";
-import FloatingWhatsApp from "@/components/common/FloatingWhatsApp";
 import LoaderWrapper from "@/components/common/LoaderWrapper";
+import LayoutWrapper from "@/components/layout/LayoutWrapper";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -36,24 +34,21 @@ export default function RootLayout({ children }) {
       <body
         className={`${inter.variable} ${cormorant.variable} bg-black text-white antialiased`}
       >
-        <CartProvider>
-          <LoaderWrapper>
-            <Navbar />
+        <AuthProvider>
+          <CartProvider>
+            <LoaderWrapper>
+              <LayoutWrapper>{children}</LayoutWrapper>
 
-            <main className="min-h-screen pt-20">{children}</main>
-
-            <FloatingWhatsApp />
-            <Footer />
-
-            <Toaster
-              position="top-center"
-              richColors
-              closeButton
-              duration={3000}
-              theme="dark"
-            />
-          </LoaderWrapper>
-        </CartProvider>
+              <Toaster
+                position="top-center"
+                richColors
+                closeButton
+                duration={3000}
+                theme="dark"
+              />
+            </LoaderWrapper>
+          </CartProvider>
+        </AuthProvider>
       </body>
     </html>
   );

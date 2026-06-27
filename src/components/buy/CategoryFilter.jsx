@@ -2,25 +2,19 @@
 
 import { motion } from "framer-motion";
 
-const categories = [
-  "All",
-  "Camera",
-  "Lens",
-  "Drone",
-  "Lighting",
-  "Audio",
-  "Accessories",
-];
-
-export default function CategoryFilter({ selected, onSelect }) {
+export default function CategoryFilter({
+  categories = [],
+  selected,
+  onSelect,
+}) {
   return (
     <div className="flex flex-wrap items-center justify-center gap-3">
-      {categories.map((category) => {
+      {categories.map((category, index) => {
         const isActive = selected === category;
 
         return (
           <motion.button
-            key={category}
+            key={`${category || "category"}-${index}`}
             type="button"
             whileTap={{ scale: 0.95 }}
             onClick={() => onSelect(category)}

@@ -4,7 +4,12 @@ import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
 
+const getStatus = (product) =>
+  product.status || (product.stock ? "In Stock" : "Out of Stock");
+
 export default function ProductCard({ product }) {
+  const imageUrl = product.image?.trim() || null;
+
   return (
     <motion.div
       whileHover={{ y: -8 }}
@@ -13,13 +18,18 @@ export default function ProductCard({ product }) {
     >
       {/* Image */}
       <div className="relative h-72 overflow-hidden">
-        <Image
-          src={product.image}
-          alt={product.name}
-          fill
-          className="object-cover transition duration-700 group-hover:scale-110"
-          unoptimized
-        />
+        {imageUrl ? (
+          <Image
+            src={imageUrl}
+            alt={product.name}
+            fill
+            sizes="(max-width: 768px) 100vw, 33vw"
+            className="object-cover transition duration-700 group-hover:scale-110"
+            unoptimized
+          />
+        ) : (
+          <div className="h-full w-full bg-white/5" />
+        )}
 
         {/* Category Badge */}
         <span className="absolute left-4 top-4 rounded-full bg-black/70 px-3 py-1 text-xs font-medium text-white backdrop-blur-md">
@@ -53,15 +63,22 @@ export default function ProductCard({ product }) {
             </p>
           </div>
 
-          <span
-            className={`rounded-full px-3 py-1 text-xs font-medium ${
-              product.stock
-                ? "bg-green-500/10 text-green-400"
-                : "bg-red-500/10 text-red-400"
-            }`}
-          >
-            {product.stock ? "In Stock" : "Out of Stock"}
-          </span>
+          {(() => {
+            const status = getStatus(product);
+            const isInStock = status === "In Stock";
+
+            return (
+              <span
+                className={`rounded-full px-3 py-1 text-xs font-medium ${
+                  isInStock
+                    ? "bg-green-500/10 text-green-400"
+                    : "bg-red-500/10 text-red-400"
+                }`}
+              >
+                {status}
+              </span>
+            );
+          })()}
         </div>
 
         {/* Button */}
