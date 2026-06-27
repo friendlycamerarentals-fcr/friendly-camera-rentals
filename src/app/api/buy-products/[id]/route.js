@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
 const normalizeStatus = (status) => {
   if (!status) return "In Stock";
 
@@ -26,9 +29,21 @@ const normalizeStatus = (status) => {
 | GET SINGLE PRODUCT
 |--------------------------------------------------------------------------
 */
-export async function GET(request, { params }) {
+export async function GET(_request, context) {
   try {
-    const { id } = await params;
+    const { id } = await context.params;
+
+    if (!id) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Missing product id",
+        },
+        {
+          status: 400,
+        },
+      );
+    }
 
     const product = await prisma.buyProduct.findUnique({
       where: {
@@ -75,9 +90,21 @@ export async function GET(request, { params }) {
 | UPDATE PRODUCT
 |--------------------------------------------------------------------------
 */
-export async function PUT(request, { params }) {
+export async function PUT(request, context) {
   try {
-    const { id } = await params;
+    const { id } = await context.params;
+
+    if (!id) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Missing product id",
+        },
+        {
+          status: 400,
+        },
+      );
+    }
 
     const body = await request.json();
 
@@ -155,9 +182,21 @@ export async function PUT(request, { params }) {
 | DELETE PRODUCT
 |--------------------------------------------------------------------------
 */
-export async function DELETE(request, { params }) {
+export async function DELETE(_request, context) {
   try {
-    const { id } = await params;
+    const { id } = await context.params;
+
+    if (!id) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Missing product id",
+        },
+        {
+          status: 400,
+        },
+      );
+    }
 
     const existingProduct = await prisma.buyProduct.findUnique({
       where: {
