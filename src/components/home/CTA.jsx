@@ -18,7 +18,7 @@ export default function CTA() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, amount: 0.3 }}
           transition={{ duration: 0.8 }}
-          className="rounded-[2rem] border border-white/10 bg-white/5 p-10 text-center backdrop-blur-xl md:p-16"
+          className="rounded-2xl border border-white/10 bg-white/5 p-10 text-center backdrop-blur-xl md:p-16"
         >
           {/* Badge */}
           <p className="text-sm uppercase tracking-[0.35em] text-amber-400">

@@ -76,10 +76,10 @@ export default function WhyChooseUs() {
                   y: -8,
                   scale: 1.02,
                 }}
-                className="group rounded-3xl border border-white/10 bg-white/5 p-8 backdrop-blur-xl transition-all duration-300 hover:border-amber-500/40 hover:bg-white/[0.07] cursor-pointer"
+                className="group rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur-xl transition-all duration-300 hover:border-amber-500/40 hover:bg-white/[0.07] cursor-pointer"
               >
                 {/* Icon */}
-                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-400 transition-all duration-300 group-hover:bg-amber-500 group-hover:text-black">
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-400 transition-all duration-300 group-hover:bg-amber-500 group-hover:text-black">
                   <Icon size={30} />
                 </div>
 

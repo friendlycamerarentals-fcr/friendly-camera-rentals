@@ -103,7 +103,7 @@ export default function Testimonials({ testimonials = [] }) {
                     whileHover={{ y: -8 }}
                     className="
                       group
-                      rounded-[32px]
+                      rounded-2xl
                       border
                       border-white/10
                       bg-white/[0.03]
@@ -112,20 +112,20 @@ export default function Testimonials({ testimonials = [] }) {
                       transition-all
                       duration-500
                       hover:border-[#F5A623]/40
-                      hover:shadow-[0_0_50px_rgba(245,166,35,0.15)]
+                      hover:shadow-[0_0_50px_rgba(245,166,35,0.15)] cursor-pointer
                     "
                   >
                     {/* Quote */}
-                    <Quote className="mb-6 h-12 w-12 text-[#F5A623]/40" />
+                    <Quote className="mb-6 h-8 w-8 text-[#F5A623]/40" />
 
                     {/* Review */}
-                    <p className="mb-8 min-h-[140px] leading-8 text-zinc-300">
+                    <p className="mb-4 min-h-[140px] leading-8 text-zinc-300">
                       "{testimonial.review || testimonial.text}"
                     </p>
 
                     {/* User */}
                     <div className="flex items-center gap-4">
-                      <FaUserCircle className="h-14 w-14 text-zinc-500" />
+                      <FaUserCircle className="h-10 w-10 text-zinc-500" />
 
                       <div>
                         <h4 className="font-semibold text-white">

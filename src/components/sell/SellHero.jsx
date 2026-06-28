@@ -74,7 +74,7 @@ export default function SellHero() {
           ].map((item) => (
             <div
               key={item.label}
-              className="rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-xl"
+              className="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur-xl"
             >
               <h3 className="text-2xl font-bold text-[#F5A623] md:text-3xl">
                 {item.value}

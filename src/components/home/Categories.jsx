@@ -72,7 +72,7 @@ export default function Categories() {
               >
                 <Link
                   href={category.href}
-                  className="group block rounded-[2rem] border border-white/10 bg-white/5 p-10 backdrop-blur-xl transition-all duration-300 hover:border-amber-500/40 hover:bg-white/[0.07]"
+                  className="group block rounded-2xl border border-white/10 bg-white/5 p-10 backdrop-blur-xl transition-all duration-300 hover:border-amber-500/40 hover:bg-white/[0.07]"
                 >
                   {/* Icon */}
                   <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-400 transition-all duration-300 group-hover:bg-amber-500 group-hover:text-black">

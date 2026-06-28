@@ -14,10 +14,10 @@ export default function ProductCard({ product }) {
     <motion.div
       whileHover={{ y: -8 }}
       transition={{ duration: 0.3 }}
-      className="group overflow-hidden rounded-[28px] border border-white/10 bg-white/[0.03] backdrop-blur-xl"
+      className="group overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-xl"
     >
       {/* Image */}
-      <div className="relative h-72 overflow-hidden">
+      <div className="relative h-62 overflow-hidden">
         {imageUrl ? (
           <Image
             src={imageUrl}
