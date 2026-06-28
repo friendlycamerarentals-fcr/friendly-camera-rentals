@@ -699,7 +699,7 @@ export default function CartDrawer({ open, onClose }) {
               </div>
 
               {cart.length > 0 && (
-                <div className="border-t mb-20 md:mb-2 border-white/10 p-4 sm:p-5">
+                <div className="border-t mb-30 md:mb-2 border-white/10 p-4 sm:p-5">
                   <div className="mb-4 flex items-center justify-between">
                     <span className="text-zinc-400">Total</span>
                     <span className="text-2xl font-bold text-amber-400 sm:text-3xl">
