@@ -540,12 +540,11 @@ export default function CartDrawer({ open, onClose }) {
                           <span className="mt-0.5 text-lg text-emerald-300">
                             ✓
                           </span>
-                          <p className="text-sm text-zinc-200">
-                            Accepted
-                          </p>
+                          <p className="text-sm text-zinc-200">Accepted</p>
                         </div>
                         <p className="mt-2 text-sm text-zinc-400">
-                          I agree to bring a valid ID Proof during equipment pickup.
+                          I agree to bring a valid ID Proof during equipment
+                          pickup.
                         </p>
                       </div>
                     </div>
@@ -582,7 +581,10 @@ export default function CartDrawer({ open, onClose }) {
                                       {item.name}
                                     </p>
                                     <p className="mt-1 text-xs text-zinc-500">
-                                      Rental Duration: <span className="text-amber-400">{item.duration}</span>
+                                      Rental Duration:{" "}
+                                      <span className="text-amber-400">
+                                        {item.duration}
+                                      </span>
                                     </p>
                                   </div>
                                 </div>
@@ -590,7 +592,6 @@ export default function CartDrawer({ open, onClose }) {
                                   ₹{lineTotal.toLocaleString("en-IN")}
                                 </p>
                               </div>
-                              
                             </div>
                           );
                         })}
@@ -620,7 +621,11 @@ export default function CartDrawer({ open, onClose }) {
                       onClick={handleWhatsApp}
                       className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-amber-400 py-3.5 px-2 text-sm font-semibold text-black transition hover:bg-amber-300 active:scale-[0.98] cursor-pointer"
                     >
-                      <FaWhatsapp size={24}  className="text-green-500 font-extrabold" /> Continue to WhatsApp
+                      <FaWhatsapp
+                        size={24}
+                        className="text-green-500 font-extrabold"
+                      />{" "}
+                      Continue to WhatsApp
                     </button>
                   </div>
                 </>
@@ -650,7 +655,7 @@ export default function CartDrawer({ open, onClose }) {
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ type: "spring", damping: 30 }}
-              className="fixed right-0 top-0 z-[999] flex h-screen w-full max-w-md flex-col border-l border-white/10 bg-black"
+              className="fixed top-0 right-0 bottom-0 z-[999] flex w-full max-w-md flex-col border-l border-white/10 bg-black"
             >
               <div className="flex items-center justify-between border-b border-white/10 p-5 sm:p-6">
                 <h2 className="text-xl font-semibold text-white sm:text-2xl">
@@ -665,7 +670,7 @@ export default function CartDrawer({ open, onClose }) {
                 </button>
               </div>
 
-              <div className="flex-1 overflow-y-auto p-4 sm:p-5">
+              <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 sm:p-5">
                 {cart.length === 0 ? (
                   <div className="flex h-full flex-col items-center justify-center text-center">
                     <FiShoppingBag size={70} className="text-zinc-700" />
@@ -699,7 +704,7 @@ export default function CartDrawer({ open, onClose }) {
               </div>
 
               {cart.length > 0 && (
-                <div className="border-t mb-30 md:mb-2 border-white/10 p-4 sm:p-5">
+                <div className="shrink-0 border-t border-white/10 bg-black p-4 pb-[calc(env(safe-area-inset-bottom)+16px)] sm:p-5">
                   <div className="mb-4 flex items-center justify-between">
                     <span className="text-zinc-400">Total</span>
                     <span className="text-2xl font-bold text-amber-400 sm:text-3xl">
