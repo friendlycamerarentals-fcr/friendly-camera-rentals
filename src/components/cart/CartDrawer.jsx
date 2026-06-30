@@ -670,7 +670,18 @@ export default function CartDrawer({ open, onClose }) {
                 </button>
               </div>
 
-              <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 sm:p-5">
+              <div
+                className="
+                  min-h-0
+                  flex-1
+                  overflow-y-auto
+                  overscroll-contain
+                  p-4
+                  pb-52
+                  sm:p-5
+                  sm:pb-56
+                "
+              >
                 {cart.length === 0 ? (
                   <div className="flex h-full flex-col items-center justify-center text-center">
                     <FiShoppingBag size={70} className="text-zinc-700" />
@@ -704,18 +715,51 @@ export default function CartDrawer({ open, onClose }) {
               </div>
 
               {cart.length > 0 && (
-                <div className="shrink-0 border-t border-white/10 bg-black p-4 pb-[calc(env(safe-area-inset-bottom)+16px)] sm:p-5">
+                <div
+                  className="
+                    sticky
+                    bottom-0
+                    z-30
+                    border-t
+                    border-white/10
+                    bg-black/95
+                    backdrop-blur-xl
+                    p-4
+                    pt-4
+                    shadow-[0_-10px_40px_rgba(0,0,0,0.5)]
+                    supports-[padding:max(0px)]:pb-[max(16px,env(safe-area-inset-bottom))]
+                    sm:p-5
+                  "
+                >
                   <div className="mb-4 flex items-center justify-between">
-                    <span className="text-zinc-400">Total</span>
-                    <span className="text-2xl font-bold text-amber-400 sm:text-3xl">
+                    <span className="text-zinc-400 text-lg">Total</span>
+
+                    <span className="text-3xl font-bold text-amber-400">
                       ₹{total.toLocaleString("en-IN")}
                     </span>
                   </div>
+
                   <button
                     onClick={handleBookingStart}
-                    className="flex w-full cursor-pointer items-center justify-center gap-3 rounded-2xl bg-green-500 py-4 font-semibold text-white transition hover:bg-green-600 active:scale-[0.98]"
+                    className="
+                            flex
+                            w-full
+                            items-center
+                            justify-center
+                            gap-3
+                            rounded-2xl
+                            bg-green-500
+                            py-4
+                            text-lg
+                            font-semibold
+                            text-white
+                            transition
+                            hover:bg-green-600
+                            active:scale-[0.98]
+                          "
                   >
-                    <FaWhatsapp size={20} /> Book Rent via WhatsApp
+                    <FaWhatsapp size={22} />
+                    Book Rent via WhatsApp
                   </button>
                 </div>
               )}
