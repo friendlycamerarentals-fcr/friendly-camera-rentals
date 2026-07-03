@@ -513,7 +513,6 @@ export default function CartDrawer({ open, onClose }) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            onClick={closeBookingForm}
             style={{
               position: "fixed",
               inset: 0,
