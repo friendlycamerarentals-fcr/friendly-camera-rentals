@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { X } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
+import { useBookingFlow } from "@/context/BookingFlowContext";
 
 const fieldCls =
   "w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white " +
@@ -18,9 +20,40 @@ const initialFormState = {
   customerId: "",
 };
 
+const PROFILE_DRAFT_KEY = "fcr-profile-draft";
+const PROFILE_REDIRECT_SOURCE_KEY = "fcr-profile-redirect-source";
+
+const readDraftProfile = () => {
+  if (typeof window === "undefined") return null;
+
+  try {
+    const savedDraft = window.sessionStorage.getItem(PROFILE_DRAFT_KEY);
+    return savedDraft ? JSON.parse(savedDraft) : null;
+  } catch {
+    return null;
+  }
+};
+
+const persistDraftProfile = (data) => {
+  if (typeof window === "undefined") return;
+  window.sessionStorage.setItem(PROFILE_DRAFT_KEY, JSON.stringify(data));
+};
+
+const clearDraftProfile = () => {
+  if (typeof window === "undefined") return;
+  window.sessionStorage.removeItem(PROFILE_DRAFT_KEY);
+};
+
+const clearPendingRedirect = () => {
+  if (typeof window === "undefined") return;
+  localStorage.removeItem("fcr-pending-booking");
+  window.sessionStorage.removeItem(PROFILE_REDIRECT_SOURCE_KEY);
+};
+
 export default function ProfilePage() {
   const router = useRouter();
   const { user, profile, loading, profileLoading, loadProfile } = useAuth();
+  const { closeProfile } = useBookingFlow();
   const [formData, setFormData] = useState(initialFormState);
   const [savedProfile, setSavedProfile] = useState(initialFormState);
   const [submitting, setSubmitting] = useState(false);
@@ -33,12 +66,27 @@ export default function ProfilePage() {
   }, [loading, user, router]);
 
   useEffect(() => {
-    if (user?.email) {
+    if (!user?.email) return;
+
+    const hasLoadedProfile = Boolean(
+      profile?.email && profile.email === user.email,
+    );
+
+    if (!hasLoadedProfile) {
       loadProfile(user.email);
     }
-  }, [user?.email, loadProfile]);
+  }, [loadProfile, profile?.email, user?.email]);
 
   useEffect(() => {
+    const savedDraft = readDraftProfile();
+    if (savedDraft) {
+      window.requestAnimationFrame(() => {
+        setFormData(savedDraft);
+        setSavedProfile(savedDraft);
+      });
+      return;
+    }
+
     const nextFormData = {
       fullName: profile?.name || "",
       email: user?.email || "",
@@ -48,25 +96,73 @@ export default function ProfilePage() {
     };
 
     const frameId = window.requestAnimationFrame(() => {
-      setFormData(nextFormData);
-      setSavedProfile(nextFormData);
+      setFormData((prev) =>
+        prev.fullName === nextFormData.fullName &&
+        prev.phoneNumber === nextFormData.phoneNumber &&
+        prev.address === nextFormData.address &&
+        prev.customerId === nextFormData.customerId
+          ? prev
+          : nextFormData,
+      );
+      setSavedProfile((prev) =>
+        prev.fullName === nextFormData.fullName &&
+        prev.phoneNumber === nextFormData.phoneNumber &&
+        prev.address === nextFormData.address &&
+        prev.customerId === nextFormData.customerId
+          ? prev
+          : nextFormData,
+      );
     });
 
     return () => window.cancelAnimationFrame(frameId);
-  }, [profile, user?.email]);
+  }, [
+    profile?.name,
+    profile?.phoneNumber,
+    profile?.address,
+    profile?.customerId,
+    user?.email,
+  ]);
 
   const handleChange = (field) => (e) => {
-    setFormData((prev) => ({ ...prev, [field]: e.target.value }));
+    const nextValue = e.target.value;
+    setFormData((prev) => {
+      const nextData = { ...prev, [field]: nextValue };
+      persistDraftProfile(nextData);
+      return nextData;
+    });
+  };
+
+  const handleClose = () => {
+    clearPendingRedirect();
+    closeProfile();
+
+    if (window.history.length > 1) {
+      router.back();
+      return;
+    }
+
+    router.push("/");
   };
 
   const handleCancel = () => {
     setFormData(savedProfile);
+    persistDraftProfile(savedProfile);
   };
 
-  const hasChanges =
-    formData.fullName !== savedProfile.fullName ||
-    formData.phoneNumber !== savedProfile.phoneNumber ||
-    formData.address !== savedProfile.address;
+  const hasChanges = useMemo(
+    () =>
+      formData.fullName !== savedProfile.fullName ||
+      formData.phoneNumber !== savedProfile.phoneNumber ||
+      formData.address !== savedProfile.address,
+    [
+      formData.address,
+      formData.fullName,
+      formData.phoneNumber,
+      savedProfile.address,
+      savedProfile.fullName,
+      savedProfile.phoneNumber,
+    ],
+  );
 
   const handleSave = async () => {
     if (!formData.fullName.trim()) {
@@ -107,7 +203,7 @@ export default function ProfilePage() {
         throw new Error(result.message || "Failed to save profile.");
       }
 
-      const refreshedProfile = await loadProfile(user.email);
+      const refreshedProfile = await loadProfile(user.email, { force: true });
       const nextFormData = {
         fullName: refreshedProfile?.name || formData.fullName.trim(),
         email: user.email || "",
@@ -118,13 +214,20 @@ export default function ProfilePage() {
 
       setFormData(nextFormData);
       setSavedProfile(nextFormData);
+      clearDraftProfile();
       toast.success("Profile updated successfully.");
 
       const pending = localStorage.getItem("fcr-pending-booking");
       if (pending) {
-        localStorage.removeItem("fcr-pending-booking");
+        clearPendingRedirect();
+        closeProfile();
         window.dispatchEvent(new Event("resume-pending-booking"));
-        router.push("/");
+
+        if (window.history.length > 1) {
+          router.back();
+        } else {
+          router.push("/");
+        }
       }
     } catch (error) {
       console.error(error);
@@ -146,16 +249,26 @@ export default function ProfilePage() {
     <main className="min-h-[70vh] px-4 py-16 text-white md:px-6 lg:px-8">
       <div className="mx-auto flex max-w-2xl justify-center">
         <div className="w-full rounded-2xl border border-white/10 bg-black/60 p-6 shadow-[0_40px_120px_rgba(0,0,0,0.55)] backdrop-blur-xl sm:p-8 lg:p-10">
-          <div className="mb-8 space-y-2 text-center sm:text-left">
-            <p className="text-sm uppercase tracking-[0.35em] text-[#F5A623]">
-              Account Settings
-            </p>
-            <h1 className="text-3xl font-semibold text-white sm:text-4xl">
-              Your Profile
-            </h1>
-            <p className="text-sm text-zinc-400 sm:text-base">
-              Keep your account details up to date for rentals and bookings.
-            </p>
+          <div className="mb-8 flex items-start justify-between gap-4">
+            <div className="space-y-2 text-center sm:text-left">
+              <p className="text-sm uppercase tracking-[0.35em] text-[#F5A623]">
+                Account Settings
+              </p>
+              <h1 className="text-3xl font-semibold text-white sm:text-4xl">
+                Your Profile
+              </h1>
+              <p className="text-sm text-zinc-400 sm:text-base">
+                Keep your account details up to date for rentals and bookings.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handleClose}
+              aria-label="Close profile"
+              className="rounded-full border border-white/10 p-2 text-zinc-400 transition hover:bg-white/10 hover:text-white cursor-pointer"
+            >
+              <X size={18} />
+            </button>
           </div>
 
           <div className="space-y-3">

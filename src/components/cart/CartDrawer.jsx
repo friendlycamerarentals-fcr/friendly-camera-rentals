@@ -2,42 +2,76 @@
 
 import Image from "next/image";
 import { toast } from "sonner";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { FaWhatsapp } from "react-icons/fa";
 import { FiShoppingBag, FiX, FiArrowRight, FiArrowLeft } from "react-icons/fi";
 import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
+import { useBookingFlow } from "@/context/BookingFlowContext";
 import CartItem from "./CartItem";
-import LoginModal from "@/components/auth/LoginModal";
 
 const fieldCls =
   "w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-white text-sm " +
   "placeholder:text-zinc-500 outline-none transition-colors duration-200 " +
   "focus:border-amber-400/60 focus:bg-white/8 hover:border-white/20";
 
+const BOOKING_DRAFT_KEY = "fcr-booking-draft";
+const PROFILE_REDIRECT_SOURCE_KEY = "fcr-profile-redirect-source";
+
+const readBookingDraft = () => {
+  if (typeof window === "undefined") return null;
+
+  try {
+    const draft = window.sessionStorage.getItem(BOOKING_DRAFT_KEY);
+    return draft ? JSON.parse(draft) : null;
+  } catch {
+    return null;
+  }
+};
+
+const persistBookingDraft = (data, step) => {
+  if (typeof window === "undefined") return;
+  window.sessionStorage.setItem(
+    BOOKING_DRAFT_KEY,
+    JSON.stringify({ data, step }),
+  );
+};
+
+const clearBookingDraft = () => {
+  if (typeof window === "undefined") return;
+  window.sessionStorage.removeItem(BOOKING_DRAFT_KEY);
+};
+
 export default function CartDrawer({ open, onClose }) {
   const { cart, removeFromCart, clearCart } = useCart();
   const { user, profile, profileComplete } = useAuth();
+  const { openProfile, closeProfile, completePendingBooking } =
+    useBookingFlow();
   const router = useRouter();
+  const pathname = usePathname();
 
   const userEmail = user?.email || "";
 
   const [showBookingForm, setShowBookingForm] = useState(false);
-  const [showLogin, setShowLogin] = useState(false);
   const [pendingBooking, setPendingBooking] = useState(false);
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(() => readBookingDraft()?.step || 1);
 
-  const [bookingData, setBookingData] = useState({
-    fullName: "",
-    phone: "",
-    address: "",
-    bookingDate: "",
-    pickupTime: "",
-    notes: "",
-    idProofConfirmed: false,
+  const [bookingData, setBookingData] = useState(() => {
+    const storedDraft = readBookingDraft();
+    return (
+      storedDraft?.data || {
+        fullName: "",
+        phone: "",
+        address: "",
+        bookingDate: "",
+        pickupTime: "",
+        notes: "",
+        idProofConfirmed: false,
+      }
+    );
   });
 
   const total = useMemo(
@@ -45,18 +79,36 @@ export default function CartDrawer({ open, onClose }) {
     [cart],
   );
 
-  const showDrawer = open && !showBookingForm && !showLogin;
+  const showDrawer = open && !showBookingForm;
 
-  const handleField = (field) => (e) =>
-    setBookingData((prev) => ({ ...prev, [field]: e.target.value }));
+  const persistDraft = (nextData, nextStep) => {
+    persistBookingDraft(nextData, nextStep);
+  };
+
+  const handleField = (field) => (e) => {
+    const nextValue = e.target.value;
+    setBookingData((prev) => {
+      const nextData = { ...prev, [field]: nextValue };
+      persistDraft(nextData, step);
+      return nextData;
+    });
+  };
 
   const handlePhone = (e) => {
     const digits = e.target.value.replace(/\D/g, "").slice(0, 10);
-    setBookingData((prev) => ({ ...prev, phone: digits }));
+    setBookingData((prev) => {
+      const nextData = { ...prev, phone: digits };
+      persistDraft(nextData, step);
+      return nextData;
+    });
   };
 
   const handleIdProofToggle = (e) => {
-    setBookingData((prev) => ({ ...prev, idProofConfirmed: e.target.checked }));
+    setBookingData((prev) => {
+      const nextData = { ...prev, idProofConfirmed: e.target.checked };
+      persistDraft(nextData, step);
+      return nextData;
+    });
   };
 
   const resetForm = () => {
@@ -70,51 +122,129 @@ export default function CartDrawer({ open, onClose }) {
       idProofConfirmed: false,
     });
     setStep(1);
+    clearBookingDraft();
   };
 
-  // Resume booking if user completed profile elsewhere
+  const redirectToProfile = useCallback(() => {
+    if (typeof window !== "undefined") {
+      const existingPending = localStorage.getItem("fcr-pending-booking");
+      if (!existingPending) {
+        localStorage.setItem("fcr-pending-booking", "1");
+      }
+      window.sessionStorage.setItem(
+        PROFILE_REDIRECT_SOURCE_KEY,
+        "booking-flow",
+      );
+    }
+
+    setPendingBooking(true);
+    setShowBookingForm(false);
+    setStep(1);
+    onClose?.();
+
+    if (pathname === "/profile") {
+      return;
+    }
+
+    openProfile({ restoreCartAfterProfile: true, pending: true });
+    if (pathname !== "/profile") {
+      router.push("/profile");
+    }
+  }, [onClose, pathname, router, openProfile]);
+
+  useEffect(() => {
+    if (showBookingForm) {
+      persistDraft(bookingData, step);
+    }
+  }, [bookingData, showBookingForm, step]);
+
   useEffect(() => {
     const handleResume = () => {
       if (!user) {
         setPendingBooking(true);
-        setShowLogin(true);
+        localStorage.setItem("fcr-pending-booking", "1");
+        window.dispatchEvent(new Event("open-login-modal"));
         return;
       }
+
+      const hasPendingBooking = Boolean(
+        typeof window !== "undefined" &&
+        localStorage.getItem("fcr-pending-booking"),
+      );
+
+      if (hasPendingBooking) {
+        localStorage.removeItem("fcr-pending-booking");
+      }
+
       if (!profileComplete) {
-        router.push("/profile");
+        redirectToProfile();
         return;
       }
 
       setBookingData((prev) => ({
         ...prev,
-        fullName: profile.name || prev.fullName,
-        phone: profile.phoneNumber || prev.phone,
-        address: profile.address || prev.address,
+        fullName: profile?.name || prev.fullName,
+        phone: profile?.phoneNumber || prev.phone,
+        address: profile?.address || prev.address,
       }));
-      setStep(1);
+      setStep((prevStep) => prevStep || 1);
       setShowBookingForm(true);
+      onClose?.();
     };
 
     window.addEventListener("resume-pending-booking", handleResume);
     return () =>
       window.removeEventListener("resume-pending-booking", handleResume);
-  }, [user, profile, profileComplete, router]);
+  }, [user, profile, profileComplete, router, onClose, redirectToProfile]);
+
+  useEffect(() => {
+    const pendingAction = localStorage.getItem("fcr-pending-booking");
+    if (!pendingAction || !user) {
+      return;
+    }
+
+    localStorage.removeItem("fcr-pending-booking");
+
+    const timeoutId = window.setTimeout(() => {
+      if (!profileComplete) {
+        redirectToProfile();
+        return;
+      }
+
+      const storedDraft = readBookingDraft();
+      if (storedDraft?.data) {
+        setBookingData((prev) => ({
+          ...prev,
+          fullName:
+            profile.name || prev.fullName || storedDraft.data.fullName || "",
+          phone:
+            profile.phoneNumber || prev.phone || storedDraft.data.phone || "",
+          address:
+            profile.address || prev.address || storedDraft.data.address || "",
+        }));
+      }
+
+      setStep((prevStep) => prevStep || storedDraft?.step || 1);
+      setShowBookingForm(true);
+      onClose?.();
+    }, 0);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [user, profile, profileComplete, onClose, router, redirectToProfile]);
 
   const handleBookingStart = () => {
     if (!user) {
       setPendingBooking(true);
-      setShowLogin(true);
+      localStorage.setItem("fcr-pending-booking", "1");
+      window.dispatchEvent(new Event("open-login-modal"));
       return;
     }
 
     if (!profileComplete) {
-      // Preserve cart and indicate pending booking flow
-      setPendingBooking(true);
-      localStorage.setItem("fcr-pending-booking", "1");
+      redirectToProfile();
       toast.error(
         "Please complete your profile before continuing with your booking.",
       );
-      router.push("/profile");
       return;
     }
 
@@ -128,37 +258,10 @@ export default function CartDrawer({ open, onClose }) {
     setShowBookingForm(true);
   };
 
-  const closeLogin = () => {
-    setShowLogin(false);
-    setPendingBooking(false);
-  };
-
-  const handleLoginSuccess = () => {
-    setShowLogin(false);
-    if (pendingBooking) {
-      setPendingBooking(false);
-      // If profile is incomplete, redirect to profile page where
-      // after saving the profile the user will be routed back.
-      if (!profileComplete) {
-        toast.error("Complete your profile before booking.");
-        router.push("/profile");
-        return;
-      }
-
-      setBookingData((prev) => ({
-        ...prev,
-        fullName: profile.name || prev.fullName,
-        phone: profile.phoneNumber || prev.phone,
-        address: profile.address || prev.address,
-      }));
-      setStep(1);
-      setShowBookingForm(true);
-    }
-  };
-
   const closeBookingForm = () => {
     setShowBookingForm(false);
     setStep(1);
+    clearBookingDraft();
   };
 
   const handleNext = () => {
@@ -289,6 +392,118 @@ export default function CartDrawer({ open, onClose }) {
     };
   }, [open]);
 
+  // Cross-browser date input that shows a placeholder on mobile
+  const DateInput = ({ value, onChange, min }) => {
+    const ref = useCallback(
+      (node) => {
+        if (!node) return;
+        // Ensure correct initial type depending on value
+        try {
+          node.type = value ? "date" : "text";
+        } catch (e) {}
+      },
+      [value],
+    );
+
+    const handleFocus = (e) => {
+      const el = e.target;
+      try {
+        el.type = "date";
+        // modern browsers expose showPicker
+        if (typeof el.showPicker === "function") el.showPicker();
+      } catch (err) {}
+    };
+
+    const handleBlur = (e) => {
+      const el = e.target;
+      // revert to text only if empty to show placeholder cross-browser
+      if (!el.value) {
+        try {
+          el.type = "text";
+        } catch (err) {}
+      }
+    };
+
+    const displayValue = value
+      ? new Date(value).toLocaleDateString("en-IN", {
+          day: "2-digit",
+          month: "short",
+          year: "numeric",
+        })
+      : "";
+
+    return (
+      <input
+        ref={ref}
+        type={value ? "date" : "text"}
+        value={value ? value : displayValue}
+        onFocus={handleFocus}
+        onBlur={handleBlur}
+        onChange={(e) => {
+          // if input is text and user typed into the text field, ignore
+          // normal path: native date control will emit yyyy-mm-dd
+          const val = e.target.value;
+          // if the element type is date, val will be in yyyy-mm-dd
+          // if it's text (user hasn't picked), don't call onChange with formatted text
+          if (e.target.type === "date") {
+            onChange({ target: { value: val } });
+          }
+        }}
+        min={min}
+        placeholder="Select Booking Date"
+        className={`${fieldCls} booking-field`}
+        aria-label="Booking date"
+      />
+    );
+  };
+
+  const TimeInput = ({ value, onChange }) => {
+    const ref = useCallback(
+      (node) => {
+        if (!node) return;
+        try {
+          node.type = value ? "time" : "text";
+        } catch (e) {}
+      },
+      [value],
+    );
+
+    const handleFocus = (e) => {
+      const el = e.target;
+      try {
+        el.type = "time";
+        if (typeof el.showPicker === "function") el.showPicker();
+      } catch (err) {}
+    };
+
+    const handleBlur = (e) => {
+      const el = e.target;
+      if (!el.value) {
+        try {
+          el.type = "text";
+        } catch (err) {}
+      }
+    };
+
+    return (
+      <input
+        ref={ref}
+        type={value ? "time" : "text"}
+        value={value || ""}
+        onFocus={handleFocus}
+        onBlur={handleBlur}
+        onChange={(e) => {
+          if (e.target.type === "time") {
+            onChange({ target: { value: e.target.value } });
+          }
+        }}
+        placeholder="Select Pickup Time"
+        className={`${fieldCls} booking-field`}
+        aria-label="Pickup time"
+      />
+    );
+  };
+
   // ✅ Booking modal rendered via Portal — completely outside parent DOM tree
   const bookingModal = showBookingForm
     ? createPortal(
@@ -370,28 +585,24 @@ export default function CartDrawer({ open, onClose }) {
                       collection.
                     </p>
                     <div className="space-y-4">
-                      <div className="grid grid-cols-2 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div className="space-y-1.5">
                           <label className="text-xs font-medium uppercase tracking-wider text-zinc-400">
                             Booking Date
                           </label>
-                          <input
-                            type="date"
+                          <DateInput
                             value={bookingData.bookingDate}
                             min={new Date().toISOString().split("T")[0]}
                             onChange={handleField("bookingDate")}
-                            className={fieldCls}
                           />
                         </div>
                         <div className="space-y-1.5">
                           <label className="text-xs font-medium uppercase tracking-wider text-zinc-400">
                             Pickup Time
                           </label>
-                          <input
-                            type="time"
+                          <TimeInput
                             value={bookingData.pickupTime}
                             onChange={handleField("pickupTime")}
-                            className={fieldCls}
                           />
                         </div>
                       </div>
@@ -540,12 +751,11 @@ export default function CartDrawer({ open, onClose }) {
                           <span className="mt-0.5 text-lg text-emerald-300">
                             ✓
                           </span>
-                          <p className="text-sm text-zinc-200">
-                            Accepted
-                          </p>
+                          <p className="text-sm text-zinc-200">Accepted</p>
                         </div>
                         <p className="mt-2 text-sm text-zinc-400">
-                          I agree to bring a valid ID Proof during equipment pickup.
+                          I agree to bring a valid ID Proof during equipment
+                          pickup.
                         </p>
                       </div>
                     </div>
@@ -582,7 +792,10 @@ export default function CartDrawer({ open, onClose }) {
                                       {item.name}
                                     </p>
                                     <p className="mt-1 text-xs text-zinc-500">
-                                      Rental Duration: <span className="text-amber-400">{item.duration}</span>
+                                      Rental Duration:{" "}
+                                      <span className="text-amber-400">
+                                        {item.duration}
+                                      </span>
                                     </p>
                                   </div>
                                 </div>
@@ -590,7 +803,6 @@ export default function CartDrawer({ open, onClose }) {
                                   ₹{lineTotal.toLocaleString("en-IN")}
                                 </p>
                               </div>
-                              
                             </div>
                           );
                         })}
@@ -620,7 +832,11 @@ export default function CartDrawer({ open, onClose }) {
                       onClick={handleWhatsApp}
                       className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-amber-400 py-3.5 px-2 text-sm font-semibold text-black transition hover:bg-amber-300 active:scale-[0.98] cursor-pointer"
                     >
-                      <FaWhatsapp size={24}  className="text-green-500 font-extrabold" /> Continue to WhatsApp
+                      <FaWhatsapp
+                        size={24}
+                        className="text-green-500 font-extrabold"
+                      />{" "}
+                      Continue to WhatsApp
                     </button>
                   </div>
                 </>
@@ -721,15 +937,6 @@ export default function CartDrawer({ open, onClose }) {
 
       {/* ✅ Portal-rendered booking modal — outside parent DOM entirely */}
       {bookingModal}
-
-      {showLogin && (
-        <LoginModal
-          key="login-modal"
-          open={showLogin}
-          onClose={closeLogin}
-          onLoginSuccess={handleLoginSuccess}
-        />
-      )}
     </>
   );
 }

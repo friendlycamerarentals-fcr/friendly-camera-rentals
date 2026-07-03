@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { FcGoogle } from "react-icons/fc";
 import { X, Mail } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
@@ -9,6 +9,8 @@ import { useAuth } from "@/context/AuthContext";
 
 export default function LoginModal({ open, onClose, onLoginSuccess }) {
   const { login } = useAuth();
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   // Lock body scroll while modal is open
   useEffect(() => {
@@ -18,14 +20,44 @@ export default function LoginModal({ open, onClose, onLoginSuccess }) {
     };
   }, [open]);
 
+  const handleClose = () => {
+    setIsLoggingIn(false);
+    setErrorMessage("");
+    onClose?.();
+  };
+
   const handleLogin = async () => {
+    if (isLoggingIn) return;
+
+    setErrorMessage("");
+    setIsLoggingIn(true);
+
+    const timeoutId = setTimeout(() => {
+      setIsLoggingIn(false);
+      setErrorMessage("Login request timed out. Please try again.");
+      toast.error("Login request timed out. Please try again.");
+    }, 15000);
+
     try {
       const result = await login();
-      // ensure any pending booking flow resumes
+      clearTimeout(timeoutId);
       onLoginSuccess?.(result?.user || null);
     } catch (error) {
+      clearTimeout(timeoutId);
       console.error("Login failed:", error);
-      toast.error("Login failed. Please try again.");
+
+      if (error.code === "auth/cancelled-popup-request") {
+        setErrorMessage("Login popup was cancelled. Please try again.");
+        toast.error("Login cancelled. Please try again.");
+      } else if (error.message === "Login already in progress") {
+        setErrorMessage("A login is already in progress. Please wait.");
+        toast.error("A login is already in progress. Please wait.");
+      } else {
+        setErrorMessage("Login failed. Please try again.");
+        toast.error("Login failed. Please try again.");
+      }
+    } finally {
+      setIsLoggingIn(false);
     }
   };
 
@@ -38,7 +70,7 @@ export default function LoginModal({ open, onClose, onLoginSuccess }) {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          onClick={onClose}
+          onClick={handleClose}
           style={{ position: "fixed", inset: 0 }}
           className="z-[1000] flex min-h-screen w-screen items-center justify-center bg-black/75 backdrop-blur-sm p-4"
         >
@@ -56,7 +88,7 @@ export default function LoginModal({ open, onClose, onLoginSuccess }) {
               <div className="mb-2 flex items-center justify-between">
                 <h2 className="text-2xl font-bold text-white">Login to FCR</h2>
                 <button
-                  onClick={onClose}
+                  onClick={handleClose}
                   aria-label="Close"
                   className="cursor-pointer rounded-full p-2 text-zinc-400 transition hover:bg-white/10 hover:text-white"
                 >
@@ -71,10 +103,11 @@ export default function LoginModal({ open, onClose, onLoginSuccess }) {
               {/* Google */}
               <button
                 onClick={handleLogin}
-                className="mb-3 flex w-full cursor-pointer items-center justify-center gap-3 rounded-2xl bg-white py-4 font-medium text-black shadow-md transition hover:bg-zinc-100 active:scale-[0.98]"
+                disabled={isLoggingIn}
+                className="mb-3 flex w-full cursor-pointer items-center justify-center gap-3 rounded-2xl bg-white py-4 font-medium text-black shadow-md transition hover:bg-zinc-100 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-70"
               >
                 <FcGoogle size={22} />
-                Continue with Google
+                {isLoggingIn ? "Signing in..." : "Continue with Google"}
               </button>
 
               {/* Email coming soon */}
@@ -85,6 +118,10 @@ export default function LoginModal({ open, onClose, onLoginSuccess }) {
                 <Mail size={18} />
                 Login with Email and Password (Coming Soon)
               </button>
+
+              {errorMessage && (
+                <p className="mb-4 text-sm text-red-400">{errorMessage}</p>
+              )}
 
               {/* Footer */}
               <p className="mt-6 text-center text-xs text-zinc-600">

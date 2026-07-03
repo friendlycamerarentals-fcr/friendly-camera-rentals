@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { getNextCustomerId } from "@/lib/customerId";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -35,6 +36,18 @@ export async function POST(request) {
   try {
     const body = await request.json();
 
+    if (!body?.email) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Email is required",
+        },
+        {
+          status: 400,
+        },
+      );
+    }
+
     const existingCustomer = await prisma.customer.findUnique({
       where: {
         email: body.email,
@@ -42,7 +55,6 @@ export async function POST(request) {
     });
 
     if (existingCustomer) {
-      // Sync customer details and preserve existing profile data
       const updatedCustomer = await prisma.customer.update({
         where: {
           email: body.email,
@@ -50,31 +62,23 @@ export async function POST(request) {
         data: {
           name: body.name || existingCustomer.name,
           profileImage: body.profileImage || existingCustomer.profileImage,
+          phoneNumber: body.phoneNumber || existingCustomer.phoneNumber || "",
+          address: body.address || existingCustomer.address || "",
         },
       });
 
-      return NextResponse.json({
-        success: true,
-        data: updatedCustomer,
-      });
+      return NextResponse.json(
+        {
+          success: true,
+          data: updatedCustomer,
+        },
+        {
+          status: 200,
+        },
+      );
     }
 
-    // Determine the next sequential Customer ID to avoid collisions
-    const lastCustomer = await prisma.customer.findFirst({
-      orderBy: {
-        createdAt: "desc",
-      },
-    });
-
-    let nextNumber = 100001;
-    if (lastCustomer && lastCustomer.customerId) {
-      const match = lastCustomer.customerId.match(/RCR-C(\d+)/);
-      if (match) {
-        nextNumber = parseInt(match[1], 10) + 1;
-      }
-    }
-
-    const customerId = `RCR-C${nextNumber}`;
+    const customerId = await getNextCustomerId(prisma);
 
     const customer = await prisma.customer.create({
       data: {

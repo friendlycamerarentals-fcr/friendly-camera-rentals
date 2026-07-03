@@ -292,24 +292,7 @@ export default function ProductDetails({ product }) {
                 {product.name}
               </h1>
 
-              {/* Rating */}
-              <div className="mt-2 flex items-center gap-2">
-                <div className="flex">
-                  {[1, 2, 3, 4, 5].map((s) => (
-                    <span
-                      key={s}
-                      className={`text-sm ${s <= Math.round(product.rating ?? 5) ? "text-amber-400" : "text-zinc-600"}`}
-                    >
-                      ★
-                    </span>
-                  ))}
-                </div>
-                <span className="text-xs text-zinc-400">
-                  {product.rating ?? "4.9"} ({product.reviewCount ?? "120"}{" "}
-                  Reviews)
-                </span>
-              </div>
-
+              
               <div className="mt-4 border-t border-white/10" />
 
               {/* Specs */}

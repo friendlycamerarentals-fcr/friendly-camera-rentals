@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { getNextCustomerId } from "@/lib/customerId";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -50,18 +51,7 @@ export async function PUT(request) {
       );
     }
 
-    // Ensure new customers get sequential RCR-C IDs matching customers route
-    const lastCustomer = await prisma.customer.findFirst({
-      orderBy: { createdAt: "desc" },
-    });
-
-    let nextNumber = 100001;
-    if (lastCustomer && lastCustomer.customerId) {
-      const match = lastCustomer.customerId.match(/RCR-C(\d+)/);
-      if (match) nextNumber = parseInt(match[1], 10) + 1;
-    }
-
-    const customerId = `RCR-C${nextNumber}`;
+    const customerId = await getNextCustomerId(prisma);
 
     const customer = await prisma.customer.upsert({
       where: { email },

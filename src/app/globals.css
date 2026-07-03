@@ -23,7 +23,6 @@ body {
   font-family: var(--font-cormorant);
 }
 
-
 /* Chrome, Safari, Edge */
 input[type="number"]::-webkit-outer-spin-button,
 input[type="number"]::-webkit-inner-spin-button {
@@ -49,4 +48,41 @@ input[type="time"]::-webkit-calendar-picker-indicator {
   filter: invert(1);
   cursor: pointer;
   opacity: 1;
+}
+
+/* Booking input cross-browser fixes */
+.booking-field {
+  min-width: 0; /* prevent overflow in flex/grid */
+  width: 100%;
+  min-height: 44px; /* touch-friendly */
+  text-align: left;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+/* Keep native picker icons visible and styled for webkit */
+input[type="date"].booking-field::-webkit-calendar-picker-indicator,
+input[type="time"].booking-field::-webkit-calendar-picker-indicator {
+  filter: invert(1) hue-rotate(180deg) brightness(1.1);
+  opacity: 1;
+  cursor: pointer;
+}
+
+/* iOS specific tweaks */
+input[type="date"].booking-field,
+input[type="time"].booking-field {
+  -webkit-appearance: textfield; /* avoid iOS overlapping styles */
+}
+
+/* ensure the editable datetime fields align text properly */
+input[type="date"]::-webkit-datetime-edit,
+input[type="time"]::-webkit-datetime-edit {
+  text-align: left;
+}
+
+/* Remove inner padding weirdness on Safari */
+input.booking-field::-webkit-inner-spin-button,
+input.booking-field::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }

@@ -3,6 +3,7 @@ import "./globals.css";
 import { Toaster } from "sonner";
 import { AuthProvider } from "@/context/AuthContext";
 import { CartProvider } from "@/context/CartContext";
+import { BookingFlowProvider } from "@/context/BookingFlowContext";
 import LoaderWrapper from "@/components/common/LoaderWrapper";
 import LayoutWrapper from "@/components/layout/LayoutWrapper";
 
@@ -36,17 +37,19 @@ export default function RootLayout({ children }) {
       >
         <AuthProvider>
           <CartProvider>
-            <LoaderWrapper>
-              <LayoutWrapper>{children}</LayoutWrapper>
+            <BookingFlowProvider>
+              <LoaderWrapper>
+                <LayoutWrapper>{children}</LayoutWrapper>
 
-              <Toaster
-                position="top-center"
-                richColors
-                closeButton
-                duration={3000}
-                theme="dark"
-              />
-            </LoaderWrapper>
+                <Toaster
+                  position="top-center"
+                  richColors
+                  closeButton
+                  duration={3000}
+                  theme="dark"
+                />
+              </LoaderWrapper>
+            </BookingFlowProvider>
           </CartProvider>
         </AuthProvider>
       </body>

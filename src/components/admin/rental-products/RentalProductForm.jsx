@@ -1,9 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import ImageUploader from "@/components/common/ImageUploader";
 import { uploadProductImages } from "@/lib/upload";
-import { separateImages } from "@/lib/imageUtils";
 
 const createPricingRow = () => ({
   id:
@@ -77,12 +76,77 @@ const formatPricingKey = ({ unit, duration }) => {
   return `${count}${count === 1 ? "week" : "weeks"}`;
 };
 
+const normalizeExistingImages = (initialData = {}) => {
+  const existingThumbnail = initialData.image?.trim();
+  const existingGallery = Array.isArray(initialData.images)
+    ? initialData.images.filter(Boolean)
+    : [];
+
+  const images = [];
+
+  if (existingThumbnail) {
+    images.push(existingThumbnail);
+  }
+
+  existingGallery.forEach((image) => {
+    const normalizedImage =
+      typeof image === "string" ? image.trim() : image?.url?.trim() || "";
+
+    if (normalizedImage) {
+      images.push(normalizedImage);
+    }
+  });
+
+  return images;
+};
+
+const splitImages = (imageItems = []) => {
+  const existingImages = [];
+  const newImages = [];
+
+  imageItems.forEach((image) => {
+    if (image && typeof image === "object" && image.file instanceof File) {
+      newImages.push(image);
+    } else if (image) {
+      existingImages.push(image);
+    }
+  });
+
+  return { existingImages, newImages };
+};
+
 export default function RentalProductForm({
   initialData = {},
   onSubmit,
   loading = false,
 }) {
-  const [images, setImages] = useState(initialData.images || []);
+  const [existingImages, setExistingImages] = useState(() =>
+    normalizeExistingImages(initialData),
+  );
+  const [newImages, setNewImages] = useState([]);
+
+  const combinedImages = useMemo(
+    () => [...existingImages, ...newImages],
+    [existingImages, newImages],
+  );
+
+  useEffect(() => {
+    setExistingImages(normalizeExistingImages(initialData));
+    setNewImages([]);
+  }, [initialData?.id, initialData?.image, initialData?.images]);
+
+  const setImageState = (updaterOrValue) => {
+    const nextImages =
+      typeof updaterOrValue === "function"
+        ? updaterOrValue(combinedImages)
+        : updaterOrValue;
+
+    const { existingImages: nextExistingImages, newImages: nextNewImages } =
+      splitImages(nextImages);
+
+    setExistingImages(nextExistingImages);
+    setNewImages(nextNewImages);
+  };
 
   const [formData, setFormData] = useState({
     name: initialData.name || "",
@@ -223,7 +287,21 @@ export default function RentalProductForm({
       return acc;
     }, {});
 
-    const uploadedImages = await uploadProductImages(images, "rental-products");
+    const mergedImages = [...existingImages, ...newImages];
+    console.log(
+      "Database images",
+      initialData?.image || "",
+      initialData?.images || [],
+    );
+    console.log("React images state", mergedImages);
+
+    const uploadedImages = await uploadProductImages(
+      mergedImages,
+      "rental-products",
+    );
+    const payloadImages = Array.isArray(uploadedImages) ? uploadedImages : [];
+
+    console.log("PUT payload images", payloadImages);
 
     onSubmit({
       ...formData,
@@ -232,8 +310,8 @@ export default function RentalProductForm({
         megapixels: formData.megapixels || "",
         batteries: Number(formData.batteries || 0),
       },
-      image: separateImages(uploadedImages).image,
-      images: separateImages(uploadedImages).images,
+      image: payloadImages[0] || "",
+      images: payloadImages.slice(1),
     });
   };
 
@@ -344,8 +422,8 @@ export default function RentalProductForm({
         </h2>
 
         <ImageUploader
-          images={images}
-          setImages={setImages}
+          images={combinedImages}
+          setImages={setImageState}
           maxFiles={10}
           folder="rental-products"
         />

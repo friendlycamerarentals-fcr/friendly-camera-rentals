@@ -2,15 +2,16 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { HiOutlineMenuAlt3, HiOutlineX } from "react-icons/hi";
 import { FaShoppingCart } from "react-icons/fa";
 import CartDrawer from "@/components/cart/CartDrawer";
 import ProfileAvatar from "@/components/common/ProfileAvatar";
 import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/context/AuthContext";
+import { useBookingFlow } from "@/context/BookingFlowContext";
 import LoginModal from "@/components/auth/LoginModal";
 
 const navLinks = [
@@ -23,15 +24,23 @@ const navLinks = [
 
 export default function Navbar() {
   const pathname = usePathname();
+  const router = useRouter();
   const { cart } = useCart();
   const { user, logout } = useAuth();
+  const {
+    isCartVisible,
+    isProfileVisible,
+    openCart,
+    closeCart,
+    openProfile,
+    closeProfile,
+  } = useBookingFlow();
 
   const [showLogin, setShowLogin] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
-  const [isCartOpen, setIsCartOpen] = useState(false);
 
   // Each item is qty 1
-  const cartCount = cart.length;
+  const cartCount = useMemo(() => cart.length, [cart.length]);
 
   // ── Auth loading state ──────────────────────────────────────────────────
   // Firebase/auth context may return undefined while resolving the session.
@@ -59,23 +68,73 @@ export default function Navbar() {
     return () => clearTimeout(timer);
   }, [user, isAuthLoading]);
 
+  const handleOpenCart = useCallback(() => {
+    setIsOpen(false);
+    openCart();
+  }, [openCart]);
+
+  const handleCloseCart = useCallback(() => {
+    closeCart();
+  }, [closeCart]);
+
   // Listen for resume booking events and open cart
   useEffect(() => {
     const resumeListener = () => openCart();
+    const openLoginListener = () => {
+      closeCart();
+      setShowLogin(true);
+    };
+    const openCartListener = () => openCart();
+
     window.addEventListener("resume-pending-booking", resumeListener);
-    return () =>
+    window.addEventListener("open-login-modal", openLoginListener);
+    window.addEventListener("open-cart-drawer", openCartListener);
+
+    return () => {
       window.removeEventListener("resume-pending-booking", resumeListener);
+      window.removeEventListener("open-login-modal", openLoginListener);
+      window.removeEventListener("open-cart-drawer", openCartListener);
+    };
+  }, [openCart, closeCart]);
+
+  const handleOpenLogin = useCallback(() => {
+    if (isCartVisible) {
+      closeCart();
+    }
+    setShowLogin(true);
+    setIsOpen(false);
+  }, [closeCart, isCartVisible]);
+
+  const handleCloseLogin = useCallback(() => {
+    setShowLogin(false);
   }, []);
 
-  const openCart = () => {
-    setIsCartOpen(true);
-    window.dispatchEvent(new Event("cart-open"));
-  };
+  const handleLoginSuccess = useCallback(() => {
+    setShowLogin(false);
+    if (localStorage.getItem("fcr-pending-booking")) {
+      window.dispatchEvent(new Event("resume-pending-booking"));
+    }
+  }, []);
 
-  const closeCart = () => {
-    setIsCartOpen(false);
-    window.dispatchEvent(new Event("cart-close"));
-  };
+  const handleOpenProfile = useCallback(() => {
+    if (pathname === "/profile" || isProfileVisible) return;
+
+    if (isCartVisible) {
+      closeCart();
+    }
+    setIsOpen(false);
+    openProfile({ restoreCartAfterProfile: false });
+    if (pathname !== "/profile") {
+      router.push("/profile");
+    }
+  }, [
+    closeCart,
+    isCartVisible,
+    isProfileVisible,
+    openProfile,
+    pathname,
+    router,
+  ]);
 
   return (
     <motion.header
@@ -141,11 +200,17 @@ export default function Navbar() {
         <div className="hidden items-center gap-4 md:flex">
           {user ? (
             <div className="flex items-center gap-3">
-              <ProfileAvatar
-                src={user.photoURL}
-                alt={user.displayName || "User"}
-                size={40}
-              />
+              <button
+                type="button"
+                onClick={handleOpenProfile}
+                className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F5A623] focus-visible:ring-offset-2 focus-visible:ring-offset-black"
+              >
+                <ProfileAvatar
+                  src={user.photoURL}
+                  alt={user.displayName || "User"}
+                  size={40}
+                />
+              </button>
               <button
                 onClick={logout}
                 className="cursor-pointer rounded-full border border-red-500/20 px-4 py-2 text-red-400 transition hover:bg-red-500/10"
@@ -155,7 +220,7 @@ export default function Navbar() {
             </div>
           ) : (
             <button
-              onClick={() => setShowLogin(true)}
+              onClick={handleOpenLogin}
               className="cursor-pointer rounded-full border border-white/10 px-5 py-3 text-white transition hover:border-[#F5A623] hover:text-[#F5A623]"
             >
               Login
@@ -164,7 +229,7 @@ export default function Navbar() {
 
           {/* Cart */}
           <button
-            onClick={openCart}
+            onClick={handleOpenCart}
             aria-label={
               cartCount > 0
                 ? `Open cart, ${cartCount} item${cartCount !== 1 ? "s" : ""}`
@@ -198,18 +263,21 @@ export default function Navbar() {
         <div className="flex items-center gap-2 md:hidden">
           {/* Profile avatar or Login button */}
           {user ? (
-            <ProfileAvatar
-              src={user.photoURL}
-              alt={user.displayName || "User"}
-              size={36}
-            />
+            <button
+              type="button"
+              onClick={handleOpenProfile}
+              className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F5A623] focus-visible:ring-offset-2 focus-visible:ring-offset-black cursor-pointer"
+            >
+              <ProfileAvatar
+                src={user.photoURL}
+                alt={user.displayName || "User"}
+                size={36}
+              />
+            </button>
           ) : (
             <button
-              onClick={() => {
-                setShowLogin(true);
-                setIsOpen(false);
-              }}
-              className="cursor-pointer rounded-full border border-white/10 px-3 py-1.5 text-sm text-white transition hover:border-[#F5A623] hover:text-[#F5A623]"
+              onClick={handleOpenLogin}
+              className="cursor-pointer rounded-full border border-white/10 px-3 py-1.5 text-sm text-white transition hover:border-[#F5A623] hover:text-[#F5A623] cursor-pointer"
             >
               Login
             </button>
@@ -217,7 +285,7 @@ export default function Navbar() {
 
           {/* Cart */}
           <button
-            onClick={openCart}
+            onClick={handleOpenCart}
             aria-label={
               cartCount > 0
                 ? `Open cart, ${cartCount} item${cartCount !== 1 ? "s" : ""}`
@@ -323,10 +391,7 @@ export default function Navbar() {
                 </div>
               ) : (
                 <button
-                  onClick={() => {
-                    setShowLogin(true);
-                    setIsOpen(false);
-                  }}
+                  onClick={handleOpenLogin}
                   className="w-full cursor-pointer rounded-2xl border border-white/10 py-3 text-center text-base font-medium text-white transition hover:border-[#F5A623] hover:text-[#F5A623]"
                 >
                   Login
@@ -347,10 +412,14 @@ export default function Navbar() {
       </AnimatePresence>
 
       {/* CartDrawer */}
-      <CartDrawer open={isCartOpen} onClose={closeCart} />
+      <CartDrawer open={isCartVisible} onClose={handleCloseCart} />
 
       {/* LoginModal */}
-      <LoginModal open={showLogin} onClose={() => setShowLogin(false)} />
+      <LoginModal
+        open={showLogin}
+        onClose={handleCloseLogin}
+        onLoginSuccess={handleLoginSuccess}
+      />
     </motion.header>
   );
 }
