@@ -1,102 +1,74 @@
 import { NextResponse } from "next/server";
-import prisma from "@/lib/prisma";
+import { createId } from "@paralleldrive/cuid2";
+import { query } from "@/db/query";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-/*
-|--------------------------------------------------------------------------
-| GET ALL SELL REQUESTS
-|--------------------------------------------------------------------------
-*/
 export async function GET() {
   try {
-    const requests = await prisma.sellRequest.findMany({
-      orderBy: {
-        createdAt: "desc",
-      },
-    });
-
-    return NextResponse.json({
-      success: true,
-      data: requests,
-    });
+    const requests = await query(
+      'SELECT * FROM "SellRequest" ORDER BY "createdAt" DESC',
+    );
+    return NextResponse.json({ success: true, data: requests });
   } catch (error) {
     console.error("[SELL_REQUESTS_GET]", error);
-
     return NextResponse.json(
-      {
-        success: false,
-        message: "Failed to fetch sell requests",
-      },
-      {
-        status: 500,
-      },
+      { success: false, message: "Failed to fetch sell requests" },
+      { status: 500 },
     );
   }
 }
 
-/*
-|--------------------------------------------------------------------------
-| CREATE SELL REQUEST
-|--------------------------------------------------------------------------
-*/
 export async function POST(request) {
   try {
     const body = await request.json();
 
-    const sellRequest = await prisma.sellRequest.create({
-      data: {
-        fullName: body.fullName,
-        mobile: body.mobile,
-        email: body.email || "",
-
-        city: body.city,
-
-        category: body.category,
-
-        brand: body.brand,
-        model: body.model,
-
-        purchaseYear: body.purchaseYear || "",
-
-        warrantyStatus: body.warrantyStatus || "",
-
-        expectedPrice: Number(body.expectedPrice || 0),
-
-        condition: body.condition,
-
-        accessories: body.accessories || "",
-
-        description: body.description || "",
-
-        images: body.images || [],
-
-        status: "pending",
-      },
-    });
+    const id = createId();
+    const rows = await query(
+      `INSERT INTO "SellRequest" (
+        "id", "fullName", "mobile", "email", "city", "category",
+        "brand", "model", "purchaseYear", "warrantyStatus",
+        "expectedPrice", "condition", "accessories", "description",
+        "images", "status"
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+      RETURNING *`,
+      [
+        id,
+        body.fullName,
+        body.mobile,
+        body.email || "",
+        body.city,
+        body.category,
+        body.brand,
+        body.model,
+        body.purchaseYear || "",
+        body.warrantyStatus || "",
+        Number(body.expectedPrice || 0),
+        body.condition,
+        body.accessories || "",
+        body.description || "",
+        body.images || [],
+        "pending",
+      ],
+    );
 
     return NextResponse.json(
       {
         success: true,
         message: "Sell request submitted successfully",
-        data: sellRequest,
+        data: rows[0],
       },
-      {
-        status: 201,
-      },
+      { status: 201 },
     );
   } catch (error) {
     console.error("[SELL_REQUEST_POST]", error);
-
     return NextResponse.json(
       {
         success: false,
         message: error.message || "Failed to submit sell request",
       },
-      {
-        status: 500,
-      },
+      { status: 500 },
     );
   }
 }

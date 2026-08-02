@@ -1,4 +1,3 @@
-import { Inter, Cormorant_Garamond } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "sonner";
 import { AuthProvider } from "@/context/AuthContext";
@@ -6,17 +5,7 @@ import { CartProvider } from "@/context/CartContext";
 import { BookingFlowProvider } from "@/context/BookingFlowContext";
 import LoaderWrapper from "@/components/common/LoaderWrapper";
 import LayoutWrapper from "@/components/layout/LayoutWrapper";
-
-const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-inter",
-});
-
-const cormorant = Cormorant_Garamond({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--font-cormorant",
-});
+import { initializeHeroMarqueeSchema } from "@/lib/heroMarquee";
 
 export const metadata = {
   title: "Friendly Camera Rentals",
@@ -29,12 +18,19 @@ export const metadata = {
   },
 };
 
-export default function RootLayout({ children }) {
+export default async function RootLayout({ children }) {
+  try {
+    await initializeHeroMarqueeSchema();
+  } catch (error) {
+    console.warn(
+      "[LAYOUT] Hero marquee schema bootstrap skipped",
+      error.message,
+    );
+  }
+
   return (
     <html lang="en">
-      <body
-        className={`${inter.variable} ${cormorant.variable} bg-black text-white antialiased`}
-      >
+      <body className="bg-black text-white antialiased">
         <AuthProvider>
           <CartProvider>
             <BookingFlowProvider>

@@ -34,10 +34,6 @@ Thumbs.db
 .vscode/
 .idea/
 
-# Prisma
-prisma/dev.db
-prisma/dev.db-journal
-
 # Testing
 /coverage/
 /.nyc_output/

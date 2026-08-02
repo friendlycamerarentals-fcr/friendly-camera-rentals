@@ -1,26 +1,43 @@
 @import "tailwindcss";
 
+@font-face {
+  font-family: "InterLocal";
+  src: url("/fonts/Arial.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "CormorantLocal";
+  src: url("/fonts/Palatino.ttc") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   --background: #000000;
   --foreground: #ffffff;
+  --font-sans: "InterLocal", Arial, Helvetica, sans-serif;
+  --font-heading: "CormorantLocal", "Palatino Linotype", Georgia, serif;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-
-  --font-sans: var(--font-inter);
-  --font-heading: var(--font-cormorant);
+  --font-sans: var(--font-sans);
+  --font-heading: var(--font-heading);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-inter);
+  font-family: var(--font-sans);
 }
 
 .font-heading {
-  font-family: var(--font-cormorant);
+  font-family: var(--font-heading);
 }
 
 /* Chrome, Safari, Edge */
@@ -58,6 +75,8 @@ input[type="time"]::-webkit-calendar-picker-indicator {
   text-align: left;
   -webkit-appearance: none;
   appearance: none;
+  cursor: pointer;
+  caret-color: transparent;
 }
 
 /* Keep native picker icons visible and styled for webkit */
@@ -85,4 +104,26 @@ input.booking-field::-webkit-inner-spin-button,
 input.booking-field::-webkit-outer-spin-button {
   -webkit-appearance: none;
   margin: 0;
+}
+
+/* Marquee animation */
+@keyframes marquee {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+.marquee-track {
+  width: max-content;
+  will-change: transform;
+  backface-visibility: hidden;
+  transform: translate3d(0, 0, 0);
+}
+
+.marquee-track:hover {
+  animation-play-state: paused;
 }

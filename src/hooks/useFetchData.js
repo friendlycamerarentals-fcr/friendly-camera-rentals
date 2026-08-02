@@ -1,5 +1,31 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import {
+  fetchJsonWithCache,
+  getCachedValue,
+  invalidateCachePrefix,
+} from "@/lib/dataCache";
+
+const normalizeData = (payload) => {
+  if (payload && typeof payload === "object" && "data" in payload) {
+    const nestedData = payload.data;
+    if (Array.isArray(nestedData)) {
+      return nestedData;
+    }
+
+    if (nestedData && typeof nestedData === "object") {
+      return nestedData;
+    }
+
+    return [];
+  }
+
+  if (Array.isArray(payload)) {
+    return payload;
+  }
+
+  return payload || [];
+};
 
 /**
  * Custom hook for fetching data with automatic refetch capability
@@ -13,25 +39,46 @@ import { toast } from "sonner";
  * @returns {object} - { data, loading, error, refetch }
  */
 export function useFetchData(url, options = {}) {
-  const { immediate = true, onSuccess = null, onError = null } = options;
+  const {
+    immediate = true,
+    onSuccess = null,
+    onError = null,
+    initialData = [],
+    cacheKey = url,
+    ttlMs = 30_000,
+  } = options;
 
-  const [data, setData] = useState([]);
-  const [loading, setLoading] = useState(immediate);
+  const [data, setData] = useState(() => {
+    const cachedValue = getCachedValue(cacheKey);
+    return cachedValue ? normalizeData(cachedValue) : initialData;
+  });
+  const [loading, setLoading] = useState(
+    immediate && !getCachedValue(cacheKey),
+  );
   const [error, setError] = useState(null);
   const abortControllerRef = useRef(null);
+  const latestCallbacksRef = useRef({ onSuccess, onError });
+
+  useEffect(() => {
+    latestCallbacksRef.current = { onSuccess, onError };
+  }, [onSuccess, onError]);
 
   /**
    * Fetch data from API
    */
   const fetchData = useCallback(
     async (showLoadingState = true) => {
-      // Cancel previous request if still pending
+      const cachedValue = getCachedValue(cacheKey);
+      if (cachedValue !== null && !showLoadingState) {
+        setData(normalizeData(cachedValue));
+        return;
+      }
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
       }
 
-      // Create new abort controller
-      abortControllerRef.current = new AbortController();
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
 
       try {
         if (showLoadingState) {
@@ -39,34 +86,37 @@ export function useFetchData(url, options = {}) {
         }
         setError(null);
 
-        const response = await fetch(url, {
-          signal: abortControllerRef.current.signal,
-          cache: "no-store",
-        });
+        const result = await fetchJsonWithCache(
+          url,
+          { signal: controller.signal },
+          { cacheKey, ttlMs },
+        );
 
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
+        if (!result.ok) {
+          throw new Error(result.error?.message || `HTTP ${result.status}`);
         }
 
-        const result = await response.json();
+        const payload = result.data;
 
-        if (result.success || Array.isArray(result.data)) {
-          const newData = Array.isArray(result.data)
-            ? result.data
-            : result.data || [];
-          setData(newData);
+        if (
+          payload &&
+          typeof payload === "object" &&
+          payload.success === false
+        ) {
+          throw new Error(payload.message || "Failed to fetch data");
+        }
 
-          if (onSuccess) {
-            onSuccess(newData);
-          }
-        } else {
-          throw new Error(result.message || "Failed to fetch data");
+        const newData = normalizeData(payload);
+        setData(newData);
+
+        if (latestCallbacksRef.current.onSuccess) {
+          latestCallbacksRef.current.onSuccess(newData);
         }
       } catch (err) {
         if (err.name !== "AbortError") {
           setError(err.message);
-          if (onError) {
-            onError(err);
+          if (latestCallbacksRef.current.onError) {
+            latestCallbacksRef.current.onError(err);
           }
         }
       } finally {
@@ -75,7 +125,7 @@ export function useFetchData(url, options = {}) {
         }
       }
     },
-    [url, onSuccess, onError],
+    [url, onSuccess, onError, cacheKey, ttlMs],
   );
 
   /**
@@ -95,20 +145,19 @@ export function useFetchData(url, options = {}) {
       fetchData(true);
     }
 
-    // Cleanup on unmount
     return () => {
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
       }
     };
-  }, [url, immediate, fetchData]);
+  }, [url, immediate, cacheKey, ttlMs]);
 
   return {
     data,
     loading,
     error,
     refetch,
-    setData, // For optimistic updates
+    setData,
   };
 }
 
@@ -155,11 +204,31 @@ export async function performCRUDOperation(
       toast.success(successMessage);
     }
 
+    if (url.includes("/api/buy-products")) {
+      invalidateCachePrefix("/api/buy-products");
+    }
+
+    if (url.includes("/api/rental-products")) {
+      invalidateCachePrefix("/api/rental-products");
+    }
+
+    if (url.includes("/api/services")) {
+      invalidateCachePrefix("/api/services");
+    }
+
+    if (url.includes("/api/testimonials")) {
+      invalidateCachePrefix("/api/testimonials");
+    }
+
+    if (url.includes("/api/profile")) {
+      invalidateCachePrefix("/api/profile");
+    }
+
     if (refetch) {
       if (refetchDelay > 0) {
         await new Promise((resolve) => setTimeout(resolve, refetchDelay));
       }
-      await refetch(false); // false = don't show loading state
+      await refetch(false);
     }
 
     return {
@@ -190,11 +259,9 @@ export function useOptimisticUpdate(data, setData, refetch) {
    */
   const optimisticUpdate = useCallback(
     async (updateFn, url, method, body, options = {}) => {
-      // Optimistic update
       const previousData = data;
       setData(updateFn(data));
 
-      // Sync with server
       try {
         const response = await fetch(url, {
           method,
@@ -205,12 +272,30 @@ export function useOptimisticUpdate(data, setData, refetch) {
         const result = await response.json();
 
         if (!response.ok || !result.success) {
-          // Revert on error
           setData(previousData);
           throw new Error(result.message || "Operation failed");
         }
 
-        // Refetch to ensure consistency
+        if (url.includes("/api/buy-products")) {
+          invalidateCachePrefix("/api/buy-products");
+        }
+
+        if (url.includes("/api/rental-products")) {
+          invalidateCachePrefix("/api/rental-products");
+        }
+
+        if (url.includes("/api/services")) {
+          invalidateCachePrefix("/api/services");
+        }
+
+        if (url.includes("/api/testimonials")) {
+          invalidateCachePrefix("/api/testimonials");
+        }
+
+        if (url.includes("/api/profile")) {
+          invalidateCachePrefix("/api/profile");
+        }
+
         if (refetch) {
           if (options.refetchDelay > 0) {
             await new Promise((resolve) =>
@@ -226,7 +311,6 @@ export function useOptimisticUpdate(data, setData, refetch) {
 
         return { success: true, error: null };
       } catch (error) {
-        // Already reverted, just show error
         if (options.showToast !== false) {
           toast.error(error.message || "Failed to update");
         }

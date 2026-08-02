@@ -1,5 +1,11 @@
 import { NextResponse } from "next/server";
-import prisma from "@/lib/prisma";
+import { createId } from "@paralleldrive/cuid2";
+import { query } from "@/db/query";
+import {
+  getCachedValue,
+  setCachedValue,
+  invalidateCachePrefix,
+} from "@/lib/dataCache";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -24,33 +30,51 @@ const normalizeStatus = (status) => {
   return status;
 };
 
-/*
-|--------------------------------------------------------------------------
-| GET ALL PRODUCTS
-|--------------------------------------------------------------------------
-*/
+const selectColumns = [
+  '"id"',
+  '"name"',
+  '"slug"',
+  '"brand"',
+  '"model"',
+  '"category"',
+  '"condition"',
+  '"warranty"',
+  '"status"',
+  '"description"',
+  '"price"',
+  '"image"',
+  '"images"',
+  '"specifications"',
+  '"accessories"',
+  '"display_order"',
+  '"createdAt"',
+  '"updatedAt"',
+];
+
 export async function GET() {
+  const cacheKey = "/api/buy-products";
+  const cachedPayload = getCachedValue(cacheKey);
+  if (cachedPayload !== null) {
+    return NextResponse.json(cachedPayload);
+  }
+
   try {
-    const products = await prisma.buyProduct.findMany({
-      orderBy: [
-        {
-          display_order: "asc",
-        },
-        {
-          createdAt: "desc",
-        },
-      ],
-    });
+    const products = await query(
+      `SELECT ${selectColumns.join(", ")} FROM "BuyProduct" ORDER BY "display_order" ASC, "createdAt" DESC`,
+    );
 
     const normalizedProducts = products.map((product) => ({
       ...product,
       status: normalizeStatus(product.status),
     }));
 
-    return NextResponse.json({
+    const payload = {
       success: true,
       data: normalizedProducts,
-    });
+    };
+
+    setCachedValue(cacheKey, payload, 30_000);
+    return NextResponse.json(payload);
   } catch (error) {
     console.error("[BUY_PRODUCTS_GET]", error);
 
@@ -66,60 +90,52 @@ export async function GET() {
   }
 }
 
-/*
-|--------------------------------------------------------------------------
-| CREATE PRODUCT
-|--------------------------------------------------------------------------
-*/
 export async function POST(request) {
   try {
     const body = await request.json();
 
-    // Get the highest display_order to set new product at the end
-    const lastProduct = await prisma.buyProduct.findFirst({
-      orderBy: {
-        display_order: "desc",
-      },
-      select: {
-        display_order: true,
-      },
-    });
+    const id = createId();
 
-    const nextDisplayOrder = (lastProduct?.display_order ?? -1) + 1;
+    // Use a single INSERT query with a CTE so there is no extra round-trip for the display order.
+    const rows = await query(
+      `WITH next_display AS (
+        SELECT COALESCE(MAX("display_order"), -1) + 1 AS "next_display_order"
+        FROM "BuyProduct"
+      )
+      INSERT INTO "BuyProduct" (
+        "id", "name", "slug", "brand", "model", "category",
+        "condition", "warranty", "status", "description",
+        "price", "image", "images", "specifications",
+        "accessories", "display_order"
+      )
+      SELECT $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, "next_display_order"
+      FROM next_display
+      RETURNING ${selectColumns.join(", ")}`,
+      [
+        id,
+        body.name,
+        body.slug,
+        body.brand,
+        body.model,
+        body.category,
+        body.condition || "",
+        body.warranty || "",
+        normalizeStatus(body.status),
+        body.description || "",
+        Number(body.price || 0),
+        body.image || "",
+        body.images || [],
+        body.specifications || [],
+        body.accessories || [],
+      ],
+    );
 
-    const product = await prisma.buyProduct.create({
-      data: {
-        name: body.name,
-        slug: body.slug,
-
-        brand: body.brand,
-        model: body.model,
-        category: body.category,
-
-        condition: body.condition || "",
-        warranty: body.warranty || "",
-
-        status: normalizeStatus(body.status),
-
-        description: body.description || "",
-
-        price: Number(body.price || 0),
-        image: body.image || "",
-        images: body.images || [],
-
-        specifications: body.specifications || [],
-
-        accessories: body.accessories || [],
-
-        display_order: nextDisplayOrder,
-      },
-    });
-
+    invalidateCachePrefix("/api/buy-products");
     return NextResponse.json(
       {
         success: true,
         message: "Product created successfully",
-        data: product,
+        data: rows[0],
       },
       {
         status: 201,

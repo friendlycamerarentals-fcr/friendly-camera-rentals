@@ -1,13 +1,124 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { motion } from "framer-motion";
 import { FaArrowRight, FaWhatsapp } from "react-icons/fa";
 import Counter from "@/components/ui/Counter";
+import { useEffect, useMemo, useState } from "react";
+import { getHeroMarqueeVisibilityState } from "@/lib/heroMarqueeVisibility";
 
 export default function Hero() {
+  const [marqueeItems, setMarqueeItems] = useState([]);
+  const [marqueeSettings, setMarqueeSettings] = useState({ isEnabled: true });
+  const [loadingMarquee, setLoadingMarquee] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function fetchMarquee() {
+      try {
+        const [itemsResponse, settingsResponse] = await Promise.all([
+          fetch("/api/hero-marquee"),
+          fetch("/api/hero-marquee/settings"),
+        ]);
+
+        const itemsData = await itemsResponse.json();
+        const settingsData = await settingsResponse.json();
+
+        if (!isMounted) return;
+
+        if (itemsData.success) {
+          setMarqueeItems(Array.isArray(itemsData.data) ? itemsData.data : []);
+        }
+
+        if (settingsData.success) {
+          setMarqueeSettings(
+            settingsData.data && typeof settingsData.data === "object"
+              ? settingsData.data
+              : { isEnabled: true },
+          );
+        }
+      } catch (error) {
+        console.error("Failed to fetch hero marquee items", error);
+      } finally {
+        if (isMounted) {
+          setLoadingMarquee(false);
+        }
+      }
+    }
+
+    fetchMarquee();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const visibilityState = getHeroMarqueeVisibilityState({
+    settings: marqueeSettings,
+    items: marqueeItems,
+  });
+  const showMarquee = !loadingMarquee && visibilityState.isVisible;
+
+  const marqueeContent = useMemo(() => {
+    if (!marqueeItems.length) {
+      return [];
+    }
+
+    const activeItems = marqueeItems.filter((item) => item?.isActive !== false);
+    if (!activeItems.length) {
+      return [];
+    }
+
+    const clones = 5;
+    return Array.from({ length: clones }, (_, cloneIndex) => (
+      <div key={`clone-${cloneIndex}`} className="flex shrink-0 items-center">
+        {activeItems.map((item) => (
+          <div
+            key={`${cloneIndex}-${item.id}`}
+            className="flex shrink-0 items-center gap-2 px-2 py-1 sm:gap-3 sm:px-3 md:gap-4 md:px-4 lg:gap-6 lg:px-6"
+          >
+            <span className="whitespace-nowrap font-[family-name:var(--font-cormorant)] text-[10px] font-bold uppercase tracking-[2px] text-amber-400 sm:text-[12px] md:text-[12px] lg:text-[14px]">
+              {item.text}
+            </span>
+            <span className="text-[10px] text-amber-500/70 sm:text-[12px] md:text-[12px] lg:text-[14px]">
+              ✦
+            </span>
+          </div>
+        ))}
+      </div>
+    ));
+  }, [marqueeItems]);
+
   return (
-    <section className="relative flex min-h-screen items-center overflow-hidden bg-black">
+    <section className="relative flex min-h-screen items-center overflow-hidden">
+      {/* Glass Marquee */}
+      {showMarquee && marqueeContent.length > 0 ? (
+        <div className="absolute left-0 top-5 z-30 w-full overflow-hidden border-b border-white/20 bg-white/15 backdrop-blur-2xl shadow-[0_8px_30px_rgba(0,0,0,0.08)]">
+          <div className="relative flex items-center overflow-hidden py-1">
+            <div className="marquee-track flex w-max items-center text-[10px] motion-safe:animate-[marquee_22s_linear_infinite] sm:text-[12px] lg:text-[14px]">
+              {marqueeContent}
+            </div>
+          </div>
+
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-white/70" />
+        </div>
+      ) : null}
+
+      {/* Background Image */}
+      <div className="absolute inset-0 -z-20">
+        <Image
+          src="/hero/photography.jpg"
+          alt="Premium camera rental studio"
+          fill
+          priority
+          sizes="100vw"
+          className="object-cover object-center"
+        />
+        <div className="absolute inset-0 bg-black/40" />
+      </div>
+
       {/* Background Glow */}
       <div className="absolute inset-0 -z-10">
         <div className="absolute left-1/2 top-1/2 h-[600px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-amber-500/10 blur-[140px]" />
@@ -47,9 +158,8 @@ export default function Hero() {
           transition={{ duration: 1 }}
           className="mt-8 max-w-3xl text-lg leading-8 text-zinc-400 md:text-xl"
         >
-          Premium cameras, lenses, and accessories for creators.
-          We also provide photography, videography, photo editing,
-          and video editing services.
+          Premium cameras, lenses, and accessories for creators. We also provide
+          photography, videography, photo editing, and video editing services.
         </motion.p>
 
         {/* CTA Buttons */}
@@ -85,29 +195,13 @@ export default function Hero() {
           transition={{ duration: 1.4 }}
           className="mt-24 grid grid-cols-2 gap-10 md:grid-cols-4"
         >
-          <Counter
-            end={200}
-            suffix="+"
-            label="Happy Customers"
-          />
+          <Counter end={200} suffix="+" label="Happy Customers" />
 
-          <Counter
-            end={50}
-            suffix="+"
-            label="Equipment"
-          />
+          <Counter end={20} suffix="+" label="Equipment" />
 
-          <Counter
-            end={24}
-            suffix="/7"
-            label="Support"
-          />
+          <Counter end={24} suffix="/7" label="Support" />
 
-          <Counter
-            end={100}
-            suffix="%"
-            label="Trusted Service"
-          />
+          <Counter end={100} suffix="%" label="Trusted Service" />
         </motion.div>
       </div>
     </section>

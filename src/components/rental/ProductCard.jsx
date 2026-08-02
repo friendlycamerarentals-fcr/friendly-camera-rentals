@@ -40,17 +40,19 @@ export default function ProductCard({ product }) {
         </p>
 
         {/* Product Name */}
-        <h3 className="font-heading mt-3 text-[2rem] leading-tight font-semibold text-white">
+        <h3 className="font-heading mt-3 text-2xl leading-tight font-semibold text-white">
           {product.name}
         </h3>
 
         {/* Specifications */}
-        <div className="mt-4 space-y-1.5 text-sm text-zinc-400">
-          {product.megapixels !== "-" && <p>{product.megapixels} Sensor</p>}
-
-          {product.batteries > 0 && (
-            <p>{product.batteries} Batteries Included</p>
+        <div className="mt-4 flex justify-around space-y-1.5 text-sm text-zinc-400">
+          {product.megapixels != null && product.megapixels !== "" && (
+            <span>{product.megapixels}</span>
           )}
+
+          {product.batteries != null &&
+            product.batteries !== "" &&
+            product.batteries !== 0 && <span>{product.batteries} Batteries Included</span>}
         </div>
 
         {/* Bottom Section */}

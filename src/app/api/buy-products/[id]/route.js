@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import prisma from "@/lib/prisma";
+import { query } from "@/db/query";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -24,11 +24,6 @@ const normalizeStatus = (status) => {
   return status;
 };
 
-/*
-|--------------------------------------------------------------------------
-| GET SINGLE PRODUCT
-|--------------------------------------------------------------------------
-*/
 export async function GET(_request, context) {
   try {
     const { id } = await context.params;
@@ -45,11 +40,11 @@ export async function GET(_request, context) {
       );
     }
 
-    const product = await prisma.buyProduct.findUnique({
-      where: {
-        id,
-      },
-    });
+    const rows = await query(
+      'SELECT * FROM "BuyProduct" WHERE "id" = $1 LIMIT 1',
+      [id],
+    );
+    const product = rows[0];
 
     if (!product) {
       return NextResponse.json(
@@ -85,11 +80,6 @@ export async function GET(_request, context) {
   }
 }
 
-/*
-|--------------------------------------------------------------------------
-| UPDATE PRODUCT
-|--------------------------------------------------------------------------
-*/
 export async function PUT(request, context) {
   try {
     const { id } = await context.params;
@@ -107,12 +97,11 @@ export async function PUT(request, context) {
     }
 
     const body = await request.json();
-
-    const existingProduct = await prisma.buyProduct.findUnique({
-      where: {
-        id,
-      },
-    });
+    const existingRows = await query(
+      'SELECT * FROM "BuyProduct" WHERE "id" = $1 LIMIT 1',
+      [id],
+    );
+    const existingProduct = existingRows[0];
 
     if (!existingProduct) {
       return NextResponse.json(
@@ -126,41 +115,48 @@ export async function PUT(request, context) {
       );
     }
 
-    const updateData = {};
+    const updates = [];
+    const values = [id];
 
-    if (body.name !== undefined) updateData.name = body.name;
-    if (body.slug !== undefined) updateData.slug = body.slug;
-    if (body.brand !== undefined) updateData.brand = body.brand;
-    if (body.model !== undefined) updateData.model = body.model;
-    if (body.category !== undefined) updateData.category = body.category;
-    if (body.condition !== undefined) updateData.condition = body.condition;
-    if (body.warranty !== undefined) updateData.warranty = body.warranty;
+    const pushValue = (column, value) => {
+      if (value !== undefined) {
+        updates.push(`"${column}" = $${values.length + 1}`);
+        values.push(value);
+      }
+    };
+
+    pushValue("name", body.name);
+    pushValue("slug", body.slug);
+    pushValue("brand", body.brand);
+    pushValue("model", body.model);
+    pushValue("category", body.category);
+    pushValue("condition", body.condition);
+    pushValue("warranty", body.warranty);
     if (body.status !== undefined)
-      updateData.status = normalizeStatus(body.status);
+      pushValue("status", normalizeStatus(body.status));
     if (body.description !== undefined)
-      updateData.description = body.description;
-    if (body.price !== undefined) updateData.price = Number(body.price);
-    if (body.image !== undefined) updateData.image = body.image;
+      pushValue("description", body.description);
+    if (body.price !== undefined) pushValue("price", Number(body.price));
+    if (body.image !== undefined) pushValue("image", body.image);
     if (body.images !== undefined)
-      updateData.images = Array.isArray(body.images)
-        ? body.images
-        : existingProduct.images || [];
+      pushValue(
+        "images",
+        Array.isArray(body.images) ? body.images : existingProduct.images || [],
+      );
     if (body.specifications !== undefined)
-      updateData.specifications = body.specifications;
+      pushValue("specifications", body.specifications);
     if (body.accessories !== undefined)
-      updateData.accessories = body.accessories;
+      pushValue("accessories", body.accessories);
 
-    const updatedProduct = await prisma.buyProduct.update({
-      where: {
-        id,
-      },
-      data: updateData,
-    });
+    const rows = await query(
+      `UPDATE "BuyProduct" SET ${updates.join(", ")} WHERE "id" = $1 RETURNING *`,
+      values,
+    );
 
     return NextResponse.json({
       success: true,
       message: "Product updated successfully",
-      data: updatedProduct,
+      data: rows[0],
     });
   } catch (error) {
     console.error("[BUY_PRODUCT_UPDATE]", error);
@@ -177,11 +173,6 @@ export async function PUT(request, context) {
   }
 }
 
-/*
-|--------------------------------------------------------------------------
-| DELETE PRODUCT
-|--------------------------------------------------------------------------
-*/
 export async function DELETE(_request, context) {
   try {
     const { id } = await context.params;
@@ -198,13 +189,11 @@ export async function DELETE(_request, context) {
       );
     }
 
-    const existingProduct = await prisma.buyProduct.findUnique({
-      where: {
-        id,
-      },
-    });
-
-    if (!existingProduct) {
+    const existingRows = await query(
+      'SELECT * FROM "BuyProduct" WHERE "id" = $1 LIMIT 1',
+      [id],
+    );
+    if (!existingRows[0]) {
       return NextResponse.json(
         {
           success: false,
@@ -216,11 +205,7 @@ export async function DELETE(_request, context) {
       );
     }
 
-    await prisma.buyProduct.delete({
-      where: {
-        id,
-      },
-    });
+    await query('DELETE FROM "BuyProduct" WHERE "id" = $1', [id]);
 
     return NextResponse.json({
       success: true,

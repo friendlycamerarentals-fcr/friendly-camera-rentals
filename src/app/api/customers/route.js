@@ -1,22 +1,46 @@
 import { NextResponse } from "next/server";
-import prisma from "@/lib/prisma";
+import { createId } from "@paralleldrive/cuid2";
+import { query, transaction } from "@/db/query";
 import { getNextCustomerId } from "@/lib/customerId";
+import {
+  getCachedValue,
+  setCachedValue,
+  invalidateCachePrefix,
+} from "@/lib/dataCache";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-export async function GET() {
-  try {
-    const customers = await prisma.customer.findMany({
-      orderBy: {
-        createdAt: "desc",
-      },
-    });
+const selectColumns = [
+  '"id"',
+  '"customerId"',
+  '"name"',
+  '"email"',
+  '"profileImage"',
+  '"phoneNumber"',
+  '"address"',
+  '"createdAt"',
+  '"updatedAt"',
+];
 
-    return NextResponse.json({
+export async function GET() {
+  const cacheKey = "/api/customers";
+  const cachedPayload = getCachedValue(cacheKey);
+  if (cachedPayload !== null) {
+    return NextResponse.json(cachedPayload);
+  }
+
+  try {
+    const customers = await query(
+      `SELECT ${selectColumns.join(", ")} FROM "Customer" ORDER BY "createdAt" DESC`,
+    );
+
+    const payload = {
       success: true,
       data: customers,
-    });
+    };
+    setCachedValue(cacheKey, payload, 30_000);
+    return NextResponse.json(payload);
   } catch (error) {
     console.error("[CUSTOMERS_GET]", error);
 
@@ -48,56 +72,65 @@ export async function POST(request) {
       );
     }
 
-    const existingCustomer = await prisma.customer.findUnique({
-      where: {
-        email: body.email,
-      },
-    });
+    const emailValue = (body.email || "").trim();
+    const normalizedEmail = emailValue.toLowerCase();
 
-    if (existingCustomer) {
-      const updatedCustomer = await prisma.customer.update({
-        where: {
-          email: body.email,
-        },
-        data: {
-          name: body.name || existingCustomer.name,
-          profileImage: body.profileImage || existingCustomer.profileImage,
-          phoneNumber: body.phoneNumber || existingCustomer.phoneNumber || "",
-          address: body.address || existingCustomer.address || "",
-        },
-      });
-
-      return NextResponse.json(
-        {
-          success: true,
-          data: updatedCustomer,
-        },
-        {
-          status: 200,
-        },
+    const customer = await transaction(async (client) => {
+      const existingRows = await client.query(
+        `SELECT ${selectColumns.join(", ")} FROM "Customer"
+         WHERE LOWER("email") = LOWER($1)
+         LIMIT 1`,
+        [normalizedEmail],
       );
-    }
 
-    const customerId = await getNextCustomerId(prisma);
+      if (existingRows.rows[0]) {
+        return {
+          customer: existingRows.rows[0],
+          created: false,
+        };
+      }
 
-    const customer = await prisma.customer.create({
-      data: {
-        customerId,
-        name: body.name || "Customer",
-        email: body.email,
-        profileImage: body.profileImage || "",
-        phoneNumber: body.phoneNumber || "",
-        address: body.address || "",
-      },
+      const customerId = await getNextCustomerId();
+
+      const id = createId();
+      const createdRows = await client.query(
+        `INSERT INTO "Customer" (
+          "id",
+          "customerId",
+          "name",
+          "email",
+          "profileImage",
+          "phoneNumber",
+          "address"
+        )
+         VALUES ($1, $2, $3, $4, $5, $6, $7)
+         RETURNING ${selectColumns.join(", ")}`,
+        [
+          id,
+          customerId,
+          body.name || "Customer",
+          emailValue,
+          body.profileImage || "",
+          body.phoneNumber || "",
+          body.address || "",
+        ],
+      );
+      return {
+        customer: createdRows.rows[0],
+        created: true,
+      };
     });
+
+    invalidateCachePrefix("/api/profile");
+    invalidateCachePrefix("/api/customers");
 
     return NextResponse.json(
       {
         success: true,
-        data: customer,
+        data: customer.customer,
       },
       {
-        status: 201,
+        status: customer.created ? 201 : 200,
       },
     );
   } catch (error) {

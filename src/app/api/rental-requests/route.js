@@ -1,21 +1,20 @@
 import { NextResponse } from "next/server";
-import prisma from "@/lib/prisma";
+import { createId } from "@paralleldrive/cuid2";
+import { query } from "@/db/query";
+import rewardService from "@/services/rewardService";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-function buildRequestId() {
-  const now = new Date();
-  const stamp = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}${String(now.getHours()).padStart(2, "0")}${String(now.getMinutes()).padStart(2, "0")}${String(now.getSeconds()).padStart(2, "0")}`;
-  return `FCR-RQ-${stamp}`;
+function buildRequestId(idNumber) {
+  return `FCR-R${String(idNumber).padStart(6, "0")}`;
 }
 
 export async function GET() {
   try {
-    const requests = await prisma.rentalRequest.findMany({
-      orderBy: { createdAt: "desc" },
-    });
-
+    const requests = await query(
+      'SELECT * FROM "RentalRequest" ORDER BY "createdAt" DESC',
+    );
     return NextResponse.json({ success: true, data: requests });
   } catch (error) {
     console.error("[RENTAL_REQUESTS_GET]", error);
@@ -63,52 +62,151 @@ export async function POST(request) {
       );
     }
 
-    const existing = await prisma.rentalRequest.findFirst({
-      where: {
-        productId: body.productId,
-        phone: body.phone,
-        bookingDate: body.bookingDate,
-        pickupTime: body.pickupTime || null,
-        rentalDuration: body.rentalDuration,
-        status: { in: ["Pending", "Approved", "Completed"] },
-      },
-    });
+    const productRows = await query(
+      'SELECT "id", "name", "available" FROM "RentalProduct" WHERE "id" = $1 LIMIT 1',
+      [body.productId],
+    );
+    const product = productRows[0];
 
-    if (existing) {
+    if (!product || product.available === false) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: product
+            ? `${product.name} is currently unavailable for rent.`
+            : "The selected product is currently unavailable for rent.",
+        },
+        { status: 400 },
+      );
+    }
+
+    const existingRows = await query(
+      `SELECT * FROM "RentalRequest"
+       WHERE "productId" = $1
+         AND "phone" = $2
+         AND "bookingDate" = $3
+         AND "pickupTime" IS NOT DISTINCT FROM $4
+         AND "rentalDuration" = $5
+         AND "status" IN ('Pending', 'Approved', 'Completed')
+       LIMIT 1`,
+      [
+        body.productId,
+        body.phone,
+        body.bookingDate,
+        body.pickupTime || null,
+        body.rentalDuration,
+      ],
+    );
+
+    if (existingRows.length) {
       return NextResponse.json(
         { success: false, message: "A similar booking request already exists" },
         { status: 409 },
       );
     }
 
-    const requestId = buildRequestId();
+    const requestRows = await query(
+      `SELECT "requestId" FROM "RentalRequest" WHERE "requestId" LIKE 'FCR-R%' ORDER BY "requestId" DESC LIMIT 50`,
+    );
 
-    const rentalRequest = await prisma.rentalRequest.create({
-      data: {
+    const numericSequences = requestRows
+      .map((item) => String(item.requestId).match(/^FCR-R(\d{6})$/)?.[1])
+      .filter(Boolean)
+      .map(Number);
+
+    const lastSequence = numericSequences.length
+      ? Math.max(...numericSequences)
+      : NaN;
+    const nextSequence = Number.isInteger(lastSequence)
+      ? Math.max(lastSequence + 1, 100001)
+      : 100001;
+
+    const requestId = buildRequestId(nextSequence);
+
+    let rewardResult = null;
+    let finalBookingAmount = totalAmount;
+    let rewardId = null;
+    let rewardDiscount = null;
+
+    try {
+      await rewardService.expireRewards();
+
+      const rewardCheck = await rewardService.checkReward(
+        body.customerId,
+        body.productId,
+      );
+
+      if (rewardCheck?.valid) {
+        rewardResult = await rewardService.applyReward({
+          customerId: body.customerId,
+          rentalRequestId: requestId,
+          totalAmount,
+          productId: body.productId,
+        });
+
+        if (rewardResult?.rewardApplied) {
+          finalBookingAmount = Number(rewardResult.finalAmount || totalAmount);
+          rewardId = rewardResult.rewardId || null;
+          rewardDiscount = rewardResult.rewardDiscount || null;
+        }
+      }
+    } catch (rewardError) {
+      console.error("[RENTAL_REQUEST_REWARD]", rewardError);
+    }
+
+    const id = createId();
+    const rows = await query(
+      `INSERT INTO "RentalRequest" (
+        "id", "requestId", "customerId", "userId", "fullName", "email", "phone",
+        "address", "productId", "productName", "productImage", "rentalDuration",
+        "quantity", "rentalPrice", "totalAmount", "rewardId", "rewardDiscount",
+        "bookingDate", "pickupTime", "notes", "status", "paymentStatus"
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
+      RETURNING *`,
+      [
+        id,
         requestId,
-        customerId: body.customerId,
-        userId: body.userId || null,
-        fullName: body.fullName,
-        email: body.email || null,
-        phone: body.phone,
-        address: body.address || null,
-        productId: body.productId,
-        productName: body.productName,
-        productImage: body.productImage || null,
-        rentalDuration: body.rentalDuration,
+        body.customerId,
+        body.userId || null,
+        body.fullName,
+        body.email || null,
+        body.phone,
+        body.address || null,
+        body.productId,
+        body.productName,
+        body.productImage || null,
+        body.rentalDuration,
         quantity,
         rentalPrice,
-        totalAmount,
-        bookingDate: body.bookingDate,
-        pickupTime: body.pickupTime || null,
-        notes: body.notes || null,
-        status: "Pending",
-        paymentStatus: "Pending",
-      },
-    });
+        finalBookingAmount,
+        rewardId,
+        rewardDiscount,
+        body.bookingDate,
+        body.pickupTime || null,
+        body.notes || null,
+        "Pending",
+        "Pending",
+      ],
+    );
+
+    const rentalRequest = rows[0];
+
+    if (rewardResult?.rewardApplied && rentalRequest) {
+      await query(
+        'UPDATE "RentalRequest" SET "rewardId" = $1, "rewardDiscount" = $2, "totalAmount" = $3 WHERE "requestId" = $4',
+        [rewardId, rewardDiscount, finalBookingAmount, requestId],
+      );
+    }
 
     return NextResponse.json(
-      { success: true, data: rentalRequest },
+      {
+        success: true,
+        data: rentalRequest,
+        rewardApplied: rewardResult?.rewardApplied || false,
+        reward: rewardResult?.reward || null,
+        rewardDiscount: rewardDiscount || 0,
+        finalAmount: finalBookingAmount,
+      },
       { status: 201 },
     );
   } catch (error) {

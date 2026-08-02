@@ -17,6 +17,7 @@ import {
 } from "react";
 
 import { auth } from "@/lib/firebase";
+import { fetchJsonWithCache, invalidateCachePrefix } from "@/lib/dataCache";
 
 const AuthContext = createContext();
 
@@ -29,10 +30,16 @@ export function AuthProvider({ children }) {
   const profileEmailRef = useRef(null);
   const inFlightProfileRequestsRef = useRef(new Map());
   const loginInFlightRef = useRef(false);
+  const authUserKeyRef = useRef(null);
+  const syncedCustomerEmailRef = useRef(null);
+  const syncCustomerInFlightRef = useRef(null);
 
   const clearProfileState = useCallback(() => {
     profileRef.current = null;
     profileEmailRef.current = null;
+    syncedCustomerEmailRef.current = null;
+    syncCustomerInFlightRef.current = null;
+    authUserKeyRef.current = null;
     setProfile(null);
     setProfileLoading(false);
   }, []);
@@ -69,23 +76,26 @@ export function AuthProvider({ children }) {
               ? `${window.location.origin}/api/profile`
               : "/api/profile";
 
-          const response = await fetch(apiUrl, {
-            headers: {
-              "Content-Type": "application/json",
-              "x-user-email": userEmail,
+          const result = await fetchJsonWithCache(
+            apiUrl,
+            {
+              headers: {
+                "Content-Type": "application/json",
+                "x-user-email": userEmail,
+              },
             },
-            cache: "no-store",
-          });
+            { cacheKey: `/api/profile:${normalizedEmail}`, ttlMs: 60_000 },
+          );
 
-          if (!response.ok) {
-            console.error("Profile load HTTP error:", response.status);
+          if (!result.ok) {
+            console.error("Profile load HTTP error:", result.status);
             clearProfileState();
             return null;
           }
 
-          const result = await response.json();
-          if (result && result.success) {
-            const nextProfile = result.data || null;
+          const payload = result.data;
+          if (payload && payload.success) {
+            const nextProfile = payload.data || null;
             profileRef.current = nextProfile;
             profileEmailRef.current = nextProfile?.email
               ? nextProfile.email.toLowerCase()
@@ -116,39 +126,64 @@ export function AuthProvider({ children }) {
   const syncCustomer = useCallback(async (userToSync) => {
     if (!userToSync?.email) return null;
 
-    try {
-      const apiUrl =
-        typeof window !== "undefined"
-          ? `${window.location.origin}/api/customers`
-          : "/api/customers";
+    const normalizedEmail = userToSync.email.toLowerCase();
 
-      const response = await fetch(apiUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          name: userToSync.displayName || "Customer",
-          email: userToSync.email,
-          profileImage: userToSync.photoURL || "",
-        }),
-      });
-
-      if (!response.ok) {
-        console.error("Customer sync HTTP error:", response.status);
-        return null;
-      }
-
-      const result = await response.json();
-      if (result && result.success) {
-        return result.data;
-      }
-
-      return null;
-    } catch (error) {
-      console.error("Customer sync failed:", error);
-      return null;
+    if (syncedCustomerEmailRef.current === normalizedEmail) {
+      return profileRef.current;
     }
+
+    if (syncCustomerInFlightRef.current?.email === normalizedEmail) {
+      return syncCustomerInFlightRef.current.promise;
+    }
+
+    const syncPromise = (async () => {
+      try {
+        const apiUrl =
+          typeof window !== "undefined"
+            ? `${window.location.origin}/api/customers`
+            : "/api/customers";
+
+        const response = await fetch(apiUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            name: userToSync.displayName || "Customer",
+            email: userToSync.email,
+            profileImage: userToSync.photoURL || "",
+          }),
+        });
+
+        if (!response.ok) {
+          console.error("Customer sync HTTP error:", response.status);
+          return null;
+        }
+
+        const result = await response.json();
+        if (result && result.success) {
+          syncedCustomerEmailRef.current = normalizedEmail;
+          invalidateCachePrefix("/api/profile");
+          return result.data;
+        }
+
+        return null;
+      } catch (error) {
+        console.error("Customer sync failed:", error);
+        return null;
+      } finally {
+        if (syncCustomerInFlightRef.current?.email === normalizedEmail) {
+          syncCustomerInFlightRef.current = null;
+        }
+      }
+    })();
+
+    syncCustomerInFlightRef.current = {
+      email: normalizedEmail,
+      promise: syncPromise,
+    };
+
+    return syncPromise;
   }, []);
 
   const login = async () => {
@@ -193,11 +228,20 @@ export function AuthProvider({ children }) {
   };
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      setUser(user);
-      if (user) {
-        await syncCustomer(user);
-        await loadProfile(user.email);
+    const unsubscribe = onAuthStateChanged(auth, async (nextUser) => {
+      const nextUserKey = nextUser?.uid || nextUser?.email || "signed-out";
+
+      if (authUserKeyRef.current === nextUserKey) {
+        setLoading(false);
+        return;
+      }
+
+      authUserKeyRef.current = nextUserKey;
+      setUser(nextUser);
+
+      if (nextUser) {
+        await syncCustomer(nextUser);
+        await loadProfile(nextUser.email, { force: false });
       } else {
         clearProfileState();
       }

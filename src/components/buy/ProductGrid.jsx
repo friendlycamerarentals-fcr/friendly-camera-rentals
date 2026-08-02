@@ -4,14 +4,17 @@ import { useMemo, useState } from "react";
 import ProductCard from "./ProductCard";
 import { useFetchData } from "@/hooks/useFetchData";
 import CategoryFilter from "./CategoryFilter";
-import { Loader } from "lucide-react";
+import ProductListSkeleton from "@/components/ui/ProductListSkeleton";
 
 export default function ProductGrid() {
   const {
     data: allProducts,
     loading,
     error,
-  } = useFetchData("/api/buy-products");
+  } = useFetchData("/api/buy-products", {
+    cacheKey: "/api/buy-products",
+    ttlMs: 30_000,
+  });
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -56,9 +59,9 @@ export default function ProductGrid() {
   if (loading) {
     return (
       <section className="mx-auto max-w-7xl px-4 py-16 md:px-6 lg:px-8">
-        <div className="flex justify-center py-20">
-          <Loader className="h-8 w-8 animate-spin text-[#F5A623]" />
-        </div>
+        <div className="mb-8 h-12 w-full max-w-xl animate-pulse rounded-2xl bg-white/10" />
+        <div className="mb-6 h-12 w-full max-w-3xl animate-pulse rounded-2xl bg-white/10" />
+        <ProductListSkeleton count={6} />
       </section>
     );
   }

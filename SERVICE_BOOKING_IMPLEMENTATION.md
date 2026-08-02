@@ -20,9 +20,9 @@ A production-ready service booking management system with real-time admin dashbo
 
 ### 2️⃣ Database & API Layer
 
-**Schema Updates** (`prisma/schema.prisma`):
+**Schema Updates** (PostgreSQL schema):
 
-```prisma
+```sql
 model ServiceBooking {
   id          String   @id @default(cuid())
   fullName    String
@@ -218,7 +218,7 @@ model ServiceBooking {
 
 ### Modified
 
-1. `prisma/schema.prisma` - Added fields
+1. `FCR_DATABASE_UPDATES.sql` - Added fields
 2. `src/app/api/services/route.js` - Updated POST
 3. `src/app/api/services/[id]/route.js` - Enhanced PUT
 4. `src/components/services/BookSlotSection.jsx` - Better form handling

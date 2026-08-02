@@ -11,7 +11,6 @@
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-v4-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
 [![Framer Motion](https://img.shields.io/badge/Framer_Motion-12-FF0055?style=for-the-badge&logo=framer&logoColor=white)](https://www.framer.com/motion/)
 [![Cloudinary](https://img.shields.io/badge/Cloudinary-2.10.0-4A8F29?style=for-the-badge&logo=cloudinary&logoColor=white)](https://cloudinary.com/)
-[![Prisma](https://img.shields.io/badge/Prisma-6.15.0-2D3748?style=for-the-badge&logo=prisma&logoColor=white)](https://www.prisma.io/)
 
 <br />
 
@@ -39,20 +38,19 @@ The admin area supports product management, request review, customer listings, t
 
 ## Tech Stack
 
-| Category            | Technology                    |
-| ------------------- | ----------------------------- |
-| Framework           | Next.js 16 App Router         |
-| Frontend            | React 19.2.4                  |
-| Styling             | Tailwind CSS v4               |
-| Animations          | Framer Motion 12.40.0         |
-| Drag & Drop         | @dnd-kit                      |
-| ORM                 | Prisma 6.15.0                 |
-| Database            | PostgreSQL                    |
-| Image Upload        | Cloudinary                    |
-| Notifications       | Sonner                        |
-| Icons               | Lucide React, React Icons     |
-| Date Input          | React Datepicker              |
-| Linting             | ESLint, eslint-config-next    |
+| Category      | Technology                 |
+| ------------- | -------------------------- |
+| Framework     | Next.js 16 App Router      |
+| Frontend      | React 19.2.4               |
+| Styling       | Tailwind CSS v4            |
+| Animations    | Framer Motion 12.40.0      |
+| Drag & Drop   | @dnd-kit                   |
+| Database      | Neon PostgreSQL + pg       |
+| Image Upload  | Cloudinary                 |
+| Notifications | Sonner                     |
+| Icons         | Lucide React, React Icons  |
+| Date Input    | React Datepicker           |
+| Linting       | ESLint, eslint-config-next |
 
 ---
 
@@ -60,9 +58,9 @@ The admin area supports product management, request review, customer listings, t
 
 ```
 fcr/
-├── prisma/
-│   ├── migrations/
-│   └── schema.prisma
+├── database/
+│   ├── init.sql
+│   └── migrations.sql
 ├── public/
 │   ├── images/
 │   ├── sounds/
@@ -164,18 +162,34 @@ NEXT_PUBLIC_FIREBASE_APP_ID="your_firebase_app_id"
 
 ## Database Setup
 
-Generate the Prisma client and apply migrations:
+This project uses a SQL-first workflow with Neon PostgreSQL.
+
+### Development workflow
+
+1. Update the SQL file in database/init.sql for initial setup or database/migrations.sql for future schema changes.
+2. Run the SQL in the Neon SQL Editor.
+3. Continue coding and keep all application queries routed through src/db/query.js.
+4. No Prisma commands and no Prisma migrations.
+
+Apply the initial schema:
 
 ```bash
-npx prisma generate
-npx prisma migrate dev
+psql "$DATABASE_URL" -f database/init.sql
 ```
 
-For production deployments:
+Apply future schema changes:
 
 ```bash
-npx prisma migrate deploy
+psql "$DATABASE_URL" -f database/migrations.sql
 ```
+
+Start the app:
+
+```bash
+npm run dev
+```
+
+For Vercel deployments, keep the same Neon PostgreSQL connection string in the environment variables and apply the SQL files through the Neon SQL Editor before the first deployment.
 
 ---
 
@@ -314,28 +328,28 @@ npm start
 
 ## API Structure
 
-| Route | Purpose |
-| --- | --- |
-| `/api/buy-products` | List and create buy products |
-| `/api/buy-products/[id]` | Get, update, delete buy product |
-| `/api/buy-products/reorder` | Save buy product display order |
-| `/api/rental-products` | List and create rental products |
-| `/api/rental-products/[id]` | Get, update, delete rental product |
-| `/api/rental-products/reorder` | Save rental product display order |
-| `/api/sell-requests` | Create and list sell requests |
-| `/api/services` | Submit service bookings |
-| `/api/testimonials` | Submit testimonials |
-| `/api/customers` | List customer records |
-| `/api/contact` | Contact form submissions |
-| `/api/upload` | Upload and delete images |
-| `/api/admin/login` | Admin login |
-| `/api/admin/logout` | Admin logout |
+| Route                          | Purpose                            |
+| ------------------------------ | ---------------------------------- |
+| `/api/buy-products`            | List and create buy products       |
+| `/api/buy-products/[id]`       | Get, update, delete buy product    |
+| `/api/buy-products/reorder`    | Save buy product display order     |
+| `/api/rental-products`         | List and create rental products    |
+| `/api/rental-products/[id]`    | Get, update, delete rental product |
+| `/api/rental-products/reorder` | Save rental product display order  |
+| `/api/sell-requests`           | Create and list sell requests      |
+| `/api/services`                | Submit service bookings            |
+| `/api/testimonials`            | Submit testimonials                |
+| `/api/customers`               | List customer records              |
+| `/api/contact`                 | Contact form submissions           |
+| `/api/upload`                  | Upload and delete images           |
+| `/api/admin/login`             | Admin login                        |
+| `/api/admin/logout`            | Admin logout                       |
 
 ---
 
 ## Deployment
 
-Deploy this Next.js application on Vercel or any Node.js hosting provider that supports Next.js 16. Configure environment variables and apply Prisma migrations before starting.
+Deploy this Next.js application on Vercel or any Node.js hosting provider that supports Next.js 16. Configure environment variables and apply the PostgreSQL schema before starting.
 
 ---
 

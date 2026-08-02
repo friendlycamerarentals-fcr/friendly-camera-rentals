@@ -1,10 +1,12 @@
 "use client";
 
-import { useMemo, useState, useEffect, useCallback } from "react";
+import { useMemo, useState, useEffect, useCallback, useRef } from "react";
 
 import SearchBar from "@/components/rental/SearchBar";
 import CategoryFilter from "@/components/rental/CategoryFilter";
 import ProductCard from "@/components/rental/ProductCard";
+import ProductListSkeleton from "@/components/ui/ProductListSkeleton";
+import { fetchJsonWithCache, prefetchJson } from "@/lib/dataCache";
 
 export default function RentalPage() {
   const [products, setProducts] = useState([]);
@@ -13,8 +15,16 @@ export default function RentalPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [query, setQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const fetchProducts = useCallback(async () => {
+    console.log("Fetch start", { query, selectedCategory, loading });
     setLoading(true);
     setError("");
 
@@ -29,28 +39,47 @@ export default function RentalPage() {
         params.set("category", selectedCategory);
       }
 
-      const response = await fetch(
-        `/api/rental-products?${params.toString()}`,
+      const url = `/api/rental-products?${params.toString()}`;
+      const result = await fetchJsonWithCache(
+        url,
+        {},
         {
-          cache: "no-store",
+          cacheKey: url,
+          ttlMs: 30_000,
         },
       );
 
-      const result = await response.json();
+      const data = result.data;
+      console.log("API response:", data);
 
-      if (!response.ok || !result.success) {
-        throw new Error(result.message || "Failed to load rental products.");
+      if (!result.ok || !data?.success) {
+        throw new Error(data?.message || "Failed to load rental products.");
       }
 
-      setProducts(result.data || []);
+      const productsList = Array.isArray(data?.data)
+        ? data.data
+        : Array.isArray(data)
+          ? data
+          : [];
+
+      console.log("Products:", productsList);
+      if (isMountedRef.current) {
+        setProducts(productsList);
+      }
     } catch (fetchError) {
       console.error("Failed to fetch rental products:", fetchError);
-      setError(fetchError.message || "Unable to load rental products.");
-      setProducts([]);
+      if (isMountedRef.current) {
+        setError(fetchError.message || "Unable to load rental products.");
+        setProducts([]);
+      }
     } finally {
-      setLoading(false);
+      console.log("Fetch end", { query, selectedCategory, loading });
+      console.log("Loading:", loading);
+      if (isMountedRef.current) {
+        setLoading(false);
+      }
     }
-  }, [query, selectedCategory]);
+  }, [query, selectedCategory, loading]);
 
   useEffect(() => {
     fetchProducts();
@@ -72,7 +101,7 @@ export default function RentalPage() {
       {/* Hero */}
       <section className="relative overflow-hidden py-20 md:py-20">
         <div className="absolute inset-0 -z-10">
-          <div className="absolute left-1/2 top-1/2 h-[500px] w-[500px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-amber-500/10 blur-[140px]" />
+          <div className="absolute left-1/2 top-1/2 h-125 w-125 -translate-x-1/2 -translate-y-1/2 rounded-full bg-amber-500/10 blur-[140px]" />
         </div>
 
         <div className="mx-auto max-w-7xl px-6 lg:px-8">
@@ -128,17 +157,12 @@ export default function RentalPage() {
           </div>
 
           {loading ? (
-            <div className="rounded-[2rem] border border-white/10 bg-white/5 py-20 text-center backdrop-blur-xl">
-              <h3 className="font-heading text-4xl text-white">
-                Loading Products...
-              </h3>
-
-              <p className="mt-4 text-zinc-400">
-                Please wait while we load the latest rental gear.
-              </p>
+            <div className="space-y-6">
+              <div className="h-12 w-full max-w-2xl animate-pulse rounded-2xl bg-white/10" />
+              <ProductListSkeleton count={6} />
             </div>
           ) : error ? (
-            <div className="rounded-[2rem] border border-red-500/20 bg-red-500/5 py-20 text-center backdrop-blur-xl">
+            <div className="rounded-4xl border border-red-500/20 bg-red-500/5 py-20 text-center backdrop-blur-xl">
               <h3 className="font-heading text-4xl text-white">
                 Failed to load products
               </h3>
@@ -146,7 +170,7 @@ export default function RentalPage() {
               <p className="mt-4 text-zinc-400">{error}</p>
             </div>
           ) : products.length === 0 ? (
-            <div className="rounded-[2rem] border border-white/10 bg-white/5 py-20 text-center backdrop-blur-xl">
+            <div className="rounded-4xl border border-white/10 bg-white/5 py-20 text-center backdrop-blur-xl">
               <h3 className="font-heading text-4xl text-white">
                 No Products Found
               </h3>

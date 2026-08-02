@@ -1,18 +1,13 @@
 import { NextResponse } from "next/server";
-import prisma from "@/lib/prisma";
+import { transaction } from "@/db/query";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-/*
-|--------------------------------------------------------------------------
-| REORDER PRODUCTS
-|--------------------------------------------------------------------------
-*/
 export async function PUT(request) {
   try {
     const body = await request.json();
-    const { productOrder } = body; // Array of { id, display_order }
+    const { productOrder } = body;
 
     if (!Array.isArray(productOrder)) {
       return NextResponse.json(
@@ -24,15 +19,14 @@ export async function PUT(request) {
       );
     }
 
-    // Use transaction to ensure all updates succeed or all fail
-    const updates = productOrder.map((item) =>
-      prisma.rentalProduct.update({
-        where: { id: item.id },
-        data: { display_order: item.display_order },
-      }),
-    );
-
-    await prisma.$transaction(updates);
+    await transaction(async (client) => {
+      for (const item of productOrder) {
+        await client.query(
+          'UPDATE "RentalProduct" SET "display_order" = $1 WHERE "id" = $2',
+          [item.display_order, item.id],
+        );
+      }
+    });
 
     return NextResponse.json({
       success: true,
@@ -40,7 +34,6 @@ export async function PUT(request) {
     });
   } catch (error) {
     console.error("[RENTAL_PRODUCTS_REORDER]", error);
-
     return NextResponse.json(
       {
         success: false,

@@ -260,7 +260,7 @@ export default function Navbar() {
         </div>
 
         {/* ── Mobile Controls (profile + cart + hamburger) ── */}
-        <div className="flex items-center gap-2 md:hidden">
+        <div className="flex items-center gap-5 pr-3 md:hidden">
           {/* Profile avatar or Login button */}
           {user ? (
             <button

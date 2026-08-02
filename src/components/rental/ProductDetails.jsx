@@ -292,7 +292,6 @@ export default function ProductDetails({ product }) {
                 {product.name}
               </h1>
 
-              
               <div className="mt-4 border-t border-white/10" />
 
               {/* Specs */}
@@ -313,14 +312,14 @@ export default function ProductDetails({ product }) {
                     <span className="font-medium">{product.megapixels}</span>
                   </div>
                 )}
-                {product.batteries > 0 && (
-                  <div className="flex justify-between">
-                    <span className="text-zinc-400">Batteries</span>
-                    <span className="font-medium">
-                      {product.batteries} Included
-                    </span>
-                  </div>
-                )}
+                {product.batteries != null &&
+                  product.batteries !== "" &&
+                  product.batteries !== 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-zinc-400">Batteries</span>
+                      <span className="font-medium">{product.batteries}</span>
+                    </div>
+                  )}
               </div>
 
               {/* Animated Price */}

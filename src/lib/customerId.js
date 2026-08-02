@@ -1,3 +1,5 @@
+import { query } from "@/db/query";
+
 const CUSTOMER_ID_PREFIX = "FCR-C";
 const CUSTOMER_ID_START_NUMBER = 10000;
 
@@ -21,19 +23,19 @@ export function formatCustomerId(number) {
   return `${CUSTOMER_ID_PREFIX}${number}`;
 }
 
-export async function getNextCustomerId(prismaClient) {
-  const customers = await prismaClient.customer.findMany({
-    select: { customerId: true },
-  });
+// Use a single SQL query instead of scanning every customer row in JavaScript.
+export async function getNextCustomerId() {
+  const rows = await query(
+    `SELECT COALESCE(
+      MAX(CAST(regexp_replace("customerId", '^[A-Za-z]+-C', '') AS INTEGER)),
+      $1
+    ) AS "nextNumber"
+    FROM "Customer"
+    WHERE "customerId" ~ '^[A-Za-z]+-C[0-9]+$'`,
+    [CUSTOMER_ID_START_NUMBER],
+  );
 
-  let highestNumber = CUSTOMER_ID_START_NUMBER - 1;
-
-  for (const customer of customers) {
-    const parsedNumber = parseCustomerId(customer.customerId);
-    if (parsedNumber !== null && parsedNumber > highestNumber) {
-      highestNumber = parsedNumber;
-    }
-  }
-
-  return formatCustomerId(highestNumber + 1);
+  const nextNumber =
+    Number(rows[0]?.nextNumber ?? CUSTOMER_ID_START_NUMBER) + 1;
+  return formatCustomerId(nextNumber);
 }

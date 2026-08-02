@@ -1,7 +1,4 @@
-import BuyHero from "@/components/buy/BuyHero";
-import ProductGrid from "@/components/buy/ProductGrid";
-import WhyBuyUs from "@/components/buy/WhyBuyUs";
-import BuyFAQ from "@/components/buy/BuyFAQ";
+import BuyPageClient from "@/components/buy/BuyPageClient";
 
 export const metadata = {
   title: "Buy Equipment | Friendly Camera Rentals",
@@ -9,17 +6,5 @@ export const metadata = {
 };
 
 export default function BuyPage() {
-  return (
-    <main className="min-h-screen bg-black text-white">
-      <BuyHero />
-
-      <section id="products">
-        <ProductGrid />
-      </section>
-
-      <WhyBuyUs />
-
-      <BuyFAQ />
-    </main>
-  );
+  return <BuyPageClient />;
 }

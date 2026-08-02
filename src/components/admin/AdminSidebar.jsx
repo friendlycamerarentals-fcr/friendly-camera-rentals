@@ -16,6 +16,8 @@ import {
   X,
   Package,
   Store,
+  Gift,
+  Megaphone,
 } from "lucide-react";
 
 const menuItems = [
@@ -63,9 +65,21 @@ const menuItems = [
   },
 
   {
+    title: "Rewards",
+    href: "/admin/rewards",
+    icon: Gift,
+  },
+
+  {
     title: "Testimonials",
     href: "/admin/testimonials",
     icon: Star,
+  },
+
+  {
+    title: "Hero Marquee",
+    href: "/admin/hero-marquee",
+    icon: Megaphone,
   },
 ];
 

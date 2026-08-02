@@ -154,7 +154,7 @@ export default function RentalProductForm({
     model: initialData.model || "",
     category: initialData.category || "camera",
     megapixels: initialData.megapixels || "",
-    batteries: initialData.batteries || 1,
+    batteries: initialData.batteries || "",
     available: initialData.available ?? true,
     description: initialData.description || "",
     pricing: normalizePricing(initialData.pricing),
@@ -308,7 +308,7 @@ export default function RentalProductForm({
       pricing,
       specifications: {
         megapixels: formData.megapixels || "",
-        batteries: Number(formData.batteries || 0),
+        batteries: formData.batteries || "",
       },
       image: payloadImages[0] || "",
       images: payloadImages.slice(1),
@@ -380,12 +380,11 @@ export default function RentalProductForm({
           />
 
           <input
-            type="number"
+            type="text"
             name="batteries"
             value={formData.batteries}
             onChange={handleChange}
             placeholder="Number of Batteries"
-            min="0"
             className="rounded-2xl border border-white/10 bg-black px-4 py-3 text-white outline-none focus:border-[#F5A623]"
           />
 

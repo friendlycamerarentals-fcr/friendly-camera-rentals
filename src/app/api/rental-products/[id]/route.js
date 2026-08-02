@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import prisma from "@/lib/prisma";
+import { query } from "@/db/query";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -59,34 +59,24 @@ export async function GET(request, { params }) {
   const { id } = await params;
 
   try {
-    const product = await prisma.rentalProduct.findUnique({
-      where: {
-        id,
-      },
-    });
+    const rows = await query(
+      'SELECT * FROM "RentalProduct" WHERE "id" = $1 LIMIT 1',
+      [id],
+    );
+    const product = rows[0];
 
     if (!product) {
       return NextResponse.json(
-        {
-          success: false,
-          message: "Product not found",
-        },
+        { success: false, message: "Product not found" },
         { status: 404 },
       );
     }
 
-    return NextResponse.json({
-      success: true,
-      data: product,
-    });
+    return NextResponse.json({ success: true, data: product });
   } catch (error) {
     console.error(error);
-
     return NextResponse.json(
-      {
-        success: false,
-        message: error.message,
-      },
+      { success: false, message: error.message },
       { status: 500 },
     );
   }
@@ -97,17 +87,15 @@ export async function PUT(request, { params }) {
 
   try {
     const body = await request.json();
-
-    const existingProduct = await prisma.rentalProduct.findUnique({
-      where: { id },
-    });
+    const existingRows = await query(
+      'SELECT * FROM "RentalProduct" WHERE "id" = $1 LIMIT 1',
+      [id],
+    );
+    const existingProduct = existingRows[0];
 
     if (!existingProduct) {
       return NextResponse.json(
-        {
-          success: false,
-          message: "Product not found",
-        },
+        { success: false, message: "Product not found" },
         { status: 404 },
       );
     }
@@ -117,54 +105,93 @@ export async function PUT(request, { params }) {
       existingProduct.slug ||
       createSlug(body.name ?? existingProduct.name);
 
-    const pricing =
+    let imagesValue = Array.isArray(body.images)
+      ? body.images
+      : (existingProduct.images ?? []);
+
+    if (typeof imagesValue === "string") {
+      try {
+        imagesValue = JSON.parse(imagesValue);
+      } catch {
+        imagesValue = [imagesValue];
+      }
+    }
+    if (!Array.isArray(imagesValue)) {
+      imagesValue = [imagesValue].filter(Boolean);
+    }
+
+    let pricingValue =
       body.pricing !== undefined
         ? createPricingObject(body.pricing)
         : existingProduct.pricing;
 
-    const specifications =
+    if (typeof body.pricing === "string") {
+      try {
+        pricingValue = JSON.parse(body.pricing);
+      } catch {
+        pricingValue = createPricingObject({});
+      }
+    }
+
+    let specificationsValue =
       body.specifications !== undefined
         ? body.specifications
         : (existingProduct.specifications ?? {
             megapixels: body.megapixels ?? existingProduct.megapixels ?? "",
-            batteries: Number(body.batteries ?? existingProduct.batteries ?? 0),
+            batteries: body.batteries ?? existingProduct.batteries ?? "",
           });
 
-    const product = await prisma.rentalProduct.update({
-      where: {
-        id,
-      },
-      data: {
-        name: body.name ?? existingProduct.name,
-        slug,
-        brand: body.brand ?? existingProduct.brand,
-        model: body.model ?? existingProduct.model,
-        category: body.category ?? existingProduct.category,
-        description: body.description ?? existingProduct.description ?? "",
-        megapixels: body.megapixels ?? existingProduct.megapixels ?? "",
-        batteries: Number(body.batteries ?? existingProduct.batteries ?? 0),
-        available: body.available ?? existingProduct.available ?? true,
-        image: body.image ?? existingProduct.image ?? "",
-        images: Array.isArray(body.images)
-          ? body.images
-          : (existingProduct.images ?? []),
-        pricing,
-        specifications,
-      },
-    });
+    if (typeof specificationsValue === "string") {
+      try {
+        specificationsValue = JSON.parse(specificationsValue);
+      } catch {
+        specificationsValue = {
+          megapixels: body.megapixels ?? existingProduct.megapixels ?? "",
+          batteries: body.batteries ?? existingProduct.batteries ?? "",
+        };
+      }
+    }
 
-    return NextResponse.json({
-      success: true,
-      data: product,
-    });
+    const rows = await query(
+      `UPDATE "RentalProduct"
+       SET "name" = $1,
+           "slug" = $2,
+           "brand" = $3,
+           "model" = $4,
+           "category" = $5,
+           "description" = $6,
+           "megapixels" = $7,
+           "batteries" = $8,
+           "available" = $9,
+           "image" = $10,
+           "images" = $11::jsonb,
+           "pricing" = $12::jsonb,
+           "specifications" = $13::jsonb
+       WHERE "id" = $14
+       RETURNING *`,
+      [
+        body.name ?? existingProduct.name,
+        slug,
+        body.brand ?? existingProduct.brand,
+        body.model ?? existingProduct.model,
+        body.category ?? existingProduct.category,
+        body.description ?? existingProduct.description ?? "",
+        body.megapixels ?? existingProduct.megapixels ?? "",
+        body.batteries ?? existingProduct.batteries ?? "",
+        body.available ?? existingProduct.available ?? true,
+        body.image ?? existingProduct.image ?? "",
+        JSON.stringify(imagesValue),
+        JSON.stringify(pricingValue),
+        JSON.stringify(specificationsValue),
+        id,
+      ],
+    );
+
+    return NextResponse.json({ success: true, data: rows[0] });
   } catch (error) {
     console.error(error);
-
     return NextResponse.json(
-      {
-        success: false,
-        message: error.message || "Failed to update product",
-      },
+      { success: false, message: error.message || "Failed to update product" },
       { status: 500 },
     );
   }
@@ -174,23 +201,12 @@ export async function DELETE(request, { params }) {
   const { id } = await params;
 
   try {
-    await prisma.rentalProduct.delete({
-      where: {
-        id,
-      },
-    });
-
-    return NextResponse.json({
-      success: true,
-    });
+    await query('DELETE FROM "RentalProduct" WHERE "id" = $1', [id]);
+    return NextResponse.json({ success: true });
   } catch (error) {
     console.error(error);
-
     return NextResponse.json(
-      {
-        success: false,
-        message: "Failed to delete product",
-      },
+      { success: false, message: "Failed to delete product" },
       { status: 500 },
     );
   }

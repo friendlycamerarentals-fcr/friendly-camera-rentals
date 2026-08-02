@@ -18,6 +18,69 @@ const fieldCls =
   "placeholder:text-zinc-500 outline-none transition-colors duration-200 " +
   "focus:border-amber-400/60 focus:bg-white/8 hover:border-white/20";
 
+const BookDateInput = ({ value, onChange, min }) => {
+  const showPicker = (el) => {
+    try {
+      if (typeof el.showPicker === "function") {
+        el.showPicker();
+      }
+    } catch (err) {}
+  };
+
+  const handleActivate = (e) => {
+    const el = e.currentTarget;
+    showPicker(el);
+  };
+
+  return (
+    <div className="relative">
+      <input
+        type="date"
+        value={value}
+        min={min}
+        onChange={onChange}
+        onFocus={handleActivate}
+        onClick={handleActivate}
+        onTouchStart={handleActivate}
+        inputMode="none"
+        className={`${fieldCls} booking-field`}
+        aria-label="Booking date"
+      />
+    </div>
+  );
+};
+
+const PickupTimeInput = ({ value, onChange }) => {
+  const showPicker = (el) => {
+    try {
+      if (typeof el.showPicker === "function") {
+        el.showPicker();
+      }
+    } catch (err) {}
+  };
+
+  const handleActivate = (e) => {
+    const el = e.currentTarget;
+    showPicker(el);
+  };
+
+  return (
+    <div className="relative">
+      <input
+        type="time"
+        value={value}
+        onChange={onChange}
+        onFocus={handleActivate}
+        onClick={handleActivate}
+        onTouchStart={handleActivate}
+        inputMode="none"
+        className={`${fieldCls} booking-field`}
+        aria-label="Pickup time"
+      />
+    </div>
+  );
+};
+
 const BOOKING_DRAFT_KEY = "fcr-booking-draft";
 const PROFILE_REDIRECT_SOURCE_KEY = "fcr-profile-redirect-source";
 
@@ -46,7 +109,7 @@ const clearBookingDraft = () => {
 };
 
 export default function CartDrawer({ open, onClose }) {
-  const { cart, removeFromCart, clearCart } = useCart();
+  const { cart, setCart, removeFromCart, clearCart } = useCart();
   const { user, profile, profileComplete } = useAuth();
   const { openProfile, closeProfile, completePendingBooking } =
     useBookingFlow();
@@ -232,7 +295,7 @@ export default function CartDrawer({ open, onClose }) {
     return () => window.clearTimeout(timeoutId);
   }, [user, profile, profileComplete, onClose, router, redirectToProfile]);
 
-  const handleBookingStart = () => {
+  const handleBookingStart = async () => {
     if (!user) {
       setPendingBooking(true);
       localStorage.setItem("fcr-pending-booking", "1");
@@ -248,14 +311,77 @@ export default function CartDrawer({ open, onClose }) {
       return;
     }
 
-    setBookingData((prev) => ({
-      ...prev,
-      fullName: profile.name || prev.fullName,
-      phone: profile.phoneNumber || prev.phone,
-      address: profile.address || prev.address,
-    }));
-    setStep(1);
-    setShowBookingForm(true);
+    if (!cart.length) {
+      toast.error("Your cart is empty.");
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/rental-products/availability", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          items: cart.map((item) => ({
+            id: item.id,
+            name: item.name,
+          })),
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(
+          result?.message || "Failed to validate product availability.",
+        );
+      }
+
+      const unavailableProducts = result.data?.unavailableProducts || [];
+
+      if (unavailableProducts.length) {
+        const unavailableIds = new Set(
+          unavailableProducts.map((product) => product.id),
+        );
+        const remainingCart = cart.filter(
+          (item) => !unavailableIds.has(item.id),
+        );
+
+        if (remainingCart.length !== cart.length) {
+          setCart(remainingCart);
+        }
+
+        if (remainingCart.length === 0) {
+          onClose?.();
+          toast.error(
+            "Your cart has been updated because all selected products are no longer available.",
+          );
+          return;
+        }
+
+        const names = unavailableProducts.map((product) => product.name);
+        const message =
+          names.length === 1
+            ? `${names[0]} is currently unavailable for rent.`
+            : `The following products are currently unavailable for rent:\n${names
+                .map((name) => `• ${name}`)
+                .join("\n")}`;
+
+        toast.error(message);
+        return;
+      }
+
+      setBookingData((prev) => ({
+        ...prev,
+        fullName: profile.name || prev.fullName,
+        phone: profile.phoneNumber || prev.phone,
+        address: profile.address || prev.address,
+      }));
+      setStep(1);
+      setShowBookingForm(true);
+    } catch (error) {
+      console.error(error);
+      toast.error(error.message || "Failed to validate product availability.");
+    }
   };
 
   const closeBookingForm = () => {
@@ -392,118 +518,6 @@ export default function CartDrawer({ open, onClose }) {
     };
   }, [open]);
 
-  // Cross-browser date input that shows a placeholder on mobile
-  const DateInput = ({ value, onChange, min }) => {
-    const ref = useCallback(
-      (node) => {
-        if (!node) return;
-        // Ensure correct initial type depending on value
-        try {
-          node.type = value ? "date" : "text";
-        } catch (e) {}
-      },
-      [value],
-    );
-
-    const handleFocus = (e) => {
-      const el = e.target;
-      try {
-        el.type = "date";
-        // modern browsers expose showPicker
-        if (typeof el.showPicker === "function") el.showPicker();
-      } catch (err) {}
-    };
-
-    const handleBlur = (e) => {
-      const el = e.target;
-      // revert to text only if empty to show placeholder cross-browser
-      if (!el.value) {
-        try {
-          el.type = "text";
-        } catch (err) {}
-      }
-    };
-
-    const displayValue = value
-      ? new Date(value).toLocaleDateString("en-IN", {
-          day: "2-digit",
-          month: "short",
-          year: "numeric",
-        })
-      : "";
-
-    return (
-      <input
-        ref={ref}
-        type={value ? "date" : "text"}
-        value={value ? value : displayValue}
-        onFocus={handleFocus}
-        onBlur={handleBlur}
-        onChange={(e) => {
-          // if input is text and user typed into the text field, ignore
-          // normal path: native date control will emit yyyy-mm-dd
-          const val = e.target.value;
-          // if the element type is date, val will be in yyyy-mm-dd
-          // if it's text (user hasn't picked), don't call onChange with formatted text
-          if (e.target.type === "date") {
-            onChange({ target: { value: val } });
-          }
-        }}
-        min={min}
-        placeholder="Select Booking Date"
-        className={`${fieldCls} booking-field`}
-        aria-label="Booking date"
-      />
-    );
-  };
-
-  const TimeInput = ({ value, onChange }) => {
-    const ref = useCallback(
-      (node) => {
-        if (!node) return;
-        try {
-          node.type = value ? "time" : "text";
-        } catch (e) {}
-      },
-      [value],
-    );
-
-    const handleFocus = (e) => {
-      const el = e.target;
-      try {
-        el.type = "time";
-        if (typeof el.showPicker === "function") el.showPicker();
-      } catch (err) {}
-    };
-
-    const handleBlur = (e) => {
-      const el = e.target;
-      if (!el.value) {
-        try {
-          el.type = "text";
-        } catch (err) {}
-      }
-    };
-
-    return (
-      <input
-        ref={ref}
-        type={value ? "time" : "text"}
-        value={value || ""}
-        onFocus={handleFocus}
-        onBlur={handleBlur}
-        onChange={(e) => {
-          if (e.target.type === "time") {
-            onChange({ target: { value: e.target.value } });
-          }
-        }}
-        placeholder="Select Pickup Time"
-        className={`${fieldCls} booking-field`}
-        aria-label="Pickup time"
-      />
-    );
-  };
-
   // ✅ Booking modal rendered via Portal — completely outside parent DOM tree
   const bookingModal = showBookingForm
     ? createPortal(
@@ -536,7 +550,7 @@ export default function CartDrawer({ open, onClose }) {
                 position: "relative",
                 width: "100%",
                 maxWidth: "512px",
-                maxHeight: "calc(100dvh - 32px)",
+                maxHeight: "90dvh",
                 display: "flex",
                 flexDirection: "column",
                 overflow: "hidden",
@@ -575,7 +589,10 @@ export default function CartDrawer({ open, onClose }) {
               {/* ── Step 1 ── */}
               {step === 1 && (
                 <>
-                  <div className="flex-1 overflow-y-auto px-6 pb-2">
+                  <div
+                    className="flex-1 overflow-y-auto px-6 pb-2"
+                    style={{ WebkitOverflowScrolling: "touch" }}
+                  >
                     <h2 className="mb-1 text-xl font-semibold text-white">
                       Booking Details
                     </h2>
@@ -584,12 +601,12 @@ export default function CartDrawer({ open, onClose }) {
                       collection.
                     </p>
                     <div className="space-y-4">
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <div className="space-y-1.5">
                           <label className="text-xs font-medium uppercase tracking-wider text-zinc-400">
                             Booking Date
                           </label>
-                          <DateInput
+                          <BookDateInput
                             value={bookingData.bookingDate}
                             min={new Date().toISOString().split("T")[0]}
                             onChange={handleField("bookingDate")}
@@ -599,7 +616,7 @@ export default function CartDrawer({ open, onClose }) {
                           <label className="text-xs font-medium uppercase tracking-wider text-zinc-400">
                             Pickup Time
                           </label>
-                          <TimeInput
+                          <PickupTimeInput
                             value={bookingData.pickupTime}
                             onChange={handleField("pickupTime")}
                           />
@@ -668,7 +685,10 @@ export default function CartDrawer({ open, onClose }) {
               {/* ── Step 2 ── */}
               {step === 2 && (
                 <>
-                  <div className="flex-1 overflow-y-auto px-6 pb-2">
+                  <div
+                    className="flex-1 overflow-y-auto px-6 pb-2"
+                    style={{ WebkitOverflowScrolling: "touch" }}
+                  >
                     <h2 className="mb-1 text-xl font-semibold text-white">
                       Review & Confirm
                     </h2>

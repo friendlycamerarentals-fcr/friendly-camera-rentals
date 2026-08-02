@@ -7,10 +7,15 @@ import {
   Users,
 } from "lucide-react";
 
-import prisma from "@/lib/prisma";
+import { query } from "@/db/query";
 import StatsCard from "@/components/admin/StatsCard";
 
 export const revalidate = 0;
+
+async function getCount(tableName) {
+  const rows = await query(`SELECT COUNT(*)::int AS count FROM "${tableName}"`);
+  return Number(rows[0]?.count ?? 0);
+}
 
 export default async function AdminDashboard() {
   const [
@@ -19,14 +24,14 @@ export default async function AdminDashboard() {
     sellRequestsCount,
     bookingsCount,
     testimonialsCount,
-    customersCount
+    customersCount,
   ] = await Promise.all([
-    prisma.rentalProduct.count(),
-    prisma.buyProduct.count(),
-    prisma.sellRequest.count(),
-    prisma.serviceBooking.count(),
-    prisma.testimonial.count(),
-    prisma.customer.count(),
+    getCount("RentalProduct"),
+    getCount("BuyProduct"),
+    getCount("SellRequest"),
+    getCount("ServiceBooking"),
+    getCount("Testimonial"),
+    getCount("Customer"),
   ]);
 
   const stats = [

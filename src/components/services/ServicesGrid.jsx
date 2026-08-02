@@ -65,14 +65,6 @@ const services = [
     icon: TbAlbum,
     image: "/images/albumdesign.jpg",
   },
-
-  {
-    title: "3D Invitation Websites",
-    description:
-      "Interactive digital invitations for weddings, birthdays and events.",
-    icon: BsGlobe,
-    image: "/images/3d-inviation.png",
-  },
 ];
 
 export default function ServicesGrid() {

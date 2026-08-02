@@ -1,5 +1,11 @@
 import { NextResponse } from "next/server";
-import prisma from "@/lib/prisma";
+import { createId } from "@paralleldrive/cuid2";
+import { query } from "@/db/query";
+import {
+  getCachedValue,
+  setCachedValue,
+  invalidateCachePrefix,
+} from "@/lib/dataCache";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -55,65 +61,67 @@ const createPricingObject = (pricing) => {
   return {};
 };
 
-export async function GET(request) {
-  try {
-    const url = new URL(request.url);
-    const search = url.searchParams.get("search")?.trim() || "";
-    const category = url.searchParams.get("category")?.trim().toLowerCase();
+const selectColumns = [
+  '"id"',
+  '"name"',
+  '"slug"',
+  '"brand"',
+  '"model"',
+  '"category"',
+  '"description"',
+  '"megapixels"',
+  '"batteries"',
+  '"available"',
+  '"image"',
+  '"images"',
+  '"pricing"',
+  '"specifications"',
+  '"display_order"',
+  '"createdAt"',
+  '"updatedAt"',
+];
 
-    const where = {};
+const getCacheKey = (search, category) =>
+  `/api/rental-products:${search || "all"}:${category || "all"}`;
+
+export async function GET(request) {
+  const url = new URL(request.url);
+  const search = url.searchParams.get("search")?.trim() || "";
+  const category = url.searchParams.get("category")?.trim().toLowerCase();
+  const cacheKey = getCacheKey(search, category);
+
+  const cachedPayload = getCachedValue(cacheKey);
+  if (cachedPayload !== null) {
+    return NextResponse.json(cachedPayload);
+  }
+
+  try {
+    let sql = `SELECT ${selectColumns.join(", ")} FROM "RentalProduct"`;
+    const params = [];
 
     if (search) {
-      where.OR = [
-        {
-          name: {
-            contains: search,
-            mode: "insensitive",
-          },
-        },
-        {
-          brand: {
-            contains: search,
-            mode: "insensitive",
-          },
-        },
-        {
-          model: {
-            contains: search,
-            mode: "insensitive",
-          },
-        },
-      ];
+      sql += ' WHERE "name" ILIKE $1 OR "brand" ILIKE $2 OR "model" ILIKE $3';
+      const pattern = `%${search.toLowerCase()}%`;
+      params.push(pattern, pattern, pattern);
     }
 
     if (category && category !== "all") {
-      where.category = category;
+      sql += search ? ' AND "category" ILIKE $4' : ' WHERE "category" ILIKE $1';
+      params.push(category);
     }
 
-    const products = await prisma.rentalProduct.findMany({
-      where,
-      orderBy: [
-        {
-          display_order: "asc",
-        },
-        {
-          createdAt: "desc",
-        },
-      ],
-    });
+    sql += ' ORDER BY "display_order" ASC, "createdAt" DESC';
 
-    return NextResponse.json({
-      success: true,
-      data: products,
-    });
+    const products = await query(sql, params);
+    const payload = { success: true, data: products };
+
+    // Cache GET responses so repeated reads avoid a round-trip to Postgres.
+    setCachedValue(cacheKey, payload, 30_000);
+    return NextResponse.json(payload);
   } catch (error) {
-    console.error(error);
-
+    console.error("[RENTAL_PRODUCTS_GET]", error);
     return NextResponse.json(
-      {
-        success: false,
-        message: "Failed to fetch products",
-      },
+      { success: false, message: "Failed to fetch products" },
       { status: 500 },
     );
   }
@@ -123,60 +131,83 @@ export async function POST(request) {
   try {
     const body = await request.json();
     const slug = body.slug || createSlug(body.name);
-    const pricing = createPricingObject(body.pricing);
-    const specifications = body.specifications || {
+
+    let images = body.images ?? [];
+    if (typeof images === "string") {
+      try {
+        images = JSON.parse(images);
+      } catch {
+        images = [images];
+      }
+    }
+    if (!Array.isArray(images)) {
+      images = [images].filter(Boolean);
+    }
+
+    let pricing = createPricingObject(body.pricing);
+    if (typeof body.pricing === "string") {
+      try {
+        pricing = JSON.parse(body.pricing);
+      } catch {
+        pricing = createPricingObject({});
+      }
+    }
+
+    let specifications = body.specifications || {
       megapixels: body.megapixels || "",
-      batteries: Number(body.batteries || 0),
+      batteries: body.batteries ?? "",
     };
 
-    // Get the highest display_order to set new product at the end
-    const lastProduct = await prisma.rentalProduct.findFirst({
-      orderBy: {
-        display_order: "desc",
-      },
-      select: {
-        display_order: true,
-      },
-    });
+    if (typeof specifications === "string") {
+      try {
+        specifications = JSON.parse(specifications);
+      } catch {
+        specifications = {
+          megapixels: body.megapixels || "",
+          batteries: body.batteries ?? "",
+        };
+      }
+    }
 
-    const nextDisplayOrder = (lastProduct?.display_order ?? -1) + 1;
+    const id = createId();
 
-    const product = await prisma.rentalProduct.create({
-      data: {
-        name: body.name,
+    // Use a single INSERT query with a CTE to avoid a separate lookup for the display order.
+    const rows = await query(
+      `WITH next_display AS (
+        SELECT COALESCE(MAX("display_order"), -1) + 1 AS "next_display_order"
+        FROM "RentalProduct"
+      )
+      INSERT INTO "RentalProduct" (
+        "id", "name", "slug", "brand", "model", "category", "description",
+        "megapixels", "batteries", "available", "image", "images",
+        "pricing", "specifications", "display_order"
+      )
+      SELECT $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, "next_display_order"
+      FROM next_display
+      RETURNING ${selectColumns.join(", ")}`,
+      [
+        id,
+        body.name,
         slug,
-        brand: body.brand,
-        model: body.model,
-        category: body.category,
-        description: body.description || "",
-        megapixels: body.megapixels || "",
-        batteries: Number(body.batteries || 0),
-        available: body.available ?? true,
-        image: body.image || "",
-        images: body.images || [],
-        pricing,
-        specifications,
-        display_order: nextDisplayOrder,
-      },
-    });
-
-    return NextResponse.json({
-      success: true,
-      data: product,
-    });
-  } catch (error) {
-    console.error(error);
-    const message =
-      error?.code === "P2002" && error?.meta?.target?.includes("slug")
-        ? "A product with this slug already exists."
-        : error.message || "Failed to create product";
-
-    return NextResponse.json(
-      {
-        success: false,
-        message,
-      },
-      { status: 500 },
+        body.brand,
+        body.model,
+        body.category,
+        body.description || "",
+        body.megapixels || "",
+        body.batteries ?? "",
+        body.available ?? true,
+        body.image || "",
+        JSON.stringify(images),
+        JSON.stringify(pricing),
+        JSON.stringify(specifications),
+      ],
     );
+
+    invalidateCachePrefix("/api/rental-products");
+    return NextResponse.json({ success: true, data: rows[0] });
+  } catch (error) {
+    console.error("[RENTAL_PRODUCTS_POST]", error);
+    const message = error.message || "Failed to create product";
+    return NextResponse.json({ success: false, message }, { status: 500 });
   }
 }
