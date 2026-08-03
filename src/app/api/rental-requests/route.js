@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createId } from "@paralleldrive/cuid2";
+import { createId } from "@/lib/createId";
 import { query } from "@/db/query";
 import rewardService from "@/services/rewardService";
 

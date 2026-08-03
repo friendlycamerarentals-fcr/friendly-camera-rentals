@@ -1,4 +1,4 @@
-import { createId } from "@paralleldrive/cuid2";
+import { createId } from "@/lib/createId";
 import { query } from "@/db/query";
 import {
   REWARD_PERCENTAGE,
