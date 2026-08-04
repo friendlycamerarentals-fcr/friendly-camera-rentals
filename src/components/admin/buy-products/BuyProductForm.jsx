@@ -186,18 +186,18 @@ export default function BuyProductForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {/* Basic Information */}
-      <div className="rounded-3xl border border-white/10 bg-zinc-950 p-6">
-        <h2 className="mb-6 text-xl font-semibold text-white">
+      <div className="rounded-2xl border border-white/10 bg-zinc-950 p-4 md:p-6">
+        <h2 className="mb-4 text-xl md:mb-6 font-semibold text-white">
           Basic Information
         </h2>
 
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 md:gap-4 md:grid-cols-2">
           <input
             name="name"
             value={formData.name}
             onChange={handleChange}
             placeholder="Product Name"
-            className="rounded-2xl border border-white/10 bg-black px-4 py-3 text-white"
+            className="rounded-2xl border border-white/10 bg-black px-4 text-sm h-10 md:h-auto py-2.5 md:py-3 placeholder:text-sm md:text-base md:placeholder:text-base text-white"
             required
           />
 
@@ -206,7 +206,7 @@ export default function BuyProductForm({
             value={formData.brand}
             onChange={handleChange}
             placeholder="Brand"
-            className="rounded-2xl border border-white/10 bg-black px-4 py-3 text-white"
+            className="rounded-2xl border border-white/10 bg-black px-4 text-sm h-10 md:h-auto py-2.5 md:py-3 placeholder:text-sm md:text-base md:placeholder:text-base text-white"
             required
           />
 
@@ -215,7 +215,7 @@ export default function BuyProductForm({
             value={formData.model}
             onChange={handleChange}
             placeholder="Model"
-            className="rounded-2xl border border-white/10 bg-black px-4 py-3 text-white"
+            className="rounded-2xl border border-white/10 bg-black px-4 text-sm h-10 md:h-auto py-2.5 md:py-3 placeholder:text-sm md:text-base md:placeholder:text-base text-white"
             required
           />
 
@@ -223,7 +223,7 @@ export default function BuyProductForm({
             name="category"
             value={formData.category}
             onChange={handleChange}
-            className="rounded-2xl border border-white/10 bg-black px-4 py-3 text-white"
+            className="rounded-2xl border border-white/10 bg-black px-4 text-sm h-10 md:h-auto py-2.5 md:py-3 md:text-base text-white"
           >
             <option value="camera">Camera</option>
             <option value="lens">Lens</option>
@@ -279,7 +279,7 @@ export default function BuyProductForm({
       </div>
 
       {/* Images */}
-      <div className="rounded-3xl border border-white/10 bg-zinc-950 p-6">
+      <div className="rounded-2xl border border-white/10 bg-zinc-950 p-6">
         <h2 className="mb-6 text-xl font-semibold text-white">
           Product Images
         </h2>
@@ -293,7 +293,7 @@ export default function BuyProductForm({
       </div>
 
       {/* Purchase Price */}
-      <div className="rounded-3xl border border-white/10 bg-zinc-950 p-6">
+      <div className="rounded-2xl border border-white/10 bg-zinc-950 p-6">
         <h2 className="mb-6 text-xl font-semibold text-white">
           Purchase Price
         </h2>
@@ -316,7 +316,7 @@ export default function BuyProductForm({
       </div>
 
       {/* Specifications */}
-      <div className="rounded-3xl border border-white/10 bg-zinc-950 p-6">
+      <div className="rounded-2xl border border-white/10 bg-zinc-950 p-6">
         <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h2 className="text-xl font-semibold text-white">Specifications</h2>
 
@@ -368,7 +368,7 @@ export default function BuyProductForm({
       </div>
 
       {/* Accessories */}
-      <div className="rounded-3xl border border-white/10 bg-zinc-950 p-6">
+      <div className="rounded-2xl border border-white/10 bg-zinc-950 p-6">
         <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h2 className="text-xl font-semibold text-white">Accessories</h2>
 

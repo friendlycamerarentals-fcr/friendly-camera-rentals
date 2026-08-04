@@ -122,7 +122,7 @@ export default function TestimonialModal({
           <motion.div
             variants={modalVariants}
             onClick={(e) => e.stopPropagation()}
-            className="relative w-full max-w-md rounded-3xl bg-white p-8 overflow-hidden"
+            className="relative w-full max-w-md rounded-2xl bg-white p-8 overflow-hidden"
           >
             {/* Close Button */}
             <motion.button

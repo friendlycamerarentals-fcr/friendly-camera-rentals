@@ -18,7 +18,7 @@ export default function DeleteProductDialog({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-md rounded-3xl border border-white/10 bg-zinc-950 p-6 shadow-2xl"
+        className="w-full max-w-md rounded-2xl border border-white/10 bg-zinc-950 p-6 shadow-2xl"
       >
         {/* Header */}
         <div className="flex items-start justify-between">

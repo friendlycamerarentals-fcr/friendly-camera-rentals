@@ -8,14 +8,14 @@ import SellRequestStatusBadge from "./SellRequestStatusBadge";
 export default function SellRequestTable({ requests = [], onView, onDelete }) {
   if (!requests.length) {
     return (
-      <div className="rounded-3xl border border-white/10 bg-zinc-950 py-20 text-center">
+      <div className="rounded-2xl border border-white/10 bg-zinc-950 py-20 text-center">
         <p className="text-zinc-500">No sell requests found</p>
       </div>
     );
   }
 
   return (
-    <div className="overflow-hidden rounded-3xl border border-white/10 bg-zinc-950">
+    <div className="overflow-hidden rounded-2xl border border-white/10 bg-zinc-950">
       <div className="overflow-x-auto">
         <table className="w-full min-w-[1200px]">
           <thead>

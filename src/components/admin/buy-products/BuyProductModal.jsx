@@ -17,7 +17,7 @@ export default function BuyProductModal({ open, onClose, product }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
-      <div className="max-h-[90vh] w-full max-w-5xl overflow-y-auto rounded-3xl border border-white/10 bg-zinc-950">
+      <div className="max-h-[90vh] w-full max-w-5xl overflow-y-auto rounded-2xl border border-white/10 bg-zinc-950">
         {/* Header */}
         <div className="sticky top-0 z-10 flex items-center justify-between border-b border-white/10 bg-zinc-950 p-6">
           <h2 className="text-2xl font-bold text-white">Product Details</h2>
@@ -56,7 +56,7 @@ export default function BuyProductModal({ open, onClose, product }) {
           </div>
 
           {/* Basic Details */}
-          <div className="rounded-3xl border border-white/10 bg-black/20 p-6">
+          <div className="rounded-2xl border border-white/10 bg-black/20 p-6">
             <h3 className="mb-6 text-lg font-semibold text-white">
               Product Information
             </h3>
@@ -85,7 +85,7 @@ export default function BuyProductModal({ open, onClose, product }) {
 
           {/* Description */}
           {product.description && (
-            <div className="rounded-3xl border border-white/10 bg-black/20 p-6">
+            <div className="rounded-2xl border border-white/10 bg-black/20 p-6">
               <h3 className="mb-4 text-lg font-semibold text-white">
                 Description
               </h3>
@@ -112,7 +112,7 @@ export default function BuyProductModal({ open, onClose, product }) {
 
             return (
               specifications.length > 0 && (
-                <div className="rounded-3xl border border-white/10 bg-black/20 p-6">
+                <div className="rounded-2xl border border-white/10 bg-black/20 p-6">
                   <h3 className="mb-4 text-lg font-semibold text-white">
                     Specifications
                   </h3>
@@ -138,7 +138,7 @@ export default function BuyProductModal({ open, onClose, product }) {
 
           {/* Accessories */}
           {product.accessories?.length > 0 && (
-            <div className="rounded-3xl border border-white/10 bg-black/20 p-6">
+            <div className="rounded-2xl border border-white/10 bg-black/20 p-6">
               <h3 className="mb-4 text-lg font-semibold text-white">
                 Included Accessories
               </h3>

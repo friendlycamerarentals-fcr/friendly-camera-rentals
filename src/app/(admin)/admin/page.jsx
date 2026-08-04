@@ -5,6 +5,7 @@ import {
   CalendarDays,
   Star,
   Users,
+  Gift,
 } from "lucide-react";
 
 import { query } from "@/db/query";
@@ -25,6 +26,7 @@ export default async function AdminDashboard() {
     bookingsCount,
     testimonialsCount,
     customersCount,
+    rewardsCount,
   ] = await Promise.all([
     getCount("RentalProduct"),
     getCount("BuyProduct"),
@@ -32,6 +34,7 @@ export default async function AdminDashboard() {
     getCount("ServiceBooking"),
     getCount("Testimonial"),
     getCount("Customer"),
+    getCount("Reward"),
   ]);
 
   const stats = [
@@ -77,6 +80,13 @@ export default async function AdminDashboard() {
       color: "#EF4444",
       change: "Registered",
     },
+    {
+      title: "Rewards",
+      value: String(rewardsCount),
+      icon: Gift,
+      color: "#F5A623",
+      change: "Rewards Generated",
+    },
   ];
 
   return (
@@ -91,7 +101,7 @@ export default async function AdminDashboard() {
       </div>
 
       {/* Stats */}
-      <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 items-stretch">
         {stats.map((item) => (
           <StatsCard
             key={item.title}

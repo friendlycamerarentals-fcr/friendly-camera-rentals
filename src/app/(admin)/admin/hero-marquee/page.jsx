@@ -223,7 +223,7 @@ export default function HeroMarqueePage() {
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-3xl border border-white/10 bg-zinc-950/70 shadow-2xl">
+      <div className="overflow-hidden rounded-2xl border border-white/10 bg-zinc-950/70 shadow-2xl">
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm text-left text-zinc-300">
             <thead className="bg-white/5 text-xs uppercase tracking-[0.2em] text-zinc-500">
@@ -309,7 +309,7 @@ export default function HeroMarqueePage() {
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: 20, opacity: 0 }}
-              className="w-full max-w-xl rounded-3xl border border-white/10 bg-zinc-950 p-6 shadow-2xl"
+              className="w-full max-w-xl rounded-2xl border border-white/10 bg-zinc-950 p-6 shadow-2xl"
             >
               <div className="flex items-start justify-between gap-4">
                 <div>

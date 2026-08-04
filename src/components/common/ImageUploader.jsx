@@ -45,18 +45,21 @@ export default function ImageUploader({
       {/* Upload Area */}
       <div
         onClick={() => fileInputRef.current?.click()}
-        className="cursor-pointer rounded-3xl border border-dashed border-white/20 bg-zinc-950 p-8 transition-all duration-300 hover:border-[#F5A623]/40 hover:bg-zinc-900"
+        className="cursor-pointer rounded-3xl border border-dashed border-white/20 bg-zinc-950 px-5 py-6 transition-all duration-300 hover:border-[#F5A623]/40 hover:bg-zinc-900 md:px-8 md:py-8"
       >
         <div className="flex flex-col items-center justify-center text-center">
-          <div className="rounded-2xl bg-[#F5A623]/10 p-4">
-            <Upload size={28} className="text-[#F5A623]" />
+          <div className="rounded-2xl bg-[#F5A623]/10 flex h-16 w-16 items-center justify-center p-3 md:h-auto md:w-auto md:p-4">
+            <Upload
+              size={28}
+              className="text-[#F5A623] w-5 h-5 md:w-7 md:h-7"
+            />
           </div>
 
-          <h3 className="mt-4 text-lg font-semibold text-white">
+          <h3 className="mt-3 text-xl font-semibold text-white md:text-lg">
             Upload Images
           </h3>
 
-          <p className="mt-2 text-sm text-zinc-500">
+          <p className="mt-1.5 text-xs text-zinc-500 md:text-sm">
             Click to upload up to {maxFiles} images
           </p>
         </div>
@@ -73,7 +76,7 @@ export default function ImageUploader({
 
       {/* Images Preview */}
       {images.length > 0 ? (
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+        <div className="grid grid-cols-3 gap-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 md:gap-4">
           {images.map((image, index) => {
             const imageSrc =
               typeof image === "string"
@@ -119,7 +122,7 @@ export default function ImageUploader({
                 <button
                   type="button"
                   onClick={() => removeImage(index)}
-                  className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-red-500 text-white opacity-0 transition-all duration-300 group-hover:opacity-100 cursor-pointer"
+                  className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-black/50 text-red-400 shadow-[0_0_10px_rgba(0,0,0,0.3)] backdrop-blur-sm opacity-100 transition-all duration-300 md:right-2 md:top-2 md:opacity-0 md:group-hover:opacity-100 cursor-pointer"
                 >
                   <X size={16} />
                 </button>

@@ -59,7 +59,7 @@ export default function RewardsPage() {
           appliedRewards: 0,
           usedRewards: 0,
           expiredRewards: 0,
-        }
+        },
       );
     } catch (error) {
       console.error("[Rewards]", error);
@@ -79,8 +79,7 @@ export default function RewardsPage() {
         reward.contactNumber?.toLowerCase().includes(keyword) ||
         reward.rentalRequestId?.toLowerCase().includes(keyword);
 
-      const matchesStatus =
-        status === "All" || reward.status === status;
+      const matchesStatus = status === "All" || reward.status === status;
 
       return matchesSearch && matchesStatus;
     });
@@ -88,16 +87,13 @@ export default function RewardsPage() {
 
   const totalPages = Math.max(
     1,
-    Math.ceil(filteredRewards.length / ITEMS_PER_PAGE)
+    Math.ceil(filteredRewards.length / ITEMS_PER_PAGE),
   );
 
   const paginatedRewards = useMemo(() => {
     const start = (currentPage - 1) * ITEMS_PER_PAGE;
 
-    return filteredRewards.slice(
-      start,
-      start + ITEMS_PER_PAGE
-    );
+    return filteredRewards.slice(start, start + ITEMS_PER_PAGE);
   }, [filteredRewards, currentPage]);
 
   useEffect(() => {
@@ -114,36 +110,26 @@ export default function RewardsPage() {
     setSelectedReward(null);
   }
 
-    return (
-    <div className="space-y-8 p-6">
-
+  return (
+    <div className="space-y-6 p-4 sm:p-6">
       {/* Header */}
 
-      <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-center">
-
-        <div className="flex items-center gap-4">
-
-          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[#F5A623]/10">
-            <Gift
-              size={30}
-              className="text-[#F5A623]"
-            />
+      <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
+        <div className="flex items-center gap-3 sm:gap-4">
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#F5A623]/10 sm:h-16 sm:w-16">
+            <Gift size={26} className="text-[#F5A623]" />
           </div>
 
           <div>
-
-            <h1 className="text-3xl font-bold text-white">
+            <h1 className="text-2xl font-bold text-white sm:text-3xl">
               Reward Points
             </h1>
 
-            <p className="mt-1 text-zinc-500">
+            <p className="mt-1 text-sm text-zinc-500 sm:text-base">
               Manage customer rewards and discounts.
             </p>
-
           </div>
-
         </div>
-
       </div>
 
       {/* Statistics */}
@@ -172,20 +158,12 @@ export default function RewardsPage() {
       {/* Content */}
 
       {loading ? (
-
         <RewardSkeleton rows={10} />
-
       ) : filteredRewards.length === 0 ? (
-
         <RewardEmptyState />
-
       ) : (
-
         <>
-          <RewardTable
-            rewards={paginatedRewards}
-            onView={handleView}
-          />
+          <RewardTable rewards={paginatedRewards} onView={handleView} />
 
           <RewardPagination
             currentPage={currentPage}
@@ -193,7 +171,6 @@ export default function RewardsPage() {
             onPageChange={setCurrentPage}
           />
         </>
-
       )}
 
       {/* Details Modal */}
@@ -203,6 +180,6 @@ export default function RewardsPage() {
         reward={selectedReward}
         onClose={handleCloseModal}
       />
-          </div>
+    </div>
   );
 }

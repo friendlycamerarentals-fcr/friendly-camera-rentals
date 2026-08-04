@@ -164,6 +164,8 @@ CREATE TABLE IF NOT EXISTS "RentalRequest" (
     "quantity"       INTEGER NOT NULL DEFAULT 1,
     "rentalPrice"    DOUBLE PRECISION NOT NULL DEFAULT 0,
     "totalAmount"    DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "rewardId"       TEXT,
+    "rewardDiscount" DOUBLE PRECISION,
     "bookingDate"    TEXT NOT NULL,
     "pickupTime"     TEXT,
     "notes"          TEXT,

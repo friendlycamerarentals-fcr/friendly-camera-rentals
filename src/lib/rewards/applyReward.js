@@ -3,6 +3,30 @@ import { REWARD_STATUS } from "@/constants/rewardStatus";
 
 import { bookingContainsCamera, validateReward } from "./rewardValidation";
 
+async function getRentalRequestRewardColumnSupport() {
+  try {
+    const rows = await query(`
+      SELECT column_name
+      FROM information_schema.columns
+      WHERE table_schema = current_schema()
+        AND table_name = 'RentalRequest'
+        AND column_name IN ('rewardId', 'rewardDiscount')
+    `);
+    const columns = new Set(rows.map((row) => row.column_name));
+
+    return {
+      rewardId: columns.has("rewardId"),
+      rewardDiscount: columns.has("rewardDiscount"),
+    };
+  } catch (error) {
+    console.warn("[REWARD_SCHEMA_CHECK]", error.message);
+    return {
+      rewardId: false,
+      rewardDiscount: false,
+    };
+  }
+}
+
 /**
  * Apply customer's active reward.
  *
@@ -101,7 +125,13 @@ export async function applyReward({
     [rentalRequestId],
   );
 
-  if (rentalRows.length) {
+  const rewardColumns = await getRentalRequestRewardColumnSupport();
+
+  if (
+    rentalRows.length &&
+    rewardColumns.rewardId &&
+    rewardColumns.rewardDiscount
+  ) {
     await query(
       'UPDATE "RentalRequest" SET "rewardId" = $1, "rewardDiscount" = $2, "totalAmount" = $3 WHERE "requestId" = $4',
       [reward.rewardId, discount, finalAmount, rentalRequestId],

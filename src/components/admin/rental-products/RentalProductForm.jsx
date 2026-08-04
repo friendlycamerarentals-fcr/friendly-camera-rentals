@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { Trash2 } from "lucide-react";
 import ImageUploader from "@/components/common/ImageUploader";
 import { uploadProductImages } from "@/lib/upload";
 
@@ -318,19 +319,19 @@ export default function RentalProductForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {/* Basic Information */}
-      <div className="rounded-3xl border border-white/10 bg-zinc-950 p-4 md:p-6">
-        <h2 className="mb-6 text-lg md:text-xl font-semibold text-white">
+      <div className="rounded-2xl border border-white/10 bg-zinc-950 p-4 md:p-6">
+        <h2 className="mb-4 text-xl md:mb-6 md:text-xl font-semibold text-white">
           Basic Information
         </h2>
 
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 md:gap-4 md:grid-cols-2">
           <input
             type="text"
             name="name"
             value={formData.name}
             onChange={handleChange}
             placeholder="Product Name"
-            className="rounded-2xl border border-white/10 bg-black px-4 py-3 text-white outline-none focus:border-[#F5A623]"
+            className="rounded-2xl border border-white/10 bg-black px-4 text-sm h-10 md:h-auto py-2.5 md:py-3 placeholder:text-sm md:text-base md:placeholder:text-base text-white outline-none focus:border-[#F5A623]"
             required
           />
 
@@ -340,7 +341,7 @@ export default function RentalProductForm({
             value={formData.brand}
             onChange={handleChange}
             placeholder="Brand"
-            className="rounded-2xl border border-white/10 bg-black px-4 py-3 text-white outline-none focus:border-[#F5A623]"
+            className="rounded-2xl border border-white/10 bg-black px-4 text-sm h-10 md:h-auto py-2.5 md:py-3 placeholder:text-sm md:text-base md:placeholder:text-base text-white outline-none focus:border-[#F5A623]"
             required
           />
 
@@ -350,7 +351,7 @@ export default function RentalProductForm({
             value={formData.model}
             onChange={handleChange}
             placeholder="Model"
-            className="rounded-2xl border border-white/10 bg-black px-4 py-3 text-white outline-none focus:border-[#F5A623]"
+            className="rounded-2xl border border-white/10 bg-black px-4 text-sm h-10 md:h-auto py-2.5 md:py-3 placeholder:text-sm md:text-base md:placeholder:text-base text-white outline-none focus:border-[#F5A623]"
             required
           />
 
@@ -358,7 +359,7 @@ export default function RentalProductForm({
             name="category"
             value={formData.category}
             onChange={handleChange}
-            className="rounded-2xl border border-white/10 bg-black px-4 py-3 text-white outline-none"
+            className="rounded-2xl border border-white/10 bg-black px-4 text-sm h-10 md:h-auto py-2.5 md:py-3 md:text-base text-white outline-none"
           >
             <option value="camera">Camera</option>
             <option value="lens">Lens</option>
@@ -376,7 +377,7 @@ export default function RentalProductForm({
             value={formData.megapixels}
             onChange={handleChange}
             placeholder="Megapixels (Example: 24 MP)"
-            className="rounded-2xl border border-white/10 bg-black px-4 py-3 text-white outline-none focus:border-[#F5A623]"
+            className="rounded-2xl border border-white/10 bg-black px-4 text-sm h-10 md:h-auto py-2.5 md:py-3 placeholder:text-sm md:text-base md:placeholder:text-base text-white outline-none focus:border-[#F5A623]"
           />
 
           <input
@@ -385,7 +386,7 @@ export default function RentalProductForm({
             value={formData.batteries}
             onChange={handleChange}
             placeholder="Number of Batteries"
-            className="rounded-2xl border border-white/10 bg-black px-4 py-3 text-white outline-none focus:border-[#F5A623]"
+            className="rounded-2xl border border-white/10 bg-black px-4 text-sm h-10 md:h-auto py-2.5 md:py-3 placeholder:text-sm md:text-base md:placeholder:text-base text-white outline-none focus:border-[#F5A623]"
           />
 
           <select
@@ -397,7 +398,7 @@ export default function RentalProductForm({
                 available: e.target.value === "true",
               }))
             }
-            className="rounded-2xl border border-white/10 bg-black px-4 py-3 text-white outline-none"
+            className="rounded-2xl border border-white/10 bg-black px-4 text-sm h-10 md:h-auto py-2.5 md:py-3 md:text-base text-white outline-none"
           >
             <option value="true">Available</option>
             <option value="false">Unavailable</option>
@@ -410,12 +411,12 @@ export default function RentalProductForm({
           onChange={handleChange}
           rows={5}
           placeholder="Product Description"
-          className="mt-4 w-full rounded-2xl border border-white/10 bg-black px-4 py-3 text-white outline-none focus:border-[#F5A623]"
+          className="mt-3 w-full rounded-2xl border border-white/10 bg-black px-4 text-sm placeholder:text-sm min-h-[110px] md:min-h-[auto] py-2.5 md:py-3 text-white outline-none focus:border-[#F5A623]"
         />
       </div>
 
       {/* Images */}
-      <div className="rounded-3xl border border-white/10 bg-zinc-950 p-4 md:p-6">
+      <div className="rounded-2xl border border-white/10 bg-zinc-950 p-4 md:p-6">
         <h2 className="mb-6 text-lg md:text-xl font-semibold text-white">
           Product Images
         </h2>
@@ -429,7 +430,7 @@ export default function RentalProductForm({
       </div>
 
       {/* Rental Pricing */}
-      <div className="rounded-3xl border border-white/10 bg-zinc-950 p-4 md:p-6">
+      <div className="rounded-2xl border border-white/10 bg-zinc-950 p-4 md:p-6">
         <div className="mb-6 flex items-center justify-between">
           <h2 className="text-lg font-semibold text-white md:text-xl">
             Rental Pricing
@@ -438,7 +439,7 @@ export default function RentalProductForm({
           <button
             type="button"
             onClick={addPricingRow}
-            className="rounded-xl bg-[#F5A623] px-4 py-2 text-sm font-semibold text-black transition hover:opacity-90 cursor-pointer"
+            className="rounded-xl bg-[#F5A623] px-3 py-1.5 text-xs font-semibold text-black transition hover:opacity-90 cursor-pointer sm:px-4 sm:py-2 sm:text-sm"
           >
             + Add Pricing
           </button>
@@ -457,9 +458,9 @@ export default function RentalProductForm({
             return (
               <div
                 key={item.id}
-                className="rounded-2xl border border-white/10 bg-black/30 p-4"
+                className="rounded-2xl border border-white/10 bg-black/30 p-2"
               >
-                <div className="grid grid-cols-1 gap-3 md:grid-cols-[1fr_1fr_1fr_auto] md:items-start">
+                <div className="grid grid-cols-[1.3fr_0.8fr_1.5fr_44px] gap-3 items-center md:grid-cols-[1.4fr_1fr_1.2fr_44px] md:gap-4">
                   {/* Unit */}
                   <select
                     value={item.unit}
@@ -467,7 +468,7 @@ export default function RentalProductForm({
                       updatePricingRow(item.id, "unit", e.target.value)
                     }
                     aria-label="Duration type"
-                    className="rounded-xl border border-white/10 bg-black px-4 py-3 text-white outline-none"
+                    className="h-10 w-full min-w-0 rounded-xl border border-white/10 bg-black px-2 text-xs text-white outline-none md:text-sm"
                   >
                     <option value="hour">Hours</option>
                     <option value="day">Days</option>
@@ -475,7 +476,7 @@ export default function RentalProductForm({
                   </select>
 
                   {/* Duration */}
-                  <div className="flex flex-col gap-1">
+                  <div className="flex min-w-0 flex-col gap-1">
                     <input
                       type="number"
                       min="1"
@@ -486,7 +487,7 @@ export default function RentalProductForm({
                       }
                       placeholder="Duration"
                       aria-label="Duration"
-                      className={`rounded-xl border bg-black px-4 py-3 text-white outline-none ${
+                      className={`h-10 w-full min-w-0 rounded-xl border bg-black px-2 text-xs text-white outline-none md:text-sm ${
                         rowError.duration
                           ? "border-red-500/60 focus:border-red-500"
                           : "border-white/10 focus:border-[#F5A623]"
@@ -500,9 +501,9 @@ export default function RentalProductForm({
                   </div>
 
                   {/* Price */}
-                  <div className="flex flex-col gap-1">
+                  <div className="flex min-w-0 flex-col gap-1">
                     <div className="relative">
-                      <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500">
+                      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 text-sm">
                         ₹
                       </span>
                       <input
@@ -515,7 +516,7 @@ export default function RentalProductForm({
                         }
                         placeholder="Price"
                         aria-label="Price"
-                        className={`w-full rounded-xl border bg-black py-3 pl-8 pr-4 text-white outline-none ${
+                        className={`h-10 w-full min-w-0 rounded-xl border bg-black pl-7 pr-2 text-xs text-white outline-none md:text-sm ${
                           rowError.price
                             ? "border-red-500/60 focus:border-red-500"
                             : "border-white/10 focus:border-[#F5A623]"
@@ -532,9 +533,9 @@ export default function RentalProductForm({
                     type="button"
                     onClick={() => removePricingRow(item.id)}
                     disabled={formData.pricing.length === 1}
-                    className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-red-400 transition hover:bg-red-500/20 cursor-pointer disabled:cursor-not-allowed disabled:opacity-40"
+                    className="flex h-10 w-11 flex-shrink-0 items-center justify-center rounded-xl border border-red-500/30 bg-red-500/10 text-red-400 transition hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-40"
                   >
-                    Remove
+                    <Trash2 size={18} />
                   </button>
                 </div>
               </div>

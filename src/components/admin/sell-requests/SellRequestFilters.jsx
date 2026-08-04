@@ -5,7 +5,7 @@ export default function SellRequestFilters({
   setStatus,
 }) {
   return (
-    <div className="rounded-3xl border border-white/10 bg-zinc-950 p-5">
+    <div className="rounded-2xl border border-white/10 bg-zinc-950 p-5">
       <div className="grid gap-4 md:grid-cols-2">
         <input
           type="text"

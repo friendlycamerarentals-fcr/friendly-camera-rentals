@@ -20,7 +20,7 @@ export default function RewardStats({
   },
 }) {
   return (
-    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-5">
+    <div className="grid grid-cols-2 gap-4 xl:grid-cols-5">
       <RewardCard
         title="Total Rewards"
         value={stats.total}

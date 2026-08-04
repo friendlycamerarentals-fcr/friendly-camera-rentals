@@ -12,7 +12,7 @@ export default function DeleteProductDialog({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
-      <div className="w-full max-w-md rounded-3xl border border-white/10 bg-zinc-950 p-6">
+      <div className="w-full max-w-md rounded-2xl border border-white/10 bg-zinc-950 p-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">

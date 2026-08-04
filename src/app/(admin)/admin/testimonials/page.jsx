@@ -12,7 +12,7 @@ import FilterTabs from "@/components/admin/testimonials/FilterTabs";
 import DateFilters from "@/components/admin/testimonials/DateFilters";
 
 const SkeletonCard = () => (
-  <div className="animate-pulse rounded-3xl border border-white/10 bg-zinc-950/50 p-6 space-y-4">
+  <div className="animate-pulse rounded-2xl border border-white/10 bg-zinc-950/50 p-6 space-y-4">
     <div className="flex items-start justify-between gap-4">
       <div className="flex items-start gap-4 flex-1">
         <div className="h-16 w-16 rounded-full bg-zinc-800" />
@@ -324,7 +324,7 @@ export default function TestimonialsPage() {
       ) : filteredTestimonials.length === 0 ? (
         <motion.div
           variants={itemVariants}
-          className="rounded-3xl border border-white/10 bg-gradient-to-br from-white/[0.08] to-white/[0.02] p-16 text-center backdrop-blur-xl"
+          className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.08] to-white/[0.02] p-16 text-center backdrop-blur-xl"
         >
           <motion.div
             initial={{ scale: 0 }}
@@ -394,7 +394,7 @@ export default function TestimonialsPage() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-sm rounded-3xl border border-red-500/20 bg-gradient-to-br from-white/[0.08] to-white/[0.02] p-8 backdrop-blur-xl"
+              className="w-full max-w-sm rounded-2xl border border-red-500/20 bg-gradient-to-br from-white/[0.08] to-white/[0.02] p-8 backdrop-blur-xl"
             >
               <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-red-500/10">
                 <span className="text-2xl">⚠️</span>

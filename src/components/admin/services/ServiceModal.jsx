@@ -141,7 +141,7 @@ export default function ServiceModal({
           <motion.div
             variants={modalVariants}
             onClick={(e) => e.stopPropagation()}
-            className="relative max-h-[90vh] w-full max-w-5xl overflow-y-auto rounded-3xl border border-white/10 bg-gradient-to-br from-zinc-950 via-zinc-900 to-black shadow-2xl"
+            className="relative max-h-[90vh] w-full max-w-5xl overflow-y-auto rounded-2xl border border-white/10 bg-gradient-to-br from-zinc-950 via-zinc-900 to-black shadow-2xl"
           >
             {/* Close Button */}
             <motion.button
@@ -505,7 +505,7 @@ export default function ServiceModal({
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  className="absolute inset-0 z-50 flex items-center justify-center rounded-3xl bg-black/60 backdrop-blur-sm"
+                  className="absolute inset-0 z-50 flex items-center justify-center rounded-2xl bg-black/60 backdrop-blur-sm"
                   onClick={() => setShowDeleteConfirm(false)}
                 >
                   <motion.div

@@ -8,7 +8,7 @@ export default function CustomerModal({ open, onClose, customer }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
-      <div className="w-full max-w-2xl rounded-3xl border border-white/10 bg-zinc-950">
+      <div className="w-full max-w-2xl rounded-2xl border border-white/10 bg-zinc-950">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-white/10 p-6">
           <div>

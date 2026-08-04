@@ -105,7 +105,7 @@ export default function ReorderProductsModal({
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 20 }}
-        className="w-full max-h-[90vh] overflow-y-auto rounded-t-3xl sm:rounded-3xl bg-zinc-950 border border-white/10 p-6 sm:max-w-2xl"
+        className="w-full max-h-[90vh] overflow-y-auto rounded-t-3xl sm:rounded-2xl bg-zinc-950 border border-white/10 p-6 sm:max-w-2xl"
       >
         {/* Header */}
         <div className="mb-6 flex items-center justify-between">

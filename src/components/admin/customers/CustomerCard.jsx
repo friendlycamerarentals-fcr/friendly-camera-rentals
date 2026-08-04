@@ -5,7 +5,7 @@ import { Mail, Phone, Eye } from "lucide-react";
 
 export default function CustomerCard({ customer, onView }) {
   return (
-    <div className="group rounded-3xl border border-white/10 bg-zinc-950 p-6 transition-all hover:border-[#F5A623]/30">
+    <div className="group rounded-2xl border border-white/10 bg-zinc-950 p-6 transition-all hover:border-[#F5A623]/30">
       {/* Profile */}
       <div className="flex flex-col items-center">
         <ProfileAvatar

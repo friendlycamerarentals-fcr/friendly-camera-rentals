@@ -36,6 +36,22 @@ body {
   font-family: var(--font-sans);
 }
 
+button,
+[type="button"],
+[type="submit"],
+[type="reset"],
+[role="button"] {
+  cursor: pointer;
+}
+
+.admin-panel button,
+.admin-panel [type="button"],
+.admin-panel [type="submit"],
+.admin-panel [type="reset"],
+.admin-panel [role="button"] {
+  cursor: pointer;
+}
+
 .font-heading {
   font-family: var(--font-heading);
 }

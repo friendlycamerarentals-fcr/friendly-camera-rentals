@@ -9,7 +9,7 @@ export default function CustomerRewardHistory({
 }) {
   if (loading) {
     return (
-      <div className="rounded-3xl border border-white/10 bg-[#111111] p-6">
+      <div className="rounded-2xl border border-white/10 bg-[#111111] p-6">
         <div className="mb-6 h-7 w-56 animate-pulse rounded bg-white/10" />
 
         <div className="space-y-4">
@@ -26,7 +26,7 @@ export default function CustomerRewardHistory({
 
   if (!rewards.length) {
     return (
-      <div className="rounded-3xl border border-white/10 bg-[#111111] p-10 text-center">
+      <div className="rounded-2xl border border-white/10 bg-[#111111] p-10 text-center">
         <Gift size={60} className="mx-auto mb-4 text-[#F5A623]" />
 
         <h2 className="text-2xl font-bold text-white">No Reward History</h2>
@@ -39,7 +39,7 @@ export default function CustomerRewardHistory({
   }
 
   return (
-    <div className="rounded-3xl border border-white/10 bg-[#111111]">
+    <div className="rounded-2xl border border-white/10 bg-[#111111]">
       {/* Header */}
       <div className="border-b border-white/10 px-6 py-5">
         <h2 className="text-2xl font-bold text-white">

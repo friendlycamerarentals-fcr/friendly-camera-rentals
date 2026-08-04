@@ -21,7 +21,7 @@ export default function TestimonialCard({
       exit={{ opacity: 0, y: -20 }}
       whileHover={{ y: -8 }}
       transition={{ type: "spring", stiffness: 300, damping: 30 }}
-      className="group relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-white/[0.08] to-white/[0.02] p-6 backdrop-blur-xl transition-all duration-300 hover:border-[#F5A623]/40 hover:shadow-[0_25px_50px_rgba(245,166,35,0.15)]"
+      className="group relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.08] to-white/[0.02] p-6 backdrop-blur-xl transition-all duration-300 hover:border-[#F5A623]/40 hover:shadow-[0_25px_50px_rgba(245,166,35,0.15)]"
     >
       {/* Glow effect on hover */}
       <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300">

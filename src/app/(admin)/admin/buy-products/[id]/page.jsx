@@ -75,7 +75,7 @@ export default function EditBuyProductPage() {
 
   if (loading) {
     return (
-      <div className="rounded-3xl border border-white/10 bg-zinc-950 py-20 text-center text-zinc-500">
+      <div className="rounded-2xl border border-white/10 bg-zinc-950 py-20 text-center text-zinc-500">
         Loading product...
       </div>
     );
@@ -83,7 +83,7 @@ export default function EditBuyProductPage() {
 
   if (!product) {
     return (
-      <div className="rounded-3xl border border-red-500/20 bg-red-500/5 py-20 text-center text-red-400">
+      <div className="rounded-2xl border border-red-500/20 bg-red-500/5 py-20 text-center text-red-400">
         Product not found
       </div>
     );

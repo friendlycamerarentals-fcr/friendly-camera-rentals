@@ -10,6 +10,30 @@ function buildRequestId(idNumber) {
   return `FCR-R${String(idNumber).padStart(6, "0")}`;
 }
 
+async function getRentalRequestRewardColumnSupport() {
+  try {
+    const rows = await query(`
+      SELECT column_name
+      FROM information_schema.columns
+      WHERE table_schema = current_schema()
+        AND table_name = 'RentalRequest'
+        AND column_name IN ('rewardId', 'rewardDiscount')
+    `);
+    const columns = new Set(rows.map((row) => row.column_name));
+
+    return {
+      rewardId: columns.has("rewardId"),
+      rewardDiscount: columns.has("rewardDiscount"),
+    };
+  } catch (error) {
+    console.warn("[RENTAL_REQUEST_SCHEMA_CHECK]", error.message);
+    return {
+      rewardId: false,
+      rewardDiscount: false,
+    };
+  }
+}
+
 export async function GET() {
   try {
     const requests = await query(
@@ -155,15 +179,21 @@ export async function POST(request) {
     }
 
     const id = createId();
-    const rows = await query(
-      `INSERT INTO "RentalRequest" (
+    const now = new Date();
+    const rewardColumns = await getRentalRequestRewardColumnSupport();
+
+    let insertSql;
+    let insertParams;
+
+    if (rewardColumns.rewardId && rewardColumns.rewardDiscount) {
+      insertSql = `INSERT INTO "RentalRequest" (
         "id", "requestId", "customerId", "userId", "fullName", "email", "phone",
         "address", "productId", "productName", "productImage", "rentalDuration",
         "quantity", "rentalPrice", "totalAmount", "rewardId", "rewardDiscount",
-        "bookingDate", "pickupTime", "notes", "status", "paymentStatus"
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
-      RETURNING *`,
-      [
+        "bookingDate", "pickupTime", "notes", "status", "paymentStatus", "createdAt", "updatedAt"
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24)
+      RETURNING *`;
+      insertParams = [
         id,
         requestId,
         body.customerId,
@@ -186,12 +216,52 @@ export async function POST(request) {
         body.notes || null,
         "Pending",
         "Pending",
-      ],
-    );
+        now,
+        now,
+      ];
+    } else {
+      insertSql = `INSERT INTO "RentalRequest" (
+        "id", "requestId", "customerId", "userId", "fullName", "email", "phone",
+        "address", "productId", "productName", "productImage", "rentalDuration",
+        "quantity", "rentalPrice", "totalAmount",
+        "bookingDate", "pickupTime", "notes", "status", "paymentStatus", "createdAt", "updatedAt"
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
+      RETURNING *`;
+      insertParams = [
+        id,
+        requestId,
+        body.customerId,
+        body.userId || null,
+        body.fullName,
+        body.email || null,
+        body.phone,
+        body.address || null,
+        body.productId,
+        body.productName,
+        body.productImage || null,
+        body.rentalDuration,
+        quantity,
+        rentalPrice,
+        finalBookingAmount,
+        body.bookingDate,
+        body.pickupTime || null,
+        body.notes || null,
+        "Pending",
+        "Pending",
+        now,
+        now,
+      ];
+    }
 
+    const rows = await query(insertSql, insertParams);
     const rentalRequest = rows[0];
 
-    if (rewardResult?.rewardApplied && rentalRequest) {
+    if (
+      rewardResult?.rewardApplied &&
+      rentalRequest &&
+      rewardColumns.rewardId &&
+      rewardColumns.rewardDiscount
+    ) {
       await query(
         'UPDATE "RentalRequest" SET "rewardId" = $1, "rewardDiscount" = $2, "totalAmount" = $3 WHERE "requestId" = $4',
         [rewardId, rewardDiscount, finalBookingAmount, requestId],

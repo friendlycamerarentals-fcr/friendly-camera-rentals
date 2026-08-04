@@ -43,7 +43,7 @@ export default function SellRequestModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
-      <div className="max-h-[90vh] w-full max-w-7xl overflow-y-auto rounded-3xl border border-white/10 bg-zinc-950 shadow-2xl">
+      <div className="max-h-[90vh] w-full max-w-7xl overflow-y-auto rounded-2xl border border-white/10 bg-zinc-950 shadow-2xl">
         <div className="sticky top-0 z-20 flex items-center justify-between border-b border-white/10 bg-zinc-950/95 p-6 backdrop-blur-md">
           <div>
             <h2 className="text-2xl font-bold text-white">
@@ -65,7 +65,7 @@ export default function SellRequestModal({
 
         <div className="grid gap-6 p-6 lg:grid-cols-[1.3fr_0.9fr]">
           {/* Gallery */}
-          <section className="space-y-5 rounded-3xl border border-white/10 bg-black/20 p-5">
+          <section className="space-y-5 rounded-2xl border border-white/10 bg-black/20 p-5">
             <div className="flex items-center justify-between gap-4">
               <div>
                 <h3 className="text-lg font-semibold text-white">
@@ -97,26 +97,26 @@ export default function SellRequestModal({
                         key={image + index}
                         type="button"
                         onClick={() => setSelectedImage(index)}
-                        className={`relative overflow-hidden rounded-3xl border p-1 transition-all duration-300 ${
+                        className={`relative overflow-hidden rounded-2xl border p-1 transition-all duration-300 ${
                           isActive
                             ? "border-[#F5A623] shadow-[0_0_0_3px_rgba(245,166,35,0.12)]"
                             : "border-white/10 hover:border-[#F5A623]/50"
                         }`}
                       >
-                        <div className="relative h-[90px] w-full rounded-3xl bg-white/5">
+                        <div className="relative h-[90px] w-full rounded-2xl bg-white/5">
                           <Image
                             src={image}
                             alt={`Thumbnail ${index + 1}`}
                             fill
                             sizes="90px"
-                            className="rounded-3xl object-cover"
+                            className="rounded-2xl object-cover"
                           />
                         </div>
                       </button>
                     );
                   })
                 ) : (
-                  <div className="flex h-full items-center justify-center rounded-3xl border border-white/10 bg-black/30 p-6 text-center text-zinc-500">
+                  <div className="flex h-full items-center justify-center rounded-2xl border border-white/10 bg-black/30 p-6 text-center text-zinc-500">
                     No images available
                   </div>
                 )}
@@ -182,7 +182,7 @@ export default function SellRequestModal({
             {(accessories.length > 0 || request.description) && (
               <div className="space-y-5 lg:mt-4">
                 {accessories.length > 0 && (
-                  <div className="rounded-3xl border border-white/10 bg-black/20 p-5">
+                  <div className="rounded-2xl border border-white/10 bg-black/20 p-5">
                     <h3 className="mb-4 text-lg font-semibold text-white">
                       Accessories Included
                     </h3>
@@ -200,7 +200,7 @@ export default function SellRequestModal({
                 )}
 
                 {request.description && (
-                  <div className="rounded-3xl border border-white/10 bg-black/20 p-5">
+                  <div className="rounded-2xl border border-white/10 bg-black/20 p-5">
                     <div className="flex items-center justify-between gap-4">
                       <h3 className="text-lg font-semibold text-white">
                         Product Description
@@ -217,7 +217,7 @@ export default function SellRequestModal({
           </section>
 
           <div className="space-y-5">
-            <div className="rounded-3xl border border-white/10 bg-black/20 p-5">
+            <div className="rounded-2xl border border-white/10 bg-black/20 p-5">
               <h3 className="mb-4 text-lg font-semibold text-white">
                 Customer Details
               </h3>
@@ -229,7 +229,7 @@ export default function SellRequestModal({
               </div>
             </div>
 
-            <div className="rounded-3xl border border-white/10 bg-black/20 p-5">
+            <div className="rounded-2xl border border-white/10 bg-black/20 p-5">
               <h3 className="mb-4 text-lg font-semibold text-white">
                 Product Details
               </h3>
@@ -243,7 +243,7 @@ export default function SellRequestModal({
               </div>
             </div>
 
-            <div className="rounded-3xl border border-[#F5A623]/20 bg-[#F5A623]/10 p-5">
+            <div className="rounded-2xl border border-[#F5A623]/20 bg-[#F5A623]/10 p-5">
               <p className="text-sm uppercase tracking-[0.24em] text-zinc-400">
                 Expected Selling Price
               </p>
@@ -252,21 +252,21 @@ export default function SellRequestModal({
               </p>
             </div>
 
-            <div className="rounded-3xl border border-white/10 bg-black/20 p-5">
+            <div className="rounded-2xl border border-white/10 bg-black/20 p-5">
               <h3 className="mb-4 text-lg font-semibold text-white">Status</h3>
               <div className="flex flex-wrap items-center gap-3">
                 <SellRequestStatusBadge status={request.status} />
               </div>
             </div>
 
-            <div className="rounded-3xl border border-white/10 bg-black/20 p-5">
+            <div className="rounded-2xl border border-white/10 bg-black/20 p-5">
               <h3 className="mb-4 text-lg font-semibold text-white">
                 Update Status
               </h3>
               <select
                 value={request.status}
                 onChange={(e) => onStatusChange(request.id, e.target.value)}
-                className="w-full rounded-3xl border border-white/10 bg-black px-4 py-3 text-white outline-none transition focus:border-[#F5A623]"
+                className="w-full rounded-2xl border border-white/10 bg-black px-4 py-3 text-white outline-none transition focus:border-[#F5A623]"
               >
                 <option value="pending">Pending</option>
                 <option value="contacted">Contacted</option>

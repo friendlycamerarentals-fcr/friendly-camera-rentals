@@ -18,7 +18,7 @@ export default function Loading() {
         {[...Array(5)].map((_, index) => (
           <div
             key={index}
-            className="rounded-3xl border border-white/10 bg-[#111111] p-6"
+            className="rounded-2xl border border-white/10 bg-[#111111] p-6"
           >
             <div className="h-5 w-28 animate-pulse rounded bg-white/10" />
 

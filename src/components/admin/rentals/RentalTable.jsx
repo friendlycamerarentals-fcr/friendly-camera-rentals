@@ -28,6 +28,7 @@ export default function RentalTable({
   onDelete,
 }) {
   const [page, setPage] = useState(1);
+  const [openStatusRow, setOpenStatusRow] = useState(null);
 
   const totalPages = Math.max(1, Math.ceil(bookings.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages); // clamp if filter shrinks results
@@ -54,7 +55,13 @@ export default function RentalTable({
     return [safePage - 2, safePage - 1, safePage, safePage + 1, safePage + 2];
   };
 
-  const updateStatus = (id, status) => onStatusChange?.(id, status);
+  const updateStatus = async (id, status) => {
+    const success = await onStatusChange?.(id, status);
+    if (success) {
+      setOpenStatusRow(null);
+    }
+  };
+
   const deleteBooking = (id) => onDelete?.(id);
 
   return (
@@ -134,30 +141,45 @@ export default function RentalTable({
                 </td>
 
                 <td className="px-6 py-5">
-                  <details className="relative">
-                    <summary className="flex cursor-pointer list-none items-center gap-1.5">
+                  {booking.status === "Completed" ||
+                  booking.status === "Cancelled" ? (
+                    <div className="flex items-center gap-1.5">
                       <RentalStatusBadge status={booking.status} />
-                      <ChevronDown size={13} className="text-zinc-500" />
-                    </summary>
-
-                    <div className="absolute left-0 top-10 z-50 w-52 rounded-2xl border border-white/10 bg-zinc-900 p-1.5 shadow-2xl">
-                      {statusOptions.map((s) => (
-                        <button
-                          key={s.value}
-                          onClick={() => updateStatus(booking.id, s.value)}
-                          className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition hover:bg-white/5"
-                        >
-                          <span
-                            className={`h-2.5 w-2.5 shrink-0 rounded-full ${s.color}`}
-                          />
-                          <span className="flex-1 text-white">{s.value}</span>
-                          {booking.status === s.value && (
-                            <span className="text-[#F5A623]">✓</span>
-                          )}
-                        </button>
-                      ))}
                     </div>
-                  </details>
+                  ) : (
+                    <details
+                      className="relative"
+                      open={openStatusRow === booking.id}
+                      onToggle={(event) =>
+                        setOpenStatusRow(
+                          event.currentTarget.open ? booking.id : null,
+                        )
+                      }
+                    >
+                      <summary className="flex cursor-pointer list-none items-center gap-1.5">
+                        <RentalStatusBadge status={booking.status} />
+                        <ChevronDown size={13} className="text-zinc-500" />
+                      </summary>
+
+                      <div className="absolute left-0 top-10 z-50 w-52 rounded-2xl border border-white/10 bg-zinc-900 p-1.5 shadow-2xl">
+                        {statusOptions.map((s) => (
+                          <button
+                            key={s.value}
+                            onClick={() => updateStatus(booking.id, s.value)}
+                            className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition hover:bg-white/5"
+                          >
+                            <span
+                              className={`h-2.5 w-2.5 shrink-0 rounded-full ${s.color}`}
+                            />
+                            <span className="flex-1 text-white">{s.value}</span>
+                            {booking.status === s.value && (
+                              <span className="text-[#F5A623]">✓</span>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    </details>
+                  )}
                 </td>
 
                 <td className="px-6 py-5">

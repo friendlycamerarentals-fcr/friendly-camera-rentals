@@ -21,7 +21,7 @@ export default function ServiceCard({ booking, onView }) {
       whileHover={{ scale: 1.02 }}
       whileTap={{ scale: 0.98 }}
       onClick={() => onView(booking)}
-      className="group cursor-pointer rounded-3xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] p-6 transition-all hover:border-[#F5A623]/50 hover:shadow-2xl hover:shadow-[#F5A623]/10 backdrop-blur-sm"
+      className="group cursor-pointer rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] p-6 transition-all hover:border-[#F5A623]/50 hover:shadow-2xl hover:shadow-[#F5A623]/10 backdrop-blur-sm"
     >
       {/* Header */}
       <div className="flex items-start justify-between">

@@ -2,7 +2,7 @@
 
 export default function RewardSkeleton({ rows = 8 }) {
   return (
-    <div className="overflow-hidden rounded-3xl border border-white/10 bg-[#0F0F10]">
+    <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#0F0F10]">
       {/* Header */}
       <div className="grid grid-cols-9 gap-4 border-b border-white/10 bg-white/[0.02] px-6 py-4">
         {Array.from({ length: 9 }).map((_, i) => (

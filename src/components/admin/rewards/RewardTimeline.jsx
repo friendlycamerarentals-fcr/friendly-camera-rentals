@@ -50,7 +50,7 @@ export default function RewardTimeline({ reward }) {
   ];
 
   return (
-    <div className="rounded-3xl border border-white/10 bg-[#0F0F10] p-6">
+    <div className="rounded-2xl border border-white/10 bg-[#0F0F10] p-6">
       {/* Header */}
       <div className="mb-8">
         <h2 className="text-2xl font-bold text-white">Reward Timeline</h2>

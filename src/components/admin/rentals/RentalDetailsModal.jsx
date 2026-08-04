@@ -79,7 +79,7 @@ export default function RentalDetailsModal({
           flex max-h-[90vh] w-full flex-col overflow-hidden
           rounded-2xl border border-white/10 bg-zinc-950
           shadow-[0_0_60px_rgba(245,166,35,0.10)]
-          sm:rounded-3xl
+          sm:rounded-2xl
           sm:max-w-[560px]
           lg:max-w-[720px]
           xl:max-w-[820px]

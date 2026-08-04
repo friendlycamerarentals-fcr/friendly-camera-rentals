@@ -13,13 +13,14 @@ import {
 } from "lucide-react";
 
 import RewardStatusBadge from "./RewardStatusBadge";
+import { formatDate } from "@/lib/rewards/rewardHelpers";
 
 export default function RewardDetailsModal({ open, onClose, reward }) {
   if (!open || !reward) return null;
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-5 backdrop-blur-sm">
-      <div className="relative max-h-[90vh] w-full max-w-4xl overflow-hidden rounded-3xl border border-white/10 bg-zinc-950 shadow-[0_0_60px_rgba(0,0,0,.45)]">
+      <div className="relative max-h-[90vh] w-full max-w-4xl overflow-hidden rounded-2xl border border-white/10 bg-zinc-950 shadow-[0_0_60px_rgba(0,0,0,.45)]">
         {/* Header */}
 
         <div className="flex items-center justify-between border-b border-white/10 px-8 py-6">
@@ -61,13 +62,13 @@ export default function RewardDetailsModal({ open, onClose, reward }) {
               <InfoCard
                 icon={CalendarDays}
                 label="Generated Date"
-                value={reward.generatedDate}
+                value={formatDate(reward.createdAt)}
               />
 
               <InfoCard
                 icon={Clock3}
                 label="Expiry Date"
-                value={reward.expireDate}
+                value={formatDate(reward.expireDate)}
               />
             </div>
           </div>
@@ -95,7 +96,7 @@ export default function RewardDetailsModal({ open, onClose, reward }) {
               <InfoCard
                 icon={Phone}
                 label="Contact Number"
-                value={reward.contact}
+                value={reward.contactNumber || "-"}
               />
 
               <div className="rounded-2xl border border-white/10 bg-black/20 p-5">
@@ -119,7 +120,7 @@ export default function RewardDetailsModal({ open, onClose, reward }) {
               <InfoCard
                 icon={Camera}
                 label="Generated From Rental"
-                value={reward.rentalId}
+                value={reward.rentalRequestId || "-"}
               />
 
               <InfoCard
@@ -137,9 +138,7 @@ export default function RewardDetailsModal({ open, onClose, reward }) {
               <InfoCard
                 icon={WalletCards}
                 label="Discount Amount"
-                value={
-                  reward.discountAmount ? `₹${reward.discountAmount}` : "-"
-                }
+                value={reward.rewardAmount ? `₹${reward.rewardAmount}` : "-"}
               />
             </div>
           </div>
@@ -155,7 +154,7 @@ export default function RewardDetailsModal({ open, onClose, reward }) {
               <div className="space-y-5">
                 <TimelineItem
                   title="Reward Generated"
-                  date={reward.generatedDate}
+                  date={reward.createdAt}
                 />
 
                 <TimelineItem

@@ -78,7 +78,7 @@ export default function TestimonialStats({ testimonials = [] }) {
               y: -4,
               boxShadow: "0 20px 50px rgba(245, 166, 35, 0.1)",
             }}
-            className={`group relative overflow-hidden rounded-3xl border ${stat.borderColor} bg-gradient-to-br ${stat.bgGradient} p-4 backdrop-blur-xl transition-all duration-300 hover:border-[#F5A623]/40`}
+            className={`group relative overflow-hidden rounded-2xl border ${stat.borderColor} bg-gradient-to-br ${stat.bgGradient} p-4 backdrop-blur-xl transition-all duration-300 hover:border-[#F5A623]/40`}
           >
             {/* Glow effect */}
             <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300">

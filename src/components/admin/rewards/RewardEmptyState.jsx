@@ -7,7 +7,7 @@ export default function RewardEmptyState({
   description = "Reward records will appear here automatically after rental bookings are marked as Completed.",
 }) {
   return (
-    <div className="flex min-h-[420px] w-full items-center justify-center rounded-3xl border border-white/10 bg-[#0F0F10] px-6 py-12">
+    <div className="flex min-h-[420px] w-full items-center justify-center rounded-2xl border border-white/10 bg-[#0F0F10] px-6 py-12">
       <div className="max-w-md text-center">
         {/* Icon */}
         <div className="mx-auto mb-6 flex h-24 w-24 items-center justify-center rounded-full border border-[#F5A623]/20 bg-[#F5A623]/10">

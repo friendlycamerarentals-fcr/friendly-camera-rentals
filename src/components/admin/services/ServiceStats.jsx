@@ -58,7 +58,7 @@ export default function ServiceStats({ bookings = [] }) {
         return (
           <div
             key={stat.title}
-            className="rounded-3xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] p-6 backdrop-blur-sm"
+            className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] p-6 backdrop-blur-sm"
           >
             <div className="flex items-center justify-between">
               <div>

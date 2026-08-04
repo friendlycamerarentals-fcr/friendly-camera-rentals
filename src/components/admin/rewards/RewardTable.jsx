@@ -2,11 +2,12 @@
 
 import { Eye, Gift } from "lucide-react";
 import RewardStatusBadge from "./RewardStatusBadge";
+import { formatDate } from "@/lib/rewards/rewardHelpers";
 
 export default function RewardTable({ rewards = [], onView }) {
   if (!rewards.length) {
     return (
-      <div className="flex flex-col items-center justify-center rounded-3xl border border-dashed border-white/10 bg-zinc-950 py-20">
+      <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-white/10 bg-zinc-950 py-20">
         <Gift size={50} className="text-[#F5A623]" />
 
         <h3 className="mt-5 text-xl font-semibold text-white">
@@ -21,7 +22,7 @@ export default function RewardTable({ rewards = [], onView }) {
   }
 
   return (
-    <div className="overflow-hidden rounded-3xl border border-white/10 bg-zinc-950">
+    <div className="overflow-hidden rounded-2xl border border-white/10 bg-zinc-950">
       <div className="overflow-x-auto">
         <table className="min-w-full">
           <thead className="border-b border-white/10 bg-black/30">
@@ -74,9 +75,13 @@ export default function RewardTable({ rewards = [], onView }) {
 
                 <td className="px-6 py-5 text-zinc-300">{reward.customerId}</td>
 
-                <td className="px-6 py-5 text-zinc-300">{reward.contact}</td>
+                <td className="px-6 py-5 text-zinc-300">
+                  {reward.contactNumber || "-"}
+                </td>
 
-                <td className="px-6 py-5 text-zinc-300">{reward.rentalId}</td>
+                <td className="px-6 py-5 text-zinc-300">
+                  {reward.rentalRequestId || "-"}
+                </td>
 
                 <td className="px-6 py-5">
                   <span className="rounded-full bg-[#F5A623]/10 px-3 py-1 text-sm font-semibold text-[#F5A623]">
@@ -89,10 +94,12 @@ export default function RewardTable({ rewards = [], onView }) {
                 </td>
 
                 <td className="px-6 py-5 text-zinc-400">
-                  {reward.generatedDate}
+                  {formatDate(reward.createdAt)}
                 </td>
 
-                <td className="px-6 py-5 text-zinc-400">{reward.expireDate}</td>
+                <td className="px-6 py-5 text-zinc-400">
+                  {formatDate(reward.expireDate)}
+                </td>
 
                 <td className="px-6 py-5">
                   <div className="flex justify-center">

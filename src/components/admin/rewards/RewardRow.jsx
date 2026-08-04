@@ -2,6 +2,7 @@
 
 import { Eye, Clock3 } from "lucide-react";
 import RewardStatusBadge from "./RewardStatusBadge";
+import { formatDate } from "@/lib/rewards/rewardHelpers";
 
 export default function RewardRow({ index, reward, onView, onTimeline }) {
   return (
@@ -53,9 +54,7 @@ export default function RewardRow({ index, reward, onView, onTimeline }) {
 
       {/* Expiry */}
       <td className="px-5 py-4 text-sm text-zinc-300">
-        {reward.expireDate
-          ? new Date(reward.expireDate).toLocaleDateString("en-IN")
-          : "-"}
+        {formatDate(reward.expireDate)}
       </td>
 
       {/* Status */}

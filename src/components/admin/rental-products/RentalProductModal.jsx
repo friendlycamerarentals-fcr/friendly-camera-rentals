@@ -18,7 +18,7 @@ export default function RentalProductModal({ open, onClose, product }) {
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="max-h-[95vh] w-full max-w-6xl overflow-y-auto rounded-3xl border border-white/10 bg-zinc-950 shadow-[0_0_50px_rgba(245,166,35,0.1)]"
+        className="max-h-[95vh] w-full max-w-6xl overflow-y-auto rounded-2xl border border-white/10 bg-zinc-950 shadow-[0_0_50px_rgba(245,166,35,0.1)]"
       >
         {/* Header */}
         <div className="sticky top-0 z-10 flex items-center justify-between border-b border-white/10 bg-zinc-950 p-4 md:p-6">
@@ -43,7 +43,7 @@ export default function RentalProductModal({ open, onClose, product }) {
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             {/* Images */}
             <div>
-              <div className="relative aspect-square overflow-hidden rounded-3xl border border-white/10">
+              <div className="relative aspect-square overflow-hidden rounded-2xl border border-white/10">
                 {product.image?.trim() ? (
                   <Image
                     src={product.image}
@@ -80,7 +80,7 @@ export default function RentalProductModal({ open, onClose, product }) {
             {/* Details */}
             <div className="space-y-6">
               {/* Basic Info */}
-              <div className="rounded-3xl border border-white/10 bg-black/20 p-5">
+              <div className="rounded-2xl border border-white/10 bg-black/20 p-5">
                 <h3 className="mb-4 text-lg font-semibold text-[#F5A623]">
                   Basic Information
                 </h3>
@@ -124,7 +124,7 @@ export default function RentalProductModal({ open, onClose, product }) {
               </div>
 
               {/* Availability */}
-              <div className="rounded-3xl border border-white/10 bg-black/20 p-5">
+              <div className="rounded-2xl border border-white/10 bg-black/20 p-5">
                 <h3 className="mb-4 text-lg font-semibold text-[#F5A623]">
                   Inventory
                 </h3>
@@ -149,7 +149,7 @@ export default function RentalProductModal({ open, onClose, product }) {
               </div>
 
               {/* Pricing */}
-              <div className="rounded-3xl border border-white/10 bg-black/20 p-5">
+              <div className="rounded-2xl border border-white/10 bg-black/20 p-5">
                 <h3 className="mb-4 text-lg font-semibold text-[#F5A623]">
                   Rental Pricing
                 </h3>
@@ -172,7 +172,7 @@ export default function RentalProductModal({ open, onClose, product }) {
 
               {/* Description */}
               {product.description && (
-                <div className="rounded-3xl border border-white/10 bg-black/20 p-5">
+                <div className="rounded-2xl border border-white/10 bg-black/20 p-5">
                   <h3 className="mb-4 text-lg font-semibold text-[#F5A623]">
                     Description
                   </h3>

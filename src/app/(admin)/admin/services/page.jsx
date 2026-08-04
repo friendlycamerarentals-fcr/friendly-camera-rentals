@@ -233,7 +233,7 @@ export default function ServicesPage() {
 
       {/* Empty State */}
       {bookings.length === 0 ? (
-        <div className="rounded-3xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] p-16 text-center backdrop-blur-sm">
+        <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] p-16 text-center backdrop-blur-sm">
           <h3 className="text-xl font-semibold text-white">
             No Booking Requests
           </h3>
@@ -243,7 +243,7 @@ export default function ServicesPage() {
           </p>
         </div>
       ) : filteredBookings.length === 0 ? (
-        <div className="rounded-3xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] p-16 text-center backdrop-blur-sm">
+        <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/5 to-white/[0.02] p-16 text-center backdrop-blur-sm">
           <h3 className="text-xl font-semibold text-white">No Results Found</h3>
 
           <p className="mt-2 text-zinc-500">

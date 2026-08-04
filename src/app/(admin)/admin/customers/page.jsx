@@ -73,7 +73,7 @@ export default function CustomersPage() {
 
       {/* Empty */}
       {filteredCustomers.length === 0 ? (
-        <div className="rounded-3xl border border-white/10 bg-zinc-950 p-16 text-center">
+        <div className="rounded-2xl border border-white/10 bg-zinc-950 p-16 text-center">
           <h3 className="text-xl font-semibold text-white">
             No Customers Found
           </h3>
