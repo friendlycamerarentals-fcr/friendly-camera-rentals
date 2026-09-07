@@ -48,13 +48,8 @@ export function useFetchData(url, options = {}) {
     ttlMs = 30_000,
   } = options;
 
-  const [data, setData] = useState(() => {
-    const cachedValue = getCachedValue(cacheKey);
-    return cachedValue ? normalizeData(cachedValue) : initialData;
-  });
-  const [loading, setLoading] = useState(
-    immediate && !getCachedValue(cacheKey),
-  );
+  const [data, setData] = useState(initialData);
+  const [loading, setLoading] = useState(immediate);
   const [error, setError] = useState(null);
   const abortControllerRef = useRef(null);
   const latestCallbacksRef = useRef({ onSuccess, onError });
@@ -212,10 +207,6 @@ export async function performCRUDOperation(
       invalidateCachePrefix("/api/rental-products");
     }
 
-    if (url.includes("/api/services")) {
-      invalidateCachePrefix("/api/services");
-    }
-
     if (url.includes("/api/testimonials")) {
       invalidateCachePrefix("/api/testimonials");
     }
@@ -282,10 +273,6 @@ export function useOptimisticUpdate(data, setData, refetch) {
 
         if (url.includes("/api/rental-products")) {
           invalidateCachePrefix("/api/rental-products");
-        }
-
-        if (url.includes("/api/services")) {
-          invalidateCachePrefix("/api/services");
         }
 
         if (url.includes("/api/testimonials")) {

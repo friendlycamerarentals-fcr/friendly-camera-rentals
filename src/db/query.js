@@ -1,58 +1,13 @@
 import pool, { isDatabaseConfigured } from "./connection.js";
 
-const normalizeSql = (sql) => String(sql).replace(/\s+/g, " ").trim();
-
-const logQuery = (event, { sql, params, durationMs, rowCount, error }) => {
-  const payload = {
-    event,
-    durationMs,
-    sql: normalizeSql(sql),
-    paramCount: Array.isArray(params) ? params.length : 0,
-    rowCount,
-  };
-
-  if (error) {
-    console.error("[PG] Query failed", { ...payload, message: error.message });
-    return;
-  }
-
-  console.info("[PG] Query completed", payload);
-};
-
 const executeQuery = async (client, sql, params = []) => {
-  const startedAt = Date.now();
-
-  try {
-    const result = await client.query(sql, params);
-    logQuery("query", {
-      sql,
-      params,
-      durationMs: Date.now() - startedAt,
-      rowCount: result?.rowCount ?? result?.rows?.length ?? 0,
-    });
-    return result;
-  } catch (error) {
-    logQuery("query", {
-      sql,
-      params,
-      durationMs: Date.now() - startedAt,
-      error,
-    });
-    throw error;
-  }
+  return client.query(sql, params);
 };
 
 // Central SQL wrapper for the PostgreSQL-backed app.
 // All application queries should use this module instead of calling the pool directly.
 export async function query(sql, params = []) {
   if (!isDatabaseConfigured() || !pool) {
-    console.warn(
-      "[PG] Database is not configured; returning empty rows for query.",
-      {
-        sql: normalizeSql(sql),
-        paramCount: Array.isArray(params) ? params.length : 0,
-      },
-    );
     return [];
   }
 
@@ -83,7 +38,7 @@ export async function transaction(callback) {
     try {
       await executeQuery(client, "ROLLBACK");
     } catch (rollbackError) {
-      console.error("[PG] Transaction rollback failed", {
+      console.error("Transaction rollback failed", {
         message: rollbackError.message,
       });
     }

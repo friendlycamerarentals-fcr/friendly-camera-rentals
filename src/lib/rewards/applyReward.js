@@ -1,8 +1,6 @@
 import { query } from "@/db/query";
 import { REWARD_STATUS } from "@/constants/rewardStatus";
 
-import { bookingContainsCamera, validateReward } from "./rewardValidation";
-
 async function getRentalRequestRewardColumnSupport() {
   try {
     const rows = await query(`
@@ -40,6 +38,29 @@ export async function applyReward({
   productCategory = null,
   productCategories = [],
 }) {
+  const rentalRows = await query(
+    'SELECT * FROM "RentalRequest" WHERE "requestId" = $1 LIMIT 1',
+    [rentalRequestId],
+  );
+  const rental = rentalRows[0];
+
+  if (!rental || rental.customerId !== customerId) {
+    return {
+      success: false,
+      rewardApplied: false,
+      message: "Rental does not belong to this customer.",
+    };
+  }
+  if (rental.status !== "Confirmed") {
+    return {
+      success: false,
+      rewardApplied: false,
+      message: "Rewards can only be applied to confirmed rentals.",
+    };
+  }
+
+  totalAmount = Number(rental.totalAmount || 0);
+
   await query(
     'UPDATE "Reward" SET "status" = $1, "expiredDate" = NOW() WHERE "customerId" = $2 AND "status" = $3 AND "expireDate" < NOW()',
     [REWARD_STATUS.EXPIRED, customerId, REWARD_STATUS.ACTIVE],
@@ -66,39 +87,13 @@ export async function applyReward({
     };
   }
 
-  let resolvedProductCategory = productCategory || null;
-  const categories = Array.isArray(productCategories)
-    ? [...productCategories]
-    : [];
-
-  if (!resolvedProductCategory && productId) {
-    const productRows = await query(
-      'SELECT "category" FROM "RentalProduct" WHERE "id" = $1 LIMIT 1',
-      [productId],
-    );
-    resolvedProductCategory = productRows[0]?.category || null;
-  }
-
-  if (resolvedProductCategory) {
-    categories.push(resolvedProductCategory);
-  }
-
-  if (!bookingContainsCamera(categories)) {
-    return {
-      success: false,
-      rewardApplied: false,
-      discount: 0,
-      finalAmount: totalAmount,
-      reward: null,
-      message: "Reward points are only valid for Camera rentals.",
-    };
-  }
-
-  const validation = await validateReward(
-    customerId,
-    resolvedProductCategory,
-    categories,
+  const rewardRows = await query(
+    'SELECT * FROM "Reward" WHERE "customerId" = $1 AND "status" = $2 AND "expireDate" >= NOW() LIMIT 1',
+    [customerId, REWARD_STATUS.ACTIVE],
   );
+  const validation = rewardRows[0]
+    ? { valid: true, reward: rewardRows[0] }
+    : { valid: false, message: "No active reward available." };
 
   if (!validation.valid) {
     return {
@@ -116,11 +111,11 @@ export async function applyReward({
   const finalAmount = Math.max(totalAmount - discount, 0);
 
   await query(
-    'UPDATE "Reward" SET "status" = $1, "appliedRentalId" = $2, "appliedDate" = NOW() WHERE "id" = $3',
-    [REWARD_STATUS.APPLIED, rentalRequestId, reward.id],
+    'UPDATE "Reward" SET "status" = $1, "appliedRentalId" = $2, "appliedDate" = NOW(), "usedDate" = NOW() WHERE "id" = $3 AND "status" = $4',
+    [REWARD_STATUS.USED, rentalRequestId, reward.id, REWARD_STATUS.ACTIVE],
   );
 
-  const rentalRows = await query(
+  const existingRentalRows = await query(
     'SELECT "requestId" FROM "RentalRequest" WHERE "requestId" = $1 LIMIT 1',
     [rentalRequestId],
   );
@@ -128,7 +123,7 @@ export async function applyReward({
   const rewardColumns = await getRentalRequestRewardColumnSupport();
 
   if (
-    rentalRows.length &&
+    existingRentalRows.length &&
     rewardColumns.rewardId &&
     rewardColumns.rewardDiscount
   ) {

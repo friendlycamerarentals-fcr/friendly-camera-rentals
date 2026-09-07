@@ -40,21 +40,7 @@ export async function proxy(request) {
     }
   }
 
-  // 4. Services (Bookings) API protection: GET/PUT/DELETE are admin-only, POST (booking submission) is public
-  if (pathname.startsWith("/api/services")) {
-    if (method !== "POST") {
-      const cookie = request.cookies.get("admin_auth");
-      const payload = await verifyToken(cookie?.value);
-      if (!payload || payload.role !== "admin") {
-        return NextResponse.json(
-          { success: false, message: "Unauthorized" },
-          { status: 401 },
-        );
-      }
-    }
-  }
-
-  // 5. Sell Requests API protection: GET/PUT/DELETE are admin-only, POST (submission) is public
+  // 4. Sell Requests API protection: GET/PUT/DELETE are admin-only, POST (submission) is public
   if (pathname.startsWith("/api/sell-requests")) {
     if (method !== "POST") {
       const cookie = request.cookies.get("admin_auth");
@@ -98,7 +84,6 @@ export const config = {
     "/admin/:path*",
     "/api/admin/:path*",
     "/api/customers/:path*",
-    "/api/services/:path*",
     "/api/sell-requests/:path*",
     "/api/rental-products/:path*",
     "/api/buy-products/:path*",

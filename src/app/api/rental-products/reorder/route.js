@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { transaction } from "@/db/query";
+import { invalidateCachePrefix } from "@/lib/dataCache";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -28,6 +29,7 @@ export async function PUT(request) {
       }
     });
 
+    invalidateCachePrefix("/api/rental-products");
     return NextResponse.json({
       success: true,
       message: "Products reordered successfully",

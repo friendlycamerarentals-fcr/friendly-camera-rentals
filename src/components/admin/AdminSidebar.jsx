@@ -22,11 +22,11 @@ import {
 
 const menuItems = [
   { title: "Dashboard", href: "/admin", icon: LayoutDashboard },
+  { title: "Bookings", href: "/admin/bookings", icon: CalendarDays },
   { title: "Rentals", href: "/admin/rentals", icon: Camera },
   { title: "Rental Products", href: "/admin/rental-products", icon: Package },
   { title: "Buy Products", href: "/admin/buy", icon: ShoppingBag },
   { title: "Sell Requests", href: "/admin/sell-requests", icon: IndianRupee },
-  { title: "Service Bookings", href: "/admin/services", icon: CalendarDays },
   { title: "Customers", href: "/admin/customers", icon: Users },
   { title: "Rewards", href: "/admin/rewards", icon: Gift },
   { title: "Testimonials", href: "/admin/testimonials", icon: Star },

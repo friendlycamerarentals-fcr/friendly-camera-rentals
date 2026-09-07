@@ -10,8 +10,8 @@ import {
 import {
   calculateReward,
   calculateExpiryDate,
-  isRewardEligible,
   rewardExistsForRental,
+  hasAnotherActiveReward,
 } from "./rewardValidation";
 
 /**
@@ -59,19 +59,6 @@ export async function generateReward(rentalRequestId) {
     throw new Error("Reward can only be generated after rental completion.");
   }
 
-  const productRows = await query(
-    'SELECT "category" FROM "RentalProduct" WHERE "id" = $1 LIMIT 1',
-    [rental.productId],
-  );
-
-  if (!isRewardEligible(productRows[0]?.category)) {
-    return {
-      success: false,
-      skipped: true,
-      message: "Reward generation skipped: non-Camera rental.",
-    };
-  }
-
   const alreadyGenerated = await rewardExistsForRental(rental.requestId);
 
   if (alreadyGenerated) {
@@ -95,32 +82,57 @@ export async function generateReward(rentalRequestId) {
     throw new Error("Customer not found.");
   }
 
+  await query(
+    'UPDATE "Reward" SET "status" = $1, "expiredDate" = NOW() WHERE "customerId" = $2 AND "status" = $3 AND "expireDate" < NOW()',
+    ["Expired", rental.customerId, "Active"],
+  );
+
+  if (await hasAnotherActiveReward(rental.customerId)) {
+    return {
+      success: false,
+      skipped: true,
+      message: "Reward skipped: customer already has an active reward.",
+    };
+  }
+
   const rewardAmount = calculateReward(rental.totalAmount);
   const rewardId = await generateRewardId();
   const expireDate = calculateExpiryDate(rental.updatedAt || new Date());
 
   const id = createId();
-  const rewardRows = await query(
-    `INSERT INTO "Reward" (
+  let rewardRows;
+  try {
+    rewardRows = await query(
+      `INSERT INTO "Reward" (
       "id", "rewardId", "customerId", "customerName", "contactNumber",
       "rentalRequestId", "rentalDate", "rewardPercentage",
       "rewardAmount", "status", "expireDate"
     ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
     RETURNING *`,
-    [
-      id,
-      rewardId,
-      customer.customerId,
-      customer.name,
-      customer.phoneNumber || rental.phone || "",
-      rental.requestId,
-      rental.bookingDate,
-      REWARD_PERCENTAGE,
-      rewardAmount,
-      REWARD_STATUS.ACTIVE,
-      expireDate,
-    ],
-  );
+      [
+        id,
+        rewardId,
+        customer.customerId,
+        customer.name,
+        customer.phoneNumber || rental.phone || "",
+        rental.requestId,
+        rental.bookingDate,
+        REWARD_PERCENTAGE,
+        rewardAmount,
+        REWARD_STATUS.ACTIVE,
+        expireDate,
+      ],
+    );
+  } catch (error) {
+    if (error.code === "23505") {
+      return {
+        success: false,
+        skipped: true,
+        message: "Reward already exists for this rental or customer.",
+      };
+    }
+    throw error;
+  }
 
   return {
     success: true,

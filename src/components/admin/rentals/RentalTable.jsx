@@ -16,7 +16,7 @@ const PAGE_SIZE = 10;
 
 const statusOptions = [
   { value: "Pending", color: "bg-yellow-500" },
-  { value: "Approved", color: "bg-blue-500" },
+  { value: "Confirmed", color: "bg-blue-500" },
   { value: "Rejected", color: "bg-red-500" },
   { value: "Completed", color: "bg-green-500" },
 ];
@@ -138,6 +138,12 @@ export default function RentalTable({
                   <span className="font-bold text-white">
                     ₹{Number(booking.totalAmount || 0).toLocaleString("en-IN")}
                   </span>
+                  {booking.rewardDiscount > 0 && (
+                    <span className="block text-xs text-emerald-400">
+                      ₹{Number(booking.rewardDiscount).toLocaleString("en-IN")}{" "}
+                      reward used
+                    </span>
+                  )}
                 </td>
 
                 <td className="px-6 py-5">

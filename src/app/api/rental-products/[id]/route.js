@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { query } from "@/db/query";
+import { invalidateCachePrefix } from "@/lib/dataCache";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -187,6 +188,7 @@ export async function PUT(request, { params }) {
       ],
     );
 
+    invalidateCachePrefix("/api/rental-products");
     return NextResponse.json({ success: true, data: rows[0] });
   } catch (error) {
     console.error(error);
@@ -202,6 +204,7 @@ export async function DELETE(request, { params }) {
 
   try {
     await query('DELETE FROM "RentalProduct" WHERE "id" = $1', [id]);
+    invalidateCachePrefix("/api/rental-products");
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error(error);

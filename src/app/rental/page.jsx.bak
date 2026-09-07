@@ -24,7 +24,7 @@ export default function RentalPage() {
   }, []);
 
   const fetchProducts = useCallback(async () => {
-    // console.log("Fetch start", { query, selectedCategory, loading });
+    console.log("Fetch start", { query, selectedCategory, loading });
     setLoading(true);
     setError("");
 
@@ -50,7 +50,7 @@ export default function RentalPage() {
       );
 
       const data = result.data;
-      // console.log("API response:", data);
+      console.log("API response:", data);
 
       if (!result.ok || !data?.success) {
         throw new Error(data?.message || "Failed to load rental products.");
@@ -62,7 +62,7 @@ export default function RentalPage() {
           ? data
           : [];
 
-      // console.log("Products:", productsList);
+      console.log("Products:", productsList);
       if (isMountedRef.current) {
         setProducts(productsList);
       }
@@ -73,8 +73,8 @@ export default function RentalPage() {
         setProducts([]);
       }
     } finally {
-      // console.log("Fetch end", { query, selectedCategory, loading });
-      // console.log("Loading:", loading);
+      console.log("Fetch end", { query, selectedCategory, loading });
+      console.log("Loading:", loading);
       if (isMountedRef.current) {
         setLoading(false);
       }

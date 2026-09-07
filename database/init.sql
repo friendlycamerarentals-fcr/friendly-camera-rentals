@@ -58,6 +58,21 @@ CREATE TABLE IF NOT EXISTS "RentalProduct" (
     "createdAt"      TIMESTAMP(3) NOT NULL DEFAULT now(),
     "updatedAt"      TIMESTAMP(3) NOT NULL DEFAULT now(),
     "rentalPrice"    JSONB,
+
+-- ----------------------------------------------------------------------------
+-- AdminNotification
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS "AdminNotification" (
+    "id"          TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    "type"        TEXT NOT NULL,
+    "title"       TEXT NOT NULL,
+    "message"     TEXT NOT NULL,
+    "relatedId"   TEXT,
+    "relatedType" TEXT,
+    "read"        BOOLEAN NOT NULL DEFAULT FALSE,
+    "createdAt"   TIMESTAMP(3) NOT NULL DEFAULT now(),
+    "updatedAt"   TIMESTAMP(3) NOT NULL DEFAULT now()
+);
     "specifications" JSONB,
     "display_order"  INTEGER NOT NULL DEFAULT 0
 );
@@ -325,9 +340,16 @@ CREATE INDEX IF NOT EXISTS "idx_rentalrequest_created_at"     ON "RentalRequest"
 CREATE INDEX IF NOT EXISTS "idx_testimonial_status"   ON "Testimonial" ("status");
 CREATE INDEX IF NOT EXISTS "idx_testimonial_featured" ON "Testimonial" ("featured");
 
+CREATE INDEX IF NOT EXISTS "idx_adminnotification_read"       ON "AdminNotification" ("read");
+CREATE INDEX IF NOT EXISTS "idx_adminnotification_created_at" ON "AdminNotification" ("createdAt");
+CREATE INDEX IF NOT EXISTS "idx_adminnotification_type"       ON "AdminNotification" ("type");
+
 CREATE INDEX IF NOT EXISTS "idx_reward_status"      ON "Reward" ("status");
 CREATE INDEX IF NOT EXISTS "idx_reward_customer_id" ON "Reward" ("customerId");
 CREATE INDEX IF NOT EXISTS "idx_reward_expire_date" ON "Reward" ("expireDate");
+
+CREATE UNIQUE INDEX IF NOT EXISTS "Reward_one_active_per_customer_idx"
+    ON "Reward" ("customerId") WHERE "status" = 'Active';
 
 
 -- ============================================================================
@@ -486,6 +508,10 @@ CREATE TRIGGER "set_updated_at" BEFORE UPDATE ON "Testimonial"
 
 DROP TRIGGER IF EXISTS "set_updated_at" ON "Reward";
 CREATE TRIGGER "set_updated_at" BEFORE UPDATE ON "Reward"
+    FOR EACH ROW EXECUTE FUNCTION trg_set_updated_at();
+
+DROP TRIGGER IF EXISTS "set_updated_at" ON "AdminNotification";
+CREATE TRIGGER "set_updated_at" BEFORE UPDATE ON "AdminNotification"
     FOR EACH ROW EXECUTE FUNCTION trg_set_updated_at();
 
 -- Note: DROP TRIGGER IF EXISTS + CREATE TRIGGER is the standard idempotent

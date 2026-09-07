@@ -5,12 +5,12 @@ import { NotificationProvider } from "@/context/NotificationContext";
 export default function AdminLayout({ children }) {
   return (
     <NotificationProvider>
-      <div className="admin-panel flex h-screen overflow-hidden bg-black text-white">
+      <div className="admin-panel relative flex h-screen overflow-hidden bg-black text-white">
         {/* Sidebar */}
         <AdminSidebar />
 
         {/* Main Content */}
-        <div className="flex min-w-0 flex-1 flex-col overflow-hidden transition-[margin-left] duration-300 ease-out md:ml-(--admin-sidebar-width)">
+        <div className="flex min-w-0 w-full flex-1 flex-col overflow-hidden transition-[padding-left] duration-300 ease-out md:pl-[var(--admin-sidebar-width)]">
           {/* Header */}
           <AdminHeader />
 

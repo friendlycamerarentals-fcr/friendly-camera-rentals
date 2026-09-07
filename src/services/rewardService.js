@@ -141,6 +141,7 @@ class RewardService {
       usedRewards: stats.used,
       expiredRewards: stats.expired,
       expiringSoon: stats.expiringSoon,
+      totalRewardValue: Number(totalAmountRows[0]?.total || 0),
     };
   }
 

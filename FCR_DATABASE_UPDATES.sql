@@ -224,6 +224,21 @@ CREATE TABLE IF NOT EXISTS "HeroMarquee" (
     "updatedAt"     TIMESTAMP(3) NOT NULL DEFAULT now()
 );
 
+-- ----------------------------------------------------------------------------
+-- AdminNotification
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS "AdminNotification" (
+    "id"          TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    "type"        TEXT NOT NULL,
+    "title"       TEXT NOT NULL,
+    "message"     TEXT NOT NULL,
+    "relatedId"   TEXT,
+    "relatedType" TEXT,
+    "read"        BOOLEAN NOT NULL DEFAULT FALSE,
+    "createdAt"   TIMESTAMP(3) NOT NULL DEFAULT now(),
+    "updatedAt"   TIMESTAMP(3) NOT NULL DEFAULT now()
+);
+
 CREATE TABLE IF NOT EXISTS "HeroMarqueeSettings" (
     "id"            TEXT PRIMARY KEY,
     "isEnabled"     BOOLEAN NOT NULL DEFAULT TRUE,
@@ -349,6 +364,9 @@ CREATE INDEX IF NOT EXISTS "idx_testimonial_featured" ON "Testimonial" ("feature
 CREATE INDEX IF NOT EXISTS "idx_reward_status"      ON "Reward" ("status");
 CREATE INDEX IF NOT EXISTS "idx_reward_customer_id" ON "Reward" ("customerId");
 CREATE INDEX IF NOT EXISTS "idx_reward_expire_date" ON "Reward" ("expireDate");
+
+CREATE UNIQUE INDEX IF NOT EXISTS "Reward_one_active_per_customer_idx"
+    ON "Reward" ("customerId") WHERE "status" = 'Active';
 
 CREATE INDEX IF NOT EXISTS "idx_heromarquee_active"       ON "HeroMarquee" ("isActive");
 CREATE INDEX IF NOT EXISTS "idx_heromarquee_display_order" ON "HeroMarquee" ("display_order");

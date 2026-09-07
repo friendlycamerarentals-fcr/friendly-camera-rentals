@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createId } from "@/lib/createId";
 import { query } from "@/db/query";
-import rewardService from "@/services/rewardService";
+import { createAdminNotification } from "@/lib/adminNotificationService";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -147,37 +147,6 @@ export async function POST(request) {
 
     const requestId = buildRequestId(nextSequence);
 
-    let rewardResult = null;
-    let finalBookingAmount = totalAmount;
-    let rewardId = null;
-    let rewardDiscount = null;
-
-    try {
-      await rewardService.expireRewards();
-
-      const rewardCheck = await rewardService.checkReward(
-        body.customerId,
-        body.productId,
-      );
-
-      if (rewardCheck?.valid) {
-        rewardResult = await rewardService.applyReward({
-          customerId: body.customerId,
-          rentalRequestId: requestId,
-          totalAmount,
-          productId: body.productId,
-        });
-
-        if (rewardResult?.rewardApplied) {
-          finalBookingAmount = Number(rewardResult.finalAmount || totalAmount);
-          rewardId = rewardResult.rewardId || null;
-          rewardDiscount = rewardResult.rewardDiscount || null;
-        }
-      }
-    } catch (rewardError) {
-      console.error("[RENTAL_REQUEST_REWARD]", rewardError);
-    }
-
     const id = createId();
     const now = new Date();
     const rewardColumns = await getRentalRequestRewardColumnSupport();
@@ -208,9 +177,9 @@ export async function POST(request) {
         body.rentalDuration,
         quantity,
         rentalPrice,
-        finalBookingAmount,
-        rewardId,
-        rewardDiscount,
+        totalAmount,
+        null,
+        null,
         body.bookingDate,
         body.pickupTime || null,
         body.notes || null,
@@ -242,7 +211,7 @@ export async function POST(request) {
         body.rentalDuration,
         quantity,
         rentalPrice,
-        finalBookingAmount,
+        totalAmount,
         body.bookingDate,
         body.pickupTime || null,
         body.notes || null,
@@ -256,26 +225,23 @@ export async function POST(request) {
     const rows = await query(insertSql, insertParams);
     const rentalRequest = rows[0];
 
-    if (
-      rewardResult?.rewardApplied &&
-      rentalRequest &&
-      rewardColumns.rewardId &&
-      rewardColumns.rewardDiscount
-    ) {
-      await query(
-        'UPDATE "RentalRequest" SET "rewardId" = $1, "rewardDiscount" = $2, "totalAmount" = $3 WHERE "requestId" = $4',
-        [rewardId, rewardDiscount, finalBookingAmount, requestId],
-      );
-    }
+    // Create admin notification for new rental booking
+    await createAdminNotification({
+      type: "rental_booking",
+      title: "New Rental Booking",
+      message: `${body.fullName} booked ${body.productName} for ${body.rentalDuration}`,
+      relatedId: rentalRequest.id,
+      relatedType: "RentalRequest",
+    });
 
     return NextResponse.json(
       {
         success: true,
         data: rentalRequest,
-        rewardApplied: rewardResult?.rewardApplied || false,
-        reward: rewardResult?.reward || null,
-        rewardDiscount: rewardDiscount || 0,
-        finalAmount: finalBookingAmount,
+        rewardApplied: false,
+        reward: null,
+        rewardDiscount: 0,
+        finalAmount: totalAmount,
       },
       { status: 201 },
     );

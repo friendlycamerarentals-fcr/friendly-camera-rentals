@@ -7,7 +7,6 @@ import {
   invalidateCachePrefix,
 } from "@/lib/dataCache";
 import {
-  ensureHeroMarqueeTable,
   heroMarqueeSelectColumns,
   normalizeHeroMarqueeText,
 } from "@/lib/heroMarquee";
@@ -26,7 +25,6 @@ export async function GET(request) {
   }
 
   try {
-    await ensureHeroMarqueeTable();
     const rows = await query(
       `SELECT ${heroMarqueeSelectColumns.join(", ")} FROM "HeroMarquee" WHERE "isActive" = TRUE ORDER BY "display_order" ASC, "createdAt" ASC`,
     );
@@ -46,7 +44,6 @@ export async function GET(request) {
 export async function POST(request) {
   try {
     const body = await request.json();
-    await ensureHeroMarqueeTable();
     const text = normalizeHeroMarqueeText(body?.text || "");
 
     if (!text) {

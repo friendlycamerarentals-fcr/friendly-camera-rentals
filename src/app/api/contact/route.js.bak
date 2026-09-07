@@ -15,7 +15,11 @@ export async function POST(request) {
     }
 
     // Optionally add persistence or email integration here.
-    // Contact requests are currently acknowledged without persistence.
+    console.log("Contact form submitted:", {
+      name: body.name,
+      phone: body.phone,
+      message: body.message,
+    });
 
     return NextResponse.json(
       {

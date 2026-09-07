@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { useFetchData } from "@/hooks/useFetchData";
+import { invalidateCache } from "@/lib/dataCache";
 import RentalProductStats from "@/components/admin/rental-products/RentalProductStats";
 import RentalProductFilters from "@/components/admin/rental-products/RentalProductFilters";
 import RentalProductTable from "@/components/admin/rental-products/RentalProductTable";
@@ -78,6 +79,7 @@ export default function RentalProductsPage() {
         toast.success("Product deleted successfully");
 
         // Refetch to ensure consistency
+        invalidateCache("/api/rental-products");
         await refetch(false);
       }
 
@@ -113,6 +115,7 @@ export default function RentalProductsPage() {
         toast.success("Product status updated");
 
         // Refetch to ensure consistency
+        invalidateCache("/api/rental-products");
         await refetch(false);
       }
     } catch (error) {

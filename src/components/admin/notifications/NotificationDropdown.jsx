@@ -4,9 +4,28 @@ import { Bell } from "lucide-react";
 import { useNotifications } from "@/context/NotificationContext";
 
 export default function NotificationDropdown() {
-  const { notifications, markAsRead } = useNotifications();
+  const { notifications, markAsRead, markAllAsRead } = useNotifications();
 
   const unread = notifications.filter((n) => !n.read).length;
+
+  const formatTime = (dateString) => {
+    try {
+      const date = new Date(dateString);
+      const now = new Date();
+      const diffMs = now - date;
+      const diffMins = Math.floor(diffMs / 60000);
+      const diffHours = Math.floor(diffMs / 3600000);
+      const diffDays = Math.floor(diffMs / 86400000);
+
+      if (diffMins < 1) return "just now";
+      if (diffMins < 60) return `${diffMins}m ago`;
+      if (diffHours < 24) return `${diffHours}h ago`;
+      if (diffDays < 7) return `${diffDays}d ago`;
+      return date.toLocaleDateString();
+    } catch {
+      return "unknown";
+    }
+  };
 
   return (
     /*
@@ -19,7 +38,7 @@ export default function NotificationDropdown() {
     <div
       className="
         absolute -right-18 top-12
-        z-[999]
+        z-999
         w-screen max-w-[calc(100vw-2rem)]
         sm:w-96 sm:max-w-[384px]
         rounded-2xl
@@ -75,7 +94,7 @@ export default function NotificationDropdown() {
                     {n.message}
                   </p>
                   <p className="mt-1 text-[11px] text-zinc-600">
-                    {n.createdAt}
+                    {formatTime(n.createdAt)}
                   </p>
                 </div>
               </div>
@@ -85,9 +104,12 @@ export default function NotificationDropdown() {
       )}
 
       {/* Footer */}
-      {notifications.length > 0 && (
+      {notifications.length > 0 && unread > 0 && (
         <div className="border-t border-white/10 px-4 py-2.5">
-          <button className="text-xs text-zinc-500 transition hover:text-[#F5A623]">
+          <button
+            onClick={markAllAsRead}
+            className="text-xs text-zinc-500 transition hover:text-[#F5A623]"
+          >
             Mark all as read
           </button>
         </div>

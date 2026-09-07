@@ -5,7 +5,6 @@ import { CartProvider } from "@/context/CartContext";
 import { BookingFlowProvider } from "@/context/BookingFlowContext";
 import LoaderWrapper from "@/components/common/LoaderWrapper";
 import LayoutWrapper from "@/components/layout/LayoutWrapper";
-import { initializeHeroMarqueeSchema } from "@/lib/heroMarquee";
 
 export const metadata = {
   title: "Friendly Camera Rentals",
@@ -18,16 +17,7 @@ export const metadata = {
   },
 };
 
-export default async function RootLayout({ children }) {
-  try {
-    await initializeHeroMarqueeSchema();
-  } catch (error) {
-    console.warn(
-      "[LAYOUT] Hero marquee schema bootstrap skipped",
-      error.message,
-    );
-  }
-
+export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body className="bg-black text-white antialiased">

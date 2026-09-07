@@ -6,6 +6,7 @@ import {
   setCachedValue,
   invalidateCachePrefix,
 } from "@/lib/dataCache";
+import { createAdminNotification } from "@/lib/adminNotificationService";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -111,11 +112,22 @@ export async function POST(request) {
       ],
     );
 
+    const testimonial = rows[0];
+
+    // Create admin notification for new testimonial
+    await createAdminNotification({
+      type: "testimonial",
+      title: "New Testimonial Submitted",
+      message: `${body.name.trim()} submitted a ${rating}-star testimonial`,
+      relatedId: testimonial.id,
+      relatedType: "Testimonial",
+    });
+
     invalidateCachePrefix("/api/testimonials");
     return NextResponse.json(
       {
         success: true,
-        data: rows[0],
+        data: testimonial,
         message:
           "Testimonial submitted successfully. It will appear after admin approval.",
       },

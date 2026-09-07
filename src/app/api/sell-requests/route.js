@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createId } from "@/lib/createId";
 import { query } from "@/db/query";
+import { createAdminNotification } from "@/lib/adminNotificationService";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -53,11 +54,22 @@ export async function POST(request) {
       ],
     );
 
+    const sellRequest = rows[0];
+
+    // Create admin notification for new sell request
+    await createAdminNotification({
+      type: "sell_request",
+      title: "New Sell Request",
+      message: `${body.fullName} submitted a sell request for ${body.brand} ${body.model}`,
+      relatedId: sellRequest.id,
+      relatedType: "SellRequest",
+    });
+
     return NextResponse.json(
       {
         success: true,
         message: "Sell request submitted successfully",
-        data: rows[0],
+        data: sellRequest,
       },
       { status: 201 },
     );

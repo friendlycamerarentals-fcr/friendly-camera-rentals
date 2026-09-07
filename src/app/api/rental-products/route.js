@@ -64,7 +64,6 @@ const createPricingObject = (pricing) => {
 const selectColumns = [
   '"id"',
   '"name"',
-  '"slug"',
   '"brand"',
   '"model"',
   '"category"',
@@ -75,10 +74,7 @@ const selectColumns = [
   '"image"',
   '"images"',
   '"pricing"',
-  '"specifications"',
   '"display_order"',
-  '"createdAt"',
-  '"updatedAt"',
 ];
 
 const getCacheKey = (search, category) =>

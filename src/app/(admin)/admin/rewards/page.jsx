@@ -24,6 +24,7 @@ export default function RewardsPage() {
     appliedRewards: 0,
     usedRewards: 0,
     expiredRewards: 0,
+    totalRewardValue: 0,
   });
 
   const [search, setSearch] = useState("");
@@ -141,6 +142,7 @@ export default function RewardsPage() {
           applied: statistics.appliedRewards,
           used: statistics.usedRewards,
           expired: statistics.expiredRewards,
+          totalValue: statistics.totalRewardValue,
         }}
       />
 

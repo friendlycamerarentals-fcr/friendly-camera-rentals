@@ -80,34 +80,6 @@ export default function BookSlotSection() {
     try {
       setLoading(true);
 
-      // Save to database
-      const response = await fetch("/api/services", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          userId: user.uid,
-          name: formData.name,
-          phone: formData.phone,
-          email: profile?.email || "",
-          service: formData.service,
-          date: formattedDate,
-          location: formData.location,
-          message: formData.message,
-          description: formData.message,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to save booking to database");
-      }
-
-      const result = await response.json();
-      if (!result.success) {
-        throw new Error("Failed to save booking to database");
-      }
-
       const message = `
 📸 *New Service Booking*
 
@@ -127,7 +99,7 @@ ${formData.message || "N/A"}
       )}`;
 
       window.open(whatsappUrl, "_blank");
-      toast.success("Booking saved and opening WhatsApp...");
+      toast.success("Opening WhatsApp with your booking details...");
 
       // Reset form
       setFormData({

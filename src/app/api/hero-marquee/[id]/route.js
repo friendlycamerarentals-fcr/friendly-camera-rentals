@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { query } from "@/db/query";
 import { invalidateCachePrefix } from "@/lib/dataCache";
 import {
-  ensureHeroMarqueeTable,
   heroMarqueeSelectColumns,
   normalizeHeroMarqueeText,
 } from "@/lib/heroMarquee";
@@ -13,7 +12,6 @@ export const runtime = "nodejs";
 export async function PUT(request, { params }) {
   try {
     const { id } = await params;
-    await ensureHeroMarqueeTable();
     const body = await request.json();
     const text =
       body?.text === undefined
@@ -89,7 +87,6 @@ export async function PUT(request, { params }) {
 export async function DELETE(request, { params }) {
   try {
     const { id } = await params;
-    await ensureHeroMarqueeTable();
     await query('DELETE FROM "HeroMarquee" WHERE "id" = $1', [id]);
     invalidateCachePrefix("/api/hero-marquee");
     return NextResponse.json({

@@ -7,6 +7,7 @@ import {
   setCachedValue,
   invalidateCachePrefix,
 } from "@/lib/dataCache";
+import { createAdminNotification } from "@/lib/adminNotificationService";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -104,6 +105,7 @@ export async function POST(request) {
           "address"
         )
          VALUES ($1, $2, $3, $4, $5, $6, $7)
+         ON CONFLICT ("email") DO NOTHING
          RETURNING ${selectColumns.join(", ")}`,
         [
           id,
@@ -115,14 +117,39 @@ export async function POST(request) {
           body.address || "",
         ],
       );
+      if (createdRows.rows[0]) {
+        return {
+          customer: createdRows.rows[0],
+          created: true,
+        };
+      }
+
+      const concurrentRows = await client.query(
+        `SELECT ${selectColumns.join(", ")} FROM "Customer"
+         WHERE LOWER("email") = LOWER($1)
+         LIMIT 1`,
+        [normalizedEmail],
+      );
+
       return {
-        customer: createdRows.rows[0],
-        created: true,
+        customer: concurrentRows.rows[0],
+        created: false,
       };
     });
 
     invalidateCachePrefix("/api/profile");
     invalidateCachePrefix("/api/customers");
+
+    // Create admin notification for new customer
+    if (customer.created) {
+      await createAdminNotification({
+        type: "new_customer",
+        title: "New Customer Registration",
+        message: `${customer.customer.name} (${customer.customer.email}) registered`,
+        relatedId: customer.customer.id,
+        relatedType: "Customer",
+      });
+    }
 
     return NextResponse.json(
       {

@@ -25,21 +25,13 @@ const pool = connectionString
   : null;
 
 if (pool) {
-  pool.on("connect", () => {
-    console.log("[PG] New PostgreSQL client connected");
-  });
-
   pool.on("error", (error) => {
-    console.error("[PG] Unexpected PostgreSQL pool error:", error);
-  });
-
-  pool.on("remove", () => {
-    console.log("[PG] PostgreSQL client removed from pool");
+    console.error("Unexpected PostgreSQL pool error:", error);
   });
 
   process.on("exit", () => {
     pool.end().catch((error) => {
-      console.error("[PG] Failed to close PostgreSQL pool on exit:", error);
+      console.error("Failed to close PostgreSQL pool on exit:", error);
     });
   });
 }

@@ -54,66 +54,96 @@ The admin area supports product management, request review, customer listings, t
 
 ---
 
-## Project Structure
+## Project Folder Structure
 
-```
-fcr/
+```text
+project-root/
 ├── database/
 │   ├── init.sql
 │   └── migrations.sql
 ├── public/
+│   ├── fonts/
+│   ├── hero/
 │   ├── images/
 │   ├── sounds/
+│   ├── favicon.ico
 │   └── logo.png
 ├── src/
 │   ├── app/
+│   │   ├── (admin)/admin/
+│   │   │   ├── bookings/page.jsx
+│   │   │   ├── buy/page.jsx
+│   │   │   ├── buy-products/
+│   │   │   ├── customers/page.jsx
+│   │   │   ├── hero-marquee/page.jsx
+│   │   │   ├── layout.jsx
+│   │   │   ├── page.jsx
+│   │   │   ├── rental-products/
+│   │   │   ├── rentals/page.jsx
+│   │   │   ├── rewards/
+│   │   │   ├── sell/page.jsx
+│   │   │   ├── sell-requests/page.jsx
+│   │   │   └── testimonials/page.jsx
+│   │   ├── (auth)/admin/login/page.jsx
+│   │   ├── api/
+│   │   │   ├── admin/
+│   │   │   ├── buy-products/
+│   │   │   ├── contact/route.js
+│   │   │   ├── customers/
+│   │   │   ├── cron/expire-rewards/route.js
+│   │   │   ├── hero-marquee/
+│   │   │   ├── profile/route.js
+│   │   │   ├── rental-products/
+│   │   │   ├── rental-requests/
+│   │   │   ├── rewards/
+│   │   │   ├── sell-requests/
+│   │   │   ├── testimonials/
+│   │   │   └── upload/
+│   │   ├── buy/
+│   │   ├── contact/page.jsx
+│   │   ├── fonts/
 │   │   ├── globals.css
 │   │   ├── layout.js
 │   │   ├── not-found.jsx
 │   │   ├── page.js
-│   │   ├── buy/
-│   │   │   ├── page.jsx
-│   │   │   └── [slug]/page.jsx
+│   │   ├── profile/page.jsx
 │   │   ├── rental/
-│   │   │   ├── page.jsx
-│   │   │   └── [id]/page.jsx
 │   │   ├── sell/page.jsx
-│   │   ├── services/page.jsx
-│   │   ├── contact/page.jsx
-│   │   ├── api/
-│   │   │   ├── buy-products/route.js
-│   │   │   ├── buy-products/reorder/route.js
-│   │   │   ├── rental-products/route.js
-│   │   │   ├── rental-products/reorder/route.js
-│   │   │   ├── sell-requests/route.js
-│   │   │   ├── services/route.js
-│   │   │   ├── testimonials/route.js
-│   │   │   ├── customers/route.js
-│   │   │   ├── contact/route.js
-│   │   │   ├── upload/route.js
-│   │   │   ├── admin/login/route.js
-│   │   │   └── admin/logout/route.js
-│   │   └── (admin)/
-│   │       └── admin/
-│   │           ├── layout.jsx
-│   │           ├── page.jsx
-│   │           ├── buy-products/
-│   │           ├── rental-products/
-│   │           ├── sell-requests/page.jsx
-│   │           ├── services/page.jsx
-│   │           ├── customers/page.jsx
-│   │           └── testimonials/page.jsx
+│   │   └── services/page.jsx
 │   ├── components/
+│   │   ├── admin/
+│   │   ├── auth/
+│   │   ├── buy/
+│   │   ├── cart/
+│   │   ├── common/
+│   │   ├── contact/
+│   │   ├── home/
+│   │   ├── layout/
+│   │   ├── rental/
+│   │   ├── sell/
+│   │   ├── services/
+│   │   ├── testimonials/
+│   │   └── ui/
+│   ├── constants/rewardStatus.js
 │   ├── context/
+│   ├── data/
+│   ├── db/
 │   ├── hooks/
 │   ├── lib/
+│   ├── proxy.js
+│   ├── services/rewardService.js
 │   └── utils/
-├── proxy.js
-├── package.json
-├── next.config.mjs
-├── postcss.config.mjs
+├── FCR_DATABASE_UPDATES.sql
+├── AGENTS.md
+├── eslint.config.mjs
 ├── jsconfig.json
-└── README.md
+├── next.config.mjs
+├── package.json
+├── package-lock.json
+├── postcss.config.mjs
+├── README.md
+├── SERVICE_BOOKING_IMPLEMENTATION.md
+└── test_security.js
 ```
 
 ---

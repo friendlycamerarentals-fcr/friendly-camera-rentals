@@ -40,39 +40,41 @@ export default function ContactPage() {
 
       {/* Contact Cards */}
       <section className="mx-auto max-w-7xl px-6 pb-16 lg:px-8">
-        <div className="grid gap-6 md:grid-cols-3">
-          <div className="rounded-3xl border border-white/10 bg-white/5 p-8 text-center shadow-[0_10px_40px_rgba(0,0,0,0.35)] backdrop-blur-xl transition-all duration-300 hover:-translate-y-2 hover:border-amber-500/40 hover:shadow-[0_20px_60px_rgba(245,166,35,0.15)]">
-            <FaPhoneAlt className="mx-auto text-3xl text-amber-400" />
-            <h3 className="font-heading mt-4 text-3xl font-semibold">
+        <div className="grid gap-4 md:grid-cols-3 md:gap-6">
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-5 text-center shadow-[0_10px_40px_rgba(0,0,0,0.35)] backdrop-blur-xl transition-all duration-300 hover:-translate-y-2 hover:border-amber-500/40 hover:shadow-[0_20px_60px_rgba(245,166,35,0.15)] md:p-8">
+            <FaPhoneAlt className="mx-auto text-2xl text-amber-400 md:text-3xl" />
+            <h3 className="font-heading mt-3 text-2xl font-semibold md:mt-4 md:text-3xl">
               Call Us
             </h3>
-            <p className="mt-3 text-zinc-400">+91 8639852224</p>
+            <p className="mt-2 text-zinc-400 md:mt-3">+91 8639852224</p>
           </div>
 
           <a
             href="https://wa.me/918639852224"
             target="_blank"
             rel="noopener noreferrer"
-            className="rounded-3xl border border-white/10 bg-white/5 p-8 text-center shadow-[0_10px_40px_rgba(0,0,0,0.35)] backdrop-blur-xl transition-all duration-300 hover:-translate-y-2 hover:border-amber-500/40 hover:shadow-[0_20px_60px_rgba(245,166,35,0.15)]"
+            className="rounded-2xl border border-white/10 bg-white/5 p-5 text-center shadow-[0_10px_40px_rgba(0,0,0,0.35)] backdrop-blur-xl transition-all duration-300 hover:-translate-y-2 hover:border-amber-500/40 hover:shadow-[0_20px_60px_rgba(245,166,35,0.15)] md:p-8"
           >
-            <FaWhatsapp className="mx-auto text-3xl text-amber-400" />
-            <h3 className="font-heading mt-4 text-3xl font-semibold">
+            <FaWhatsapp className="mx-auto text-2xl text-amber-400 md:text-3xl" />
+            <h3 className="font-heading mt-3 text-2xl font-semibold md:mt-4 md:text-3xl">
               WhatsApp
             </h3>
-            <p className="mt-3 text-zinc-400">Chat with us instantly</p>
+            <p className="mt-2 text-zinc-400 md:mt-3">Chat with us instantly</p>
           </a>
 
           <a
             href="https://instagram.com/friendly_camera_rentals"
             target="_blank"
             rel="noopener noreferrer"
-            className="rounded-3xl border border-white/10 bg-white/5 p-8 text-center shadow-[0_10px_40px_rgba(0,0,0,0.35)] backdrop-blur-xl transition-all duration-300 hover:-translate-y-2 hover:border-amber-500/40 hover:shadow-[0_20px_60px_rgba(245,166,35,0.15)]"
+            className="rounded-2xl border border-white/10 bg-white/5 p-5 text-center shadow-[0_10px_40px_rgba(0,0,0,0.35)] backdrop-blur-xl transition-all duration-300 hover:-translate-y-2 hover:border-amber-500/40 hover:shadow-[0_20px_60px_rgba(245,166,35,0.15)] md:p-8"
           >
-            <FaInstagram className="mx-auto text-3xl text-amber-400" />
-            <h3 className="font-heading mt-4 text-3xl font-semibold">
+            <FaInstagram className="mx-auto text-2xl text-amber-400 md:text-3xl" />
+            <h3 className="font-heading mt-3 text-2xl font-semibold md:mt-4 md:text-3xl">
               Instagram
             </h3>
-            <p className="mt-3 text-zinc-400">@friendly_camera_rentals</p>
+            <p className="mt-2 text-zinc-400 md:mt-3">
+              @friendly_camera_rentals
+            </p>
           </a>
         </div>
       </section>
@@ -81,7 +83,7 @@ export default function ContactPage() {
       <section className="mx-auto grid max-w-7xl gap-8 px-6 pb-24 lg:grid-cols-2 lg:px-8">
         <ContactForm />
 
-        <div className="rounded-[2rem] border border-white/10 bg-white/5 p-8 shadow-[0_15px_50px_rgba(0,0,0,0.4)] backdrop-blur-xl transition-all duration-300 hover:shadow-[0_20px_70px_rgba(245,166,35,0.12)] md:p-10">
+        <div className="rounded-2xl border border-white/10 bg-white/5 p-8 shadow-[0_15px_50px_rgba(0,0,0,0.4)] backdrop-blur-xl transition-all duration-300 hover:shadow-[0_20px_70px_rgba(245,166,35,0.12)] md:p-10">
           <h2 className="font-heading text-4xl font-semibold md:text-5xl">
             Visit Us
           </h2>
@@ -104,8 +106,16 @@ export default function ContactPage() {
             </div>
           </div>
 
-          <div className="mt-10 flex h-64 items-center justify-center rounded-3xl border border-white/10 bg-black text-zinc-500">
-            Google Map Coming Soon
+          <div className="mt-10 h-64 overflow-hidden rounded-2xl border border-white/10 bg-black md:h-80 lg:h-96">
+            <iframe
+              src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3813.654486288411!2d80.05072777499412!3d14.719619574151857!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3a4c877833a392f3%3A0x8a1694339b8f99fc!2sFriendly%20Camera%20Rentals!5e1!3m2!1sen!2sin!4v1788669671659!5m2!1sen!2sin"
+              width="100%"
+              height="100%"
+              style={{ border: 0 }}
+              allowFullScreen
+              loading="lazy"
+              referrerPolicy="strict-origin-when-cross-origin"
+            />
           </div>
         </div>
       </section>

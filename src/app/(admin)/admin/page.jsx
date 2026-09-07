@@ -31,7 +31,7 @@ export default async function AdminDashboard() {
     getCount("RentalProduct"),
     getCount("BuyProduct"),
     getCount("SellRequest"),
-    getCount("ServiceBooking"),
+    getCount("RentalRequest"),
     getCount("Testimonial"),
     getCount("Customer"),
     getCount("Reward"),

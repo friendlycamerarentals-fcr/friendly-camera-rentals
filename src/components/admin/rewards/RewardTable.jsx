@@ -47,6 +47,8 @@ export default function RewardTable({ rewards = [], onView }) {
 
               <th className="px-6 py-4">Expires</th>
 
+              <th className="px-6 py-4">Used Date</th>
+
               <th className="px-6 py-4 text-center">Action</th>
             </tr>
           </thead>
@@ -85,7 +87,7 @@ export default function RewardTable({ rewards = [], onView }) {
 
                 <td className="px-6 py-5">
                   <span className="rounded-full bg-[#F5A623]/10 px-3 py-1 text-sm font-semibold text-[#F5A623]">
-                    {reward.rewardPercentage}%
+                    ₹{Number(reward.rewardAmount || 0).toLocaleString("en-IN")}
                   </span>
                 </td>
 
@@ -99,6 +101,10 @@ export default function RewardTable({ rewards = [], onView }) {
 
                 <td className="px-6 py-5 text-zinc-400">
                   {formatDate(reward.expireDate)}
+                </td>
+
+                <td className="px-6 py-5 text-zinc-400">
+                  {formatDate(reward.usedDate)}
                 </td>
 
                 <td className="px-6 py-5">

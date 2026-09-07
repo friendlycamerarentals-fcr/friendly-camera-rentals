@@ -32,7 +32,8 @@ export async function POST(request) {
       );
     }
 
-    const reward = await rewardService.checkReward(customerId, productId);
+    const validation = await rewardService.checkReward(customerId, productId);
+    const reward = validation?.valid ? validation.reward : null;
 
     if (!reward) {
       return NextResponse.json(

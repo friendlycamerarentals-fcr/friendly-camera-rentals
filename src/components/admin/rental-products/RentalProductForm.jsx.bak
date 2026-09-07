@@ -289,6 +289,12 @@ export default function RentalProductForm({
     }, {});
 
     const mergedImages = [...existingImages, ...newImages];
+    console.log(
+      "Database images",
+      initialData?.image || "",
+      initialData?.images || [],
+    );
+    console.log("React images state", mergedImages);
 
     const uploadedImages = await uploadProductImages(
       mergedImages,
@@ -296,7 +302,7 @@ export default function RentalProductForm({
     );
     const payloadImages = Array.isArray(uploadedImages) ? uploadedImages : [];
 
-    // console.log("PUT payload images", payloadImages);
+    console.log("PUT payload images", payloadImages);
 
     onSubmit({
       ...formData,

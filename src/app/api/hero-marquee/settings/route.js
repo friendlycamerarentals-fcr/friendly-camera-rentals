@@ -5,10 +5,7 @@ import {
   setCachedValue,
   invalidateCachePrefix,
 } from "@/lib/dataCache";
-import {
-  ensureHeroMarqueeTable,
-  heroMarqueeSettingsSelectColumns,
-} from "@/lib/heroMarquee";
+import { heroMarqueeSettingsSelectColumns } from "@/lib/heroMarquee";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -24,7 +21,6 @@ export async function GET() {
   }
 
   try {
-    await ensureHeroMarqueeTable();
     const rows = await query(
       `SELECT ${heroMarqueeSettingsSelectColumns.join(", ")} FROM "HeroMarqueeSettings" WHERE "id" = 'global' LIMIT 1`,
     );
@@ -48,7 +44,6 @@ export async function GET() {
 export async function PUT(request) {
   try {
     const body = await request.json();
-    await ensureHeroMarqueeTable();
     const isEnabled = body?.isEnabled !== undefined ? body.isEnabled : true;
 
     const rows = await query(

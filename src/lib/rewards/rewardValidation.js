@@ -1,9 +1,6 @@
 import { query } from "@/db/query";
 import { REWARD_STATUS } from "@/constants/rewardStatus";
 
-/**
- * Reward points are only eligible for Camera rentals.
- */
 export function normalizeProductCategory(category) {
   return typeof category === "string" ? category.trim().toLowerCase() : "";
 }
@@ -50,18 +47,6 @@ export async function validateReward(
   productCategory = null,
   productCategories = [],
 ) {
-  const categories = Array.isArray(productCategories)
-    ? productCategories
-    : [productCategory].filter(Boolean);
-
-  if (!bookingContainsCamera(categories)) {
-    return {
-      valid: false,
-      reward: null,
-      message: "Reward points are only valid for Camera rentals.",
-    };
-  }
-
   const reward = await getActiveReward(customerId);
 
   if (!reward) {

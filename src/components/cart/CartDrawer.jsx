@@ -120,6 +120,7 @@ export default function CartDrawer({ open, onClose }) {
 
   const [showBookingForm, setShowBookingForm] = useState(false);
   const [pendingBooking, setPendingBooking] = useState(false);
+  const [activeReward, setActiveReward] = useState(null);
   const [step, setStep] = useState(() => readBookingDraft()?.step || 1);
 
   const [bookingData, setBookingData] = useState(() => {
@@ -141,6 +142,11 @@ export default function CartDrawer({ open, onClose }) {
     () => cart.reduce((sum, item) => sum + item.price, 0),
     [cart],
   );
+  const rewardDiscount = Math.min(
+    Number(activeReward?.rewardAmount || 0),
+    total,
+  );
+  const payableTotal = Math.max(total - rewardDiscount, 0);
 
   const showDrawer = open && !showBookingForm;
 
@@ -220,6 +226,27 @@ export default function CartDrawer({ open, onClose }) {
       persistDraft(bookingData, step);
     }
   }, [bookingData, showBookingForm, step]);
+
+  useEffect(() => {
+    if (!showBookingForm || !profile?.customerId) return;
+    let cancelled = false;
+    fetch("/api/rewards/check", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ customerId: profile.customerId }),
+    })
+      .then((response) => response.json())
+      .then((result) => {
+        if (!cancelled)
+          setActiveReward(result.available ? result.reward : null);
+      })
+      .catch(() => {
+        if (!cancelled) setActiveReward(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [showBookingForm, profile?.customerId]);
 
   useEffect(() => {
     const handleResume = () => {
@@ -835,6 +862,31 @@ export default function CartDrawer({ open, onClose }) {
                           ₹{total.toLocaleString("en-IN")}
                         </span>
                       </div>
+                      {activeReward && rewardDiscount > 0 && (
+                        <div className="mt-3 rounded-xl border border-emerald-400/25 bg-emerald-400/10 p-3 text-sm">
+                          <p className="font-semibold text-emerald-300">
+                            You have ₹
+                            {Number(activeReward.rewardAmount).toLocaleString(
+                              "en-IN",
+                            )}{" "}
+                            reward available
+                          </p>
+                          <div className="mt-2 flex justify-between text-zinc-300">
+                            <span>Original rental amount</span>
+                            <span>₹{total.toLocaleString("en-IN")}</span>
+                          </div>
+                          <div className="flex justify-between text-emerald-300">
+                            <span>Reward discount</span>
+                            <span>
+                              -₹{rewardDiscount.toLocaleString("en-IN")}
+                            </span>
+                          </div>
+                          <div className="mt-1 flex justify-between font-semibold text-white">
+                            <span>Final payable after confirmation</span>
+                            <span>₹{payableTotal.toLocaleString("en-IN")}</span>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div

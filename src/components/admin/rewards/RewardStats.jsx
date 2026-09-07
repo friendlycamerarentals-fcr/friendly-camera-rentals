@@ -6,6 +6,7 @@ import {
   WalletCards,
   CheckCircle2,
   Clock3,
+  Banknote,
 } from "lucide-react";
 
 import RewardCard from "./RewardCard";
@@ -20,7 +21,7 @@ export default function RewardStats({
   },
 }) {
   return (
-    <div className="grid grid-cols-2 gap-4 xl:grid-cols-5">
+    <div className="grid grid-cols-2 gap-4 xl:grid-cols-6">
       <RewardCard
         title="Total Rewards"
         value={stats.total}
@@ -56,6 +57,16 @@ export default function RewardStats({
         color="text-blue-400"
         bg="bg-blue-500/10"
         border="border-blue-500/20"
+      />
+
+      <RewardCard
+        title="Total Reward Value"
+        value={`₹${Number(stats.totalValue || 0).toLocaleString("en-IN")}`}
+        subtitle="All reward amounts"
+        icon={Banknote}
+        color="text-[#F5A623]"
+        bg="bg-[#F5A623]/10"
+        border="border-[#F5A623]/20"
       />
 
       <RewardCard

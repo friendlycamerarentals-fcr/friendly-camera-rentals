@@ -30,6 +30,18 @@ export default function ProductCard({ product }) {
         <div className="absolute left-4 top-4 rounded-full bg-amber-500 px-4 py-1 text-xs font-semibold capitalize text-black shadow-lg">
           {product.category.charAt(0).toUpperCase() + product.category.slice(1)}
         </div>
+
+        <div className="absolute right-4 bottom-4">
+          {product.available ? (
+            <span className="rounded-full bg-green-500/20 px-3 py-1 text-xs font-semibold text-green-500 backdrop-blur-md">
+              Available
+            </span>
+          ) : (
+            <span className="rounded-full bg-red-500/20 px-3 py-1 text-xs font-semibold text-red-500 backdrop-blur-md">
+              Unavailable
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Content */}
@@ -52,7 +64,9 @@ export default function ProductCard({ product }) {
 
           {product.batteries != null &&
             product.batteries !== "" &&
-            product.batteries !== 0 && <span>{product.batteries} Batteries Included</span>}
+            product.batteries !== 0 && (
+              <span>{product.batteries} Batteries Included</span>
+            )}
         </div>
 
         {/* Bottom Section */}
@@ -60,18 +74,6 @@ export default function ProductCard({ product }) {
           {/* Price */}
           <div className="mb-4 inline-flex rounded-full border border-amber-500/20 bg-amber-500/10 px-4 py-2 text-sm font-semibold text-amber-400">
             From ₹{product.pricing["1hr"]}/hr
-          </div>
-
-          <div className="absolute right-4 bottom-72">
-            {product.available ? (
-              <span className="rounded-full bg-green-500/20 px-3 py-1 text-xs font-semibold text-green-500 backdrop-blur-md">
-                Available
-              </span>
-            ) : (
-              <span className="rounded-full bg-red-500/20 px-3 py-1 text-xs font-semibold text-red-500 backdrop-blur-md">
-                Unavailable
-              </span>
-            )}
           </div>
 
           {/* Button */}
