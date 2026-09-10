@@ -118,8 +118,25 @@ export default function Footer() {
 
         {/* Bottom */}
         <div className="mt-12 border-t border-white/10 pt-6 text-center text-sm text-zinc-500">
-          © {new Date().getFullYear()} Friendly Camera Rentals. All rights
-          reserved.
+          <p>
+            © {new Date().getFullYear()} Friendly Camera Rentals. All rights
+            reserved.
+          </p>
+          <div className="mt-2 flex items-center justify-center gap-2">
+            <Link
+              href="/terms"
+              className="transition hover:text-amber-400"
+            >
+              Terms &amp; Conditions
+            </Link>
+            <span className="text-zinc-700">•</span>
+            <Link
+              href="/privacy-policy"
+              className="transition hover:text-amber-400"
+            >
+              Privacy Policy
+            </Link>
+          </div>
         </div>
       </div>
     </footer>

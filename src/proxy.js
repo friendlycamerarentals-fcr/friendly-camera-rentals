@@ -54,17 +54,10 @@ export async function proxy(request) {
     }
   }
 
-  // 6. Products & Testimonials: POST/PUT/DELETE are admin-only, GET is public
-  const publicGetApis = [
-    "/api/rental-products",
-    "/api/buy-products",
-    "/api/testimonials",
-  ];
-  const isPublicGetApi = publicGetApis.some((apiPath) =>
-    pathname.startsWith(apiPath),
-  );
-  if (isPublicGetApi) {
-    if (method !== "GET") {
+  // 5. Rental Requests API protection: GET/PUT/DELETE are admin-only
+  //    (admin rental management), POST (customer booking submission) is public.
+  if (pathname.startsWith("/api/rental-requests")) {
+    if (method !== "POST") {
       const cookie = request.cookies.get("admin_auth");
       const payload = await verifyToken(cookie?.value);
       if (!payload || payload.role !== "admin") {
@@ -73,6 +66,29 @@ export async function proxy(request) {
           { status: 401 },
         );
       }
+    }
+  }
+
+  // 6. Catalog APIs: GET is public, POST/PUT/DELETE are admin-only.
+  //    Exception: POST /api/rental-products/availability is a read-only
+  //    availability check used by the customer cart ("Book Rent via WhatsApp")
+  //    and must stay public — it never writes or exposes admin data.
+  const isCatalogPath = [
+    "/api/rental-products",
+    "/api/buy-products",
+    "/api/testimonials",
+  ].some((apiPath) => pathname.startsWith(apiPath));
+  const isPublicAvailabilityCheck =
+    pathname === "/api/rental-products/availability" && method === "POST";
+
+  if (isCatalogPath && method !== "GET" && !isPublicAvailabilityCheck) {
+    const cookie = request.cookies.get("admin_auth");
+    const payload = await verifyToken(cookie?.value);
+    if (!payload || payload.role !== "admin") {
+      return NextResponse.json(
+        { success: false, message: "Unauthorized" },
+        { status: 401 },
+      );
     }
   }
 
@@ -88,5 +104,6 @@ export const config = {
     "/api/rental-products/:path*",
     "/api/buy-products/:path*",
     "/api/testimonials/:path*",
+    "/api/rental-requests/:path*",
   ],
 };

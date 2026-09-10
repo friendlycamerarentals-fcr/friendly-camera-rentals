@@ -81,6 +81,18 @@ const PickupTimeInput = ({ value, onChange }) => {
   );
 };
 
+const WHATSAPP_PHONE = "918639852224";
+
+const formatDuration = (duration) => {
+  if (!duration) return "Not selected";
+  const match = String(duration).match(/^(\d+)(hr|day|week)s?$/i);
+  if (!match) return String(duration);
+  const unit = { hr: "Hour", day: "Day", week: "Week" }[
+    match[2].toLowerCase()
+  ];
+  return `${match[1]} ${unit}${Number(match[1]) > 1 ? "s" : ""}`;
+};
+
 const BOOKING_DRAFT_KEY = "fcr-booking-draft";
 const PROFILE_REDIRECT_SOURCE_KEY = "fcr-profile-redirect-source";
 
@@ -139,7 +151,11 @@ export default function CartDrawer({ open, onClose }) {
   });
 
   const total = useMemo(
-    () => cart.reduce((sum, item) => sum + item.price, 0),
+    () =>
+      cart.reduce(
+        (sum, item) => sum + Number(item.price || 0) * Number(item.quantity || 1),
+        0,
+      ),
     [cart],
   );
   const rewardDiscount = Math.min(
@@ -351,6 +367,7 @@ export default function CartDrawer({ open, onClose }) {
           items: cart.map((item) => ({
             id: item.id,
             name: item.name,
+            category: item.category || null,
           })),
         }),
       });
@@ -500,9 +517,10 @@ export default function CartDrawer({ open, onClose }) {
           (item, i) =>
             `\n📷 Item ${i + 1}\n` +
             `   Equipment      : ${item.name}\n` +
-            `   Rental Duration: ${item.duration}\n` +
+            `   Category       : ${item.category || "N/A"}\n` +
+            `   Rental Duration: ${formatDuration(item.duration)}\n` +
             `   Quantity       : ${item.quantity || 1}\n` +
-            `   Price          : ₹${(Number(item.price || 0) * Number(item.quantity || 1)).toLocaleString("en-IN")}`,
+            `   Price          : ₹${Number(item.price || 0).toLocaleString("en-IN")} × ${item.quantity || 1} = ₹${(Number(item.price || 0) * Number(item.quantity || 1)).toLocaleString("en-IN")}`,
         )
         .join("\n");
       const emailLine = userEmail ? `Email   : ${userEmail}\n` : "";
@@ -515,6 +533,11 @@ export default function CartDrawer({ open, onClose }) {
       const bookingIdLine = bookingIds.length
         ? `Booking ID(s) : ${bookingIds.join(", ")}\n`
         : "";
+      const rewardLine =
+        activeReward && rewardDiscount > 0
+          ? `💰 *Original Amount* : ₹${total.toLocaleString("en-IN")}\n🎁 *Reward Discount* : -₹${rewardDiscount.toLocaleString("en-IN")}\n💰 *Payable After Confirmation* : ₹${payableTotal.toLocaleString("en-IN")}\n`
+          : `💰 *Total Amount* : ₹${total.toLocaleString("en-IN")}\n`;
+
       const message =
         `Hello Friendly Camera Rentals! 👋\n\n` +
         `📋 *Customer Details*\n━━━━━━━━━━━━━━━━━━━━\n` +
@@ -522,10 +545,11 @@ export default function CartDrawer({ open, onClose }) {
         `📅 *Booking Date* : ${bookingDate}\n⏰ *Pickup Time*  : ${pickupTime}\n` +
         `🆔 *Government ID Proof* : Yes (Customer Confirmed)\n${bookingIdLine}\n` +
         `📸 *Rental Items*\n━━━━━━━━━━━━━━━━━━━━${itemLines}\n━━━━━━━━━━━━━━━━━━━━\n` +
-        `💰 *Total Amount* : ₹${total.toLocaleString("en-IN")}\n\n📝 *Notes*\n${notes.trim() || "N/A"}`;
+        rewardLine +
+        `\n📝 *Notes*\n${notes.trim() || "N/A"}`;
 
       window.open(
-        `https://wa.me/918639852224?text=${encodeURIComponent(message)}`,
+        `https://wa.me/${WHATSAPP_PHONE}?text=${encodeURIComponent(message)}`,
         "_blank",
       );
       clearCart();

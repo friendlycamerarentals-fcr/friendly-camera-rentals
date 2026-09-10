@@ -47,8 +47,11 @@ export default function Navbar() {
   // We treat undefined as "still loading" and null as "confirmed guest".
   const isAuthLoading = user === undefined;
 
-  // Auto-show login modal after 30 s for confirmed guests (once per session)
+  // Auto-show login modal after 30 s for confirmed guests (once per session).
+  // Never auto-open on the legal pages (/terms, /privacy-policy).
   useEffect(() => {
+    if (pathname === "/terms" || pathname === "/privacy-policy") return;
+
     // Wait until auth has resolved before starting the timer
     if (isAuthLoading) return;
 
@@ -66,7 +69,7 @@ export default function Navbar() {
     }, DELAY);
 
     return () => clearTimeout(timer);
-  }, [user, isAuthLoading]);
+  }, [user, isAuthLoading, pathname]);
 
   const handleOpenCart = useCallback(() => {
     setIsOpen(false);

@@ -197,7 +197,7 @@ export default function Hero() {
         >
           <Counter end={200} suffix="+" label="Happy Customers" />
 
-          <Counter end={20} suffix="+" label="Equipment" />
+          <Counter end={10} suffix="+" label="Equipment" />
 
           <Counter end={24} suffix="/7" label="Support" />
 

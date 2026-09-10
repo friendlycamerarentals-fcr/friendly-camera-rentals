@@ -5,6 +5,7 @@ import { FcGoogle } from "react-icons/fc";
 import { X, Mail } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { toast } from "sonner";
+import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 
 export default function LoginModal({ open, onClose, onLoginSuccess }) {
@@ -23,6 +24,12 @@ export default function LoginModal({ open, onClose, onLoginSuccess }) {
   const handleClose = () => {
     setIsLoggingIn(false);
     setErrorMessage("");
+    onClose?.();
+  };
+
+  // Close the modal first so its state is fully cleared; the Link then
+  // navigates to the legal page as usual (handler runs before navigation).
+  const handleLegalNavigate = () => {
     onClose?.();
   };
 
@@ -111,13 +118,13 @@ export default function LoginModal({ open, onClose, onLoginSuccess }) {
               </button>
 
               {/* Email coming soon */}
-              <button
+              {/* <button
                 disabled
                 className="flex w-full cursor-not-allowed items-center justify-center gap-3 rounded-2xl border border-white/10 py-4 text-sm text-zinc-500"
               >
                 <Mail size={18} />
                 Login with Email and Password (Coming Soon)
-              </button>
+              </button> */}
 
               {errorMessage && (
                 <p className="mb-4 text-sm text-red-400">{errorMessage}</p>
@@ -126,13 +133,21 @@ export default function LoginModal({ open, onClose, onLoginSuccess }) {
               {/* Footer */}
               <p className="mt-6 text-center text-xs text-zinc-600">
                 By continuing, you agree to our{" "}
-                <span className="cursor-pointer text-zinc-400 underline underline-offset-2 transition hover:text-white">
+                <Link
+                  href="/terms"
+                  onClick={handleLegalNavigate}
+                  className="text-amber-400 underline underline-offset-2 transition hover:text-amber-300"
+                >
                   Terms
-                </span>{" "}
+                </Link>{" "}
                 &amp;{" "}
-                <span className="cursor-pointer text-zinc-400 underline underline-offset-2 transition hover:text-white">
+                <Link
+                  href="/privacy-policy"
+                  onClick={handleLegalNavigate}
+                  className="text-amber-400 underline underline-offset-2 transition hover:text-amber-400/80"
+                >
                   Privacy Policy
-                </span>
+                </Link>
                 .
               </p>
             </div>
