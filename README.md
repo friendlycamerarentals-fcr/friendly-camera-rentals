@@ -177,6 +177,7 @@ NEXT_PUBLIC_SITE_URL="http://localhost:3000"
 ADMIN_EMAIL="admin@example.com"
 ADMIN_PASSWORD="secure-password"
 JWT_SECRET="your_jwt_secret"
+JWT_EXPIRES_IN="7d"
 
 NEXT_PUBLIC_FIREBASE_API_KEY="your_firebase_api_key"
 NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN="your_firebase_auth_domain"
@@ -219,7 +220,7 @@ Start the app:
 npm run dev
 ```
 
-For Vercel deployments, keep the same Neon PostgreSQL connection string in the environment variables and apply the SQL files through the Neon SQL Editor before the first deployment.
+For production deployments, configure `JWT_EXPIRES_IN=7d` as a server-side environment variable (do not use a `NEXT_PUBLIC_` prefix). For Vercel deployments, keep the same Neon PostgreSQL connection string in the environment variables and apply the SQL files through the Neon SQL Editor before the first deployment.
 
 ---
 
@@ -392,3 +393,4 @@ Friendly Camera Rentals
 ## License
 
 No license specified. Add a license file if you want to open source this repository.
+<!--  -->
