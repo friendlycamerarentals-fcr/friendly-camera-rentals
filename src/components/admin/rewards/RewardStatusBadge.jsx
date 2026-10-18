@@ -29,16 +29,19 @@ const STATUS_CONFIG = {
   },
 };
 
-export default function RewardStatusBadge({ status = "Active" }) {
+export default function RewardStatusBadge({
+  status = "Active",
+  compact = false,
+}) {
   const config = STATUS_CONFIG[status] || STATUS_CONFIG.Active;
 
   const Icon = config.icon;
 
   return (
     <span
-      className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold ${config.className}`}
+      className={`inline-flex items-center ${compact ? "gap-1.5 rounded-full px-2 py-0.5 text-[11px] leading-4" : "gap-2 rounded-full px-3 py-1 text-xs"} font-semibold ${config.className}`}
     >
-      <Icon size={14} />
+      <Icon size={compact ? 12 : 14} />
       {config.label}
     </span>
   );

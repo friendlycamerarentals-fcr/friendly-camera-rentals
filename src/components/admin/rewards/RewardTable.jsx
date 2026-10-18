@@ -61,59 +61,63 @@ export default function RewardTable({ rewards = [], onView }) {
                 key={reward.rewardId}
                 className="border-b border-white/5 transition hover:bg-white/5"
               >
-                <td className="px-6 py-5 text-sm text-zinc-400">{index + 1}</td>
+                <td className="px-4 py-3.5 text-xs text-zinc-400 sm:px-6">
+                  {index + 1}
+                </td>
 
-                <td className="px-6 py-5">
-                  <span className="font-semibold text-[#F5A623]">
+                <td className="break-all px-4 py-3.5 sm:px-6">
+                  <span className="text-[13px] font-medium leading-5 text-[#F5A623]">
                     {reward.rewardId}
                   </span>
                 </td>
 
-                <td className="px-6 py-5">
+                <td className="break-words px-4 py-3.5 sm:px-6">
                   <div>
-                    <p className="font-medium text-white">
+                    <p className="text-[13px] font-medium leading-5 text-white">
                       {reward.customerName}
                     </p>
                   </div>
                 </td>
 
-                <td className="px-6 py-5 text-zinc-300">{reward.customerId}</td>
+                <td className="break-all px-4 py-3.5 text-xs leading-4 text-zinc-300 sm:px-6">
+                  {reward.customerId}
+                </td>
 
-                <td className="px-6 py-5 text-zinc-300">
+                <td className="break-words px-4 py-3.5 text-[13px] leading-5 text-zinc-300 sm:px-6">
                   {reward.contactNumber || "-"}
                 </td>
 
-                <td className="px-6 py-5 text-zinc-300">
+                <td className="break-all px-4 py-3.5 text-xs leading-4 text-zinc-300 sm:px-6">
                   {reward.rentalRequestId || "-"}
                 </td>
 
-                <td className="px-6 py-5 text-zinc-300">
+                <td className="break-all px-4 py-3.5 text-xs leading-4 text-zinc-300 sm:px-6">
                   {reward.appliedRentalId || reward.lastAppliedRentalId || "-"}
                 </td>
 
-                <td className="px-6 py-5">
-                  <span className="rounded-full bg-[#F5A623]/10 px-3 py-1 text-sm font-semibold text-[#F5A623]">
+                <td className="px-4 py-3.5 sm:px-6">
+                  <span className="whitespace-nowrap rounded-full bg-[#F5A623]/10 px-2 py-0.5 text-xs font-medium leading-4 text-[#F5A623]">
                     ₹{Number(reward.rewardAmount || 0).toLocaleString("en-IN")}
                   </span>
                 </td>
 
-                <td className="px-6 py-5">
-                  <RewardStatusBadge status={reward.status} />
+                <td className="px-4 py-3.5 sm:px-6">
+                  <RewardStatusBadge status={reward.status} compact />
                 </td>
 
-                <td className="px-6 py-5 text-zinc-400">
+                <td className="whitespace-nowrap px-4 py-3.5 text-xs leading-4 text-zinc-400 sm:px-6">
                   {formatDate(reward.createdAt)}
                 </td>
 
-                <td className="px-6 py-5 text-zinc-400">
+                <td className="whitespace-nowrap px-4 py-3.5 text-xs leading-4 text-zinc-400 sm:px-6">
                   {formatDate(reward.expireDate)}
                 </td>
 
-                <td className="px-6 py-5 text-zinc-400">
+                <td className="whitespace-nowrap px-4 py-3.5 text-xs leading-4 text-zinc-400 sm:px-6">
                   {formatDate(reward.usedDate)}
                 </td>
 
-                <td className="px-6 py-5">
+                <td className="px-4 py-3.5 sm:px-6">
                   <div className="flex justify-center">
                     <button
                       onClick={() => onView(reward)}
