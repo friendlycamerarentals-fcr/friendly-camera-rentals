@@ -4,7 +4,13 @@ import { Bell } from "lucide-react";
 import { useNotifications } from "@/context/NotificationContext";
 
 export default function NotificationDropdown() {
-  const { notifications, markAsRead, markAllAsRead } = useNotifications();
+  const {
+    notifications,
+    markAsRead,
+    markAllAsRead,
+    clearAllNotifications,
+    clearing,
+  } = useNotifications();
 
   const unread = notifications.filter((n) => !n.read).length;
 
@@ -35,30 +41,30 @@ export default function NotificationDropdown() {
      * - `max-w-[calc(100vw-2rem)]` stops it from ever touching screen edges
      * - No `left-0` so it doesn't over-extend to the left on mobile
      */
-    <div
-      className="
-        absolute -right-18 top-12
-        z-999
-        w-screen max-w-[calc(100vw-2rem)]
-        sm:w-96 sm:max-w-[384px]
-        rounded-2xl
-        border border-white/10
-        bg-zinc-950
-        shadow-[0_8px_40px_rgba(0,0,0,0.6)]
-        overflow-hidden
-      "
-    >
+    <div className="absolute -right-18 top-12 z-999 w-screen max-w-[calc(100vw-2rem)] sm:w-96 sm:max-w-[384px] rounded-2xl border border-white/10 bg-zinc-950 shadow-[0_8px_40px_rgba(0,0,0,0.6)] overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
         <div className="flex items-center gap-2">
           <Bell size={16} className="text-[#F5A623]" />
           <h3 className="text-sm font-semibold text-white">Notifications</h3>
         </div>
-        {unread > 0 && (
-          <span className="rounded-full bg-[#F5A623]/20 px-2 py-0.5 text-[11px] font-semibold text-[#F5A623]">
-            {unread} new
-          </span>
-        )}
+        <div className="flex shrink-0 items-center gap-3">
+          {unread > 0 && (
+            <span className="rounded-full bg-[#F5A623]/20 px-2 py-0.5 text-[11px] font-semibold text-[#F5A623]">
+              {unread} new
+            </span>
+          )}
+          {notifications.length > 0 && (
+            <button
+              type="button"
+              onClick={clearAllNotifications}
+              disabled={clearing}
+              className="whitespace-nowrap text-xs font-medium text-[#F5A623] transition hover:text-amber-300 disabled:cursor-wait disabled:opacity-50"
+            >
+              {clearing ? "Clearing..." : "Clear All"}
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Body */}

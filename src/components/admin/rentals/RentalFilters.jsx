@@ -7,6 +7,7 @@ const statusOptions = [
   { label: "All Statuses", value: "all" },
   { label: "Pending", value: "Pending", color: "bg-yellow-500" },
   { label: "Confirmed", value: "Confirmed", color: "bg-blue-500" },
+  { label: "Rejected", value: "Rejected", color: "bg-red-500" },
   { label: "Picked Up", value: "Picked Up", color: "bg-purple-500" },
   { label: "Returned", value: "Returned", color: "bg-cyan-500" },
   { label: "Completed", value: "Completed", color: "bg-green-500" },

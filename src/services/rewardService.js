@@ -15,10 +15,22 @@ import {
   getRewardExpiryStats,
 } from "@/lib/rewards/expireRewards";
 
+const rewardSelect = `SELECT reward.*,
+  (SELECT rental."requestId" FROM "RentalRequest" rental
+   WHERE rental."rewardId" = reward."rewardId"
+  ORDER BY rental."createdAt" DESC LIMIT 1) AS "lastAppliedRentalId",
+  (SELECT rental."status" FROM "RentalRequest" rental
+   WHERE rental."rewardId" = reward."rewardId"
+  ORDER BY rental."createdAt" DESC LIMIT 1) AS "lastAppliedRentalStatus",
+  (SELECT rental."updatedAt" FROM "RentalRequest" rental
+   WHERE rental."rewardId" = reward."rewardId"
+  ORDER BY rental."createdAt" DESC LIMIT 1) AS "lastAppliedRentalUpdatedAt"
+  FROM "Reward" reward`;
+
 class RewardService {
   async getRewards() {
     await expireRewards();
-    return query('SELECT * FROM "Reward" ORDER BY "createdAt" DESC');
+    return query(`${rewardSelect} ORDER BY reward."createdAt" DESC`);
   }
 
   async expireRewards() {
@@ -34,15 +46,20 @@ class RewardService {
       throw new Error("Reward ID is required.");
     }
 
-    const validFields = [
+    const lifecycleFields = [
       "status",
-      "expireDate",
       "appliedDate",
       "usedDate",
       "expiredDate",
       "appliedRentalId",
-      "rewardAmount",
     ];
+    if (lifecycleFields.some((field) => updates?.[field] !== undefined)) {
+      throw new Error(
+        "Reward lifecycle fields are managed by rental status changes.",
+      );
+    }
+
+    const validFields = ["expireDate", "rewardAmount"];
 
     const payload = {};
 
@@ -80,7 +97,7 @@ class RewardService {
     }
 
     const rows = await query(
-      'SELECT * FROM "Reward" WHERE "rewardId" = $1 LIMIT 1',
+      `${rewardSelect} WHERE reward."rewardId" = $1 LIMIT 1`,
       [rewardId],
     );
     return rows[0] || null;
@@ -154,12 +171,12 @@ class RewardService {
 
     const pattern = `%${search}%`;
     const rows = await query(
-      `SELECT * FROM "Reward"
-       WHERE "rewardId" ILIKE $1
-          OR "customerId" ILIKE $1
-          OR "customerName" ILIKE $1
-          OR "contactNumber" ILIKE $1
-       ORDER BY "createdAt" DESC`,
+      `${rewardSelect}
+       WHERE reward."rewardId" ILIKE $1
+         OR reward."customerId" ILIKE $1
+         OR reward."customerName" ILIKE $1
+         OR reward."contactNumber" ILIKE $1
+       ORDER BY reward."createdAt" DESC`,
       [pattern],
     );
 
@@ -169,14 +186,14 @@ class RewardService {
   async getRewardsByStatus(status) {
     await expireRewards();
     return query(
-      'SELECT * FROM "Reward" WHERE "status" = $1 ORDER BY "createdAt" DESC',
+      `${rewardSelect} WHERE reward."status" = $1 ORDER BY reward."createdAt" DESC`,
       [status],
     );
   }
 
   async getCustomerHistory(customerId) {
     return query(
-      'SELECT * FROM "Reward" WHERE "customerId" = $1 ORDER BY "createdAt" DESC',
+      `${rewardSelect} WHERE reward."customerId" = $1 ORDER BY reward."createdAt" DESC`,
       [customerId],
     );
   }

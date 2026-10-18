@@ -32,7 +32,7 @@ export default function CustomerRewardHistory({
         <h2 className="text-2xl font-bold text-white">No Reward History</h2>
 
         <p className="mt-3 text-zinc-400">
-          This customer hasn't earned any rewards yet.
+          This customer hasn&apos;t earned any rewards yet.
         </p>
       </div>
     );
@@ -138,17 +138,19 @@ export default function CustomerRewardHistory({
                     <div className="grid gap-4 md:grid-cols-2">
                       <div>
                         <p className="text-xs uppercase tracking-wide text-zinc-500">
-                          Applied Rental
+                          Reserved / Redeemed Rental
                         </p>
 
                         <p className="mt-1 text-white">
-                          {reward.appliedRentalId}
+                          {reward.appliedRentalId ||
+                            reward.lastAppliedRentalId ||
+                            "-"}
                         </p>
                       </div>
 
                       <div>
                         <p className="text-xs uppercase tracking-wide text-zinc-500">
-                          Applied Date
+                          Reserved Date
                         </p>
 
                         <p className="mt-1 text-white">

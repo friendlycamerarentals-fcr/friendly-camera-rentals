@@ -20,6 +20,8 @@ export default function RentalStats({ bookings = [] }) {
 
   const cancelled = bookings.filter((b) => b.status === "Cancelled").length;
 
+  const rejected = bookings.filter((b) => b.status === "Rejected").length;
+
   const revenue = bookings
     .filter((b) => b.status === "Completed")
     .reduce((sum, booking) => sum + (booking.totalAmount || 0), 0);
@@ -56,6 +58,12 @@ export default function RentalStats({ bookings = [] }) {
       color: "text-red-400",
     },
     {
+      title: "Rejected",
+      value: rejected,
+      icon: XCircle,
+      color: "text-red-300",
+    },
+    {
       title: "Revenue",
       value: `₹${revenue.toLocaleString()}`,
       icon: IndianRupee,
@@ -64,7 +72,7 @@ export default function RentalStats({ bookings = [] }) {
   ];
 
   return (
-    <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+    <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-7">
       {stats.map((stat) => {
         const Icon = stat.icon;
 

@@ -57,6 +57,17 @@ export async function validateReward(
     };
   }
 
+  if (
+    (productCategory && !isRewardEligible(productCategory)) ||
+    (productCategories.length && !bookingContainsCamera(productCategories))
+  ) {
+    return {
+      valid: false,
+      reward: null,
+      message: "This reward is only valid for camera rentals.",
+    };
+  }
+
   if (reward.status !== REWARD_STATUS.ACTIVE) {
     return {
       valid: false,
@@ -113,8 +124,8 @@ export async function expireOldRewards() {
  */
 export async function hasAnotherActiveReward(customerId) {
   const rows = await query(
-    'SELECT * FROM "Reward" WHERE "customerId" = $1 AND "status" = $2 LIMIT 1',
-    [customerId, REWARD_STATUS.ACTIVE],
+    'SELECT * FROM "Reward" WHERE "customerId" = $1 AND "status" IN ($2, $3) LIMIT 1',
+    [customerId, REWARD_STATUS.ACTIVE, REWARD_STATUS.APPLIED],
   );
 
   return rows.length > 0;

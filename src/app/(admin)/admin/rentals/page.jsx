@@ -108,9 +108,12 @@ export default function RentalsPage() {
         throw new Error(result.message || "Failed to update status");
       setBookings((prev) =>
         prev.map((booking) =>
-          booking.id === id ? { ...booking, status: nextStatus } : booking,
+          booking.id === id ? { ...booking, ...result.data } : booking,
         ),
       );
+      if (selectedBooking?.id === id) {
+        setSelectedBooking((prev) => ({ ...prev, ...result.data }));
+      }
       toast.success("Rental request updated.");
       return true;
     } catch (error) {

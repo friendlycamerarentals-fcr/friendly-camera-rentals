@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { X, Phone, MessageCircle, Save, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import RentalStatusBadge from "./RentalStatusBadge";
+import { RENTAL_STATUS_TRANSITIONS } from "@/constants/rentalStatus";
 
 export default function RentalDetailsModal({
   open,
@@ -13,26 +14,30 @@ export default function RentalDetailsModal({
   onDelete,
   onSave,
 }) {
-  const [payment, setPayment] = useState({
-    totalRent: 0,
-    discount: 0,
-    advancePaid: 0,
-  });
-
-  useEffect(() => {
-    if (booking) {
-      setPayment({
-        totalRent: booking.totalAmount || 0,
-        discount: booking.discount || 0,
-        advancePaid: booking.advanceAmount || 0,
-      });
-    }
-  }, [booking]);
+  const [paymentEdit, setPaymentEdit] = useState(null);
+  const availableStatusTransitions =
+    RENTAL_STATUS_TRANSITIONS[booking?.status] || [];
 
   if (!open || !booking) return null;
 
-  const finalRent = payment.totalRent - payment.discount;
-  const remainingAmount = finalRent - payment.advancePaid;
+  const rewardDiscount = Number(booking.rewardDiscount || 0);
+  const paymentBase = {
+    totalRent: Number(
+      booking.originalAmount ??
+        Number(booking.totalAmount || 0) + rewardDiscount,
+    ),
+    otherDiscount: Number(booking.discount || 0),
+    advancePaid: Number(booking.advanceAmount || 0),
+  };
+  const payment = {
+    ...paymentBase,
+    ...(paymentEdit?.bookingId === booking.id ? paymentEdit.values : {}),
+  };
+  const finalRent = Math.max(
+    payment.totalRent - rewardDiscount - payment.otherDiscount,
+    0,
+  );
+  const remainingAmount = Math.max(finalRent - payment.advancePaid, 0);
 
   const handleWhatsApp = () =>
     window.open(`https://wa.me/91${booking.phone}`, "_blank");
@@ -54,7 +59,7 @@ export default function RentalDetailsModal({
 
     const payload = {
       totalAmount: payment.totalRent,
-      discount: payment.discount,
+      discount: payment.otherDiscount,
       advanceAmount: payment.advancePaid,
     };
 
@@ -64,26 +69,28 @@ export default function RentalDetailsModal({
     }
   };
 
+  const updatePayment = (field, value) => {
+    setPaymentEdit((previous) => ({
+      bookingId: booking.id,
+      values: {
+        ...(previous?.bookingId === booking.id ? previous.values : paymentBase),
+        [field]: value,
+      },
+    }));
+  };
+
   const inputCls =
     "w-full rounded-xl border border-white/10 bg-zinc-900 px-3 py-2.5 text-sm text-white outline-none focus:border-[#F5A623] transition";
 
   return (
     <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 p-3 backdrop-blur-sm sm:p-4"
+      className="fixed inset-0 z-9999 flex items-center justify-center bg-black/70 p-3 backdrop-blur-sm sm:p-4"
       onClick={onClose}
     >
       {/* Modal card */}
       <div
         onClick={(e) => e.stopPropagation()}
-        className="
-          flex max-h-[90vh] w-full flex-col overflow-hidden
-          rounded-2xl border border-white/10 bg-zinc-950
-          shadow-[0_0_60px_rgba(245,166,35,0.10)]
-          sm:rounded-2xl
-          sm:max-w-[560px]
-          lg:max-w-[720px]
-          xl:max-w-[820px]
-        "
+        className="flex max-h-[90vh] w-full flex-col overflow-hidden rounded-2xl border border-white/10 bg-zinc-950 shadow-[0_0_60px_rgba(245,166,35,0.10)] sm:rounded-2xl sm:max-w-140 lg:max-w-180 xl:max-w-205"
       >
         {/* ── Sticky header ─────────────────────────────────────────────── */}
         <div className="flex shrink-0 items-center justify-between border-b border-white/10 px-4 py-4 sm:px-6">
@@ -201,9 +208,15 @@ export default function RentalDetailsModal({
                       Duration: {booking.rentalDuration}
                     </p>
                   </div>
-                  <span className="shrink-0 text-sm font-bold text-[#F5A623]">
-                    ₹{Number(booking.totalAmount || 0).toLocaleString("en-IN")}
-                  </span>
+                  <div className="shrink-0 text-right">
+                    <span className="block text-sm font-bold text-[#F5A623]">
+                      ₹
+                      {Number(booking.totalAmount || 0).toLocaleString("en-IN")}
+                    </span>
+                    <span className="text-[11px] text-zinc-500">
+                      Final payable
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -218,32 +231,30 @@ export default function RentalDetailsModal({
               <div className="grid grid-cols-3 gap-2">
                 <div>
                   <label className="mb-1 block text-[11px] text-zinc-400 truncate">
-                    Total Rent
+                    Original Amount
                   </label>
                   <input
                     type="number"
                     value={payment.totalRent}
+                    min="0"
+                    step="0.01"
                     onChange={(e) =>
-                      setPayment((p) => ({
-                        ...p,
-                        totalRent: Number(e.target.value),
-                      }))
+                      updatePayment("totalRent", Number(e.target.value))
                     }
                     className={inputCls}
                   />
                 </div>
                 <div>
                   <label className="mb-1 block text-[11px] text-zinc-400 truncate">
-                    Discount
+                    Other Discount
                   </label>
                   <input
                     type="number"
-                    value={payment.discount}
+                    min="0"
+                    step="0.01"
+                    value={payment.otherDiscount}
                     onChange={(e) =>
-                      setPayment((p) => ({
-                        ...p,
-                        discount: Number(e.target.value),
-                      }))
+                      updatePayment("otherDiscount", Number(e.target.value))
                     }
                     className={inputCls}
                   />
@@ -254,16 +265,25 @@ export default function RentalDetailsModal({
                   </label>
                   <input
                     type="number"
+                    min="0"
+                    step="0.01"
                     value={payment.advancePaid}
                     onChange={(e) =>
-                      setPayment((p) => ({
-                        ...p,
-                        advancePaid: Number(e.target.value),
-                      }))
+                      updatePayment("advancePaid", Number(e.target.value))
                     }
                     className={inputCls}
                   />
                 </div>
+              </div>
+
+              <div className="mt-3 flex items-center justify-between border-t border-white/10 pt-3 text-sm">
+                <span className="text-zinc-400">
+                  Reward Discount
+                  {booking.rewardId ? ` · ${booking.rewardId}` : ""}
+                </span>
+                <span className="font-semibold text-emerald-400">
+                  -₹{rewardDiscount.toLocaleString("en-IN")}
+                </span>
               </div>
 
               {/* Summary cards */}
@@ -302,17 +322,15 @@ export default function RentalDetailsModal({
                 Actions
               </h3>
               <div className="flex flex-wrap gap-2">
-                {["Pending", "Approved", "Rejected", "Completed"].map(
-                  (status) => (
-                    <button
-                      key={status}
-                      onClick={() => handleStatusAction(status)}
-                      className="rounded-xl border border-white/10 px-3 py-2 text-sm text-zinc-300 transition hover:bg-white/5"
-                    >
-                      Mark {status}
-                    </button>
-                  ),
-                )}
+                {availableStatusTransitions.map((status) => (
+                  <button
+                    key={status}
+                    onClick={() => handleStatusAction(status)}
+                    className="rounded-xl border border-white/10 px-3 py-2 text-sm text-zinc-300 transition hover:bg-white/5"
+                  >
+                    Mark {status}
+                  </button>
+                ))}
                 <button
                   onClick={handleDelete}
                   className="flex items-center gap-2 rounded-xl border border-red-500/20 px-3 py-2 text-sm text-red-400 transition hover:bg-red-500/10"

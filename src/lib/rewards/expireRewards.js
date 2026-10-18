@@ -65,9 +65,20 @@ export async function expireRewardById(rewardId) {
     };
   }
 
+  if (
+    reward.status !== REWARD_STATUS.ACTIVE ||
+    new Date(reward.expireDate).getTime() >= Date.now()
+  ) {
+    return {
+      success: false,
+      message: "Only expired, available rewards can be expired manually.",
+      reward,
+    };
+  }
+
   const updatedRows = await query(
-    'UPDATE "Reward" SET "status" = $1, "expiredDate" = NOW() WHERE "rewardId" = $2 RETURNING *',
-    [REWARD_STATUS.EXPIRED, rewardId],
+    'UPDATE "Reward" SET "status" = $1, "expiredDate" = NOW() WHERE "rewardId" = $2 AND "status" = $3 AND "expireDate" < NOW() RETURNING *',
+    [REWARD_STATUS.EXPIRED, rewardId, REWARD_STATUS.ACTIVE],
   );
 
   return {

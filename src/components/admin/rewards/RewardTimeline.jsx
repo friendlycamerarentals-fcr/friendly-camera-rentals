@@ -11,6 +11,9 @@ import {
 export default function RewardTimeline({ reward }) {
   if (!reward) return null;
 
+  const reservationReleased =
+    !reward.appliedRentalId &&
+    ["Cancelled", "Rejected"].includes(reward.lastAppliedRentalStatus);
   const timeline = [
     {
       title: "Reward Created",
@@ -18,34 +21,56 @@ export default function RewardTimeline({ reward }) {
       icon: <Gift size={18} />,
       color: "text-[#F5A623]",
       active: true,
+      state: "Created",
     },
     {
       title: "Reward Activated",
       date: reward.createdAt,
-      icon: <CheckCircle2 size={18} />,
       color: "text-green-400",
       active: true,
+      state: "Active",
     },
     {
-      title: "Reward Applied",
+      title: "Reward Reserved",
       date: reward.appliedDate,
       icon: <Clock3 size={18} />,
       color: "text-blue-400",
       active: !!reward.appliedDate,
+      state: reservationReleased
+        ? "Released"
+        : reward.status === "Used"
+          ? "Redeemed"
+          : reward.status === "Applied"
+            ? "Reserved"
+            : "Recorded",
     },
     {
       title: "Reward Used",
       date: reward.usedDate,
       icon: <CheckCircle2 size={18} />,
       color: "text-emerald-400",
-      active: !!reward.usedDate,
+      active: reward.status === "Used" && !!reward.usedDate,
+      state: reward.status === "Used" ? "Redeemed" : "Pending",
     },
+    ...(reservationReleased
+      ? [
+          {
+            title: "Reservation Released",
+            date: reward.lastAppliedRentalUpdatedAt,
+            icon: <XCircle size={18} />,
+            color: "text-zinc-400",
+            active: true,
+            state: "Released",
+          },
+        ]
+      : []),
     {
       title: "Reward Expired",
       date: reward.expiredDate,
       icon: <XCircle size={18} />,
       color: "text-red-400",
-      active: !!reward.expiredDate,
+      active: reward.status === "Expired",
+      state: reward.status === "Expired" ? "Expired" : "Pending",
     },
   ];
 
@@ -108,7 +133,7 @@ export default function RewardTimeline({ reward }) {
                       : "bg-zinc-700/30 text-zinc-500"
                   }`}
                 >
-                  {item.active ? "Completed" : "Pending"}
+                  {item.state || (item.active ? "Completed" : "Pending")}
                 </span>
               </div>
             </div>
@@ -142,7 +167,11 @@ export default function RewardTimeline({ reward }) {
 
           <div>
             <p className="text-zinc-500">Current Status</p>
-            <p className="font-semibold text-white">{reward.status}</p>
+            <p className="font-semibold text-white">
+              {reward.status === "Applied"
+                ? "Reserved / Pending Redemption"
+                : reward.status}
+            </p>
           </div>
 
           <div>
@@ -155,9 +184,9 @@ export default function RewardTimeline({ reward }) {
           </div>
 
           <div>
-            <p className="text-zinc-500">Applied Rental</p>
+            <p className="text-zinc-500">Reserved / Redeemed Rental</p>
             <p className="font-semibold text-white">
-              {reward.appliedRentalId || "-"}
+              {reward.appliedRentalId || reward.lastAppliedRentalId || "-"}
             </p>
           </div>
         </div>

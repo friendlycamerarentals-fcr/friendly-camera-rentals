@@ -103,6 +103,14 @@ export async function deleteNotification(notificationId) {
 }
 
 /**
+ * Delete all admin notifications without affecting related business records.
+ */
+export async function deleteAllNotifications() {
+  const rows = await query(`DELETE FROM "AdminNotification" RETURNING "id"`);
+  return rows || [];
+}
+
+/**
  * Get notification count by read status
  */
 export async function getNotificationCounts() {

@@ -87,9 +87,7 @@ const formatDuration = (duration) => {
   if (!duration) return "Not selected";
   const match = String(duration).match(/^(\d+)(hr|day|week)s?$/i);
   if (!match) return String(duration);
-  const unit = { hr: "Hour", day: "Day", week: "Week" }[
-    match[2].toLowerCase()
-  ];
+  const unit = { hr: "Hour", day: "Day", week: "Week" }[match[2].toLowerCase()];
   return `${match[1]} ${unit}${Number(match[1]) > 1 ? "s" : ""}`;
 };
 
@@ -153,14 +151,25 @@ export default function CartDrawer({ open, onClose }) {
   const total = useMemo(
     () =>
       cart.reduce(
-        (sum, item) => sum + Number(item.price || 0) * Number(item.quantity || 1),
+        (sum, item) =>
+          sum + Number(item.price || 0) * Number(item.quantity || 1),
         0,
       ),
     [cart],
   );
+  const rewardEligibleIndex = cart.findIndex(
+    (item) =>
+      String(item.category || "")
+        .trim()
+        .toLowerCase() === "camera",
+  );
+  const rewardBaseItem = cart[rewardEligibleIndex];
+  const rewardBaseAmount = rewardBaseItem
+    ? Number(rewardBaseItem.price || 0) * Number(rewardBaseItem.quantity || 1)
+    : 0;
   const rewardDiscount = Math.min(
     Number(activeReward?.rewardAmount || 0),
-    total,
+    rewardBaseAmount,
   );
   const payableTotal = Math.max(total - rewardDiscount, 0);
 
@@ -249,7 +258,10 @@ export default function CartDrawer({ open, onClose }) {
     fetch("/api/rewards/check", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ customerId: profile.customerId }),
+      body: JSON.stringify({
+        customerId: profile.customerId,
+        productId: cart[rewardEligibleIndex >= 0 ? rewardEligibleIndex : 0]?.id,
+      }),
     })
       .then((response) => response.json())
       .then((result) => {
@@ -262,7 +274,7 @@ export default function CartDrawer({ open, onClose }) {
     return () => {
       cancelled = true;
     };
-  }, [showBookingForm, profile?.customerId]);
+  }, [showBookingForm, profile?.customerId, cart, rewardEligibleIndex]);
 
   useEffect(() => {
     const handleResume = () => {
@@ -476,7 +488,7 @@ export default function CartDrawer({ open, onClose }) {
     }
 
     try {
-      const bookingPayloads = cart.map((item) => ({
+      const bookingPayloads = cart.map((item, index) => ({
         customerId: profile?.customerId || null,
         fullName: fullName.trim(),
         email: user.email,
@@ -489,6 +501,8 @@ export default function CartDrawer({ open, onClose }) {
         quantity: item.quantity || 1,
         rentalPrice: Number(item.price || 0),
         totalAmount: Number(item.price || 0) * Number(item.quantity || 1),
+        rewardId:
+          index === rewardEligibleIndex ? activeReward?.rewardId : undefined,
         bookingDate,
         pickupTime,
         notes: notes.trim(),

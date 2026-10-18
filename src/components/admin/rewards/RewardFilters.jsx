@@ -2,7 +2,13 @@
 
 import { Search, RotateCcw } from "lucide-react";
 
-const FILTERS = ["All", "Active", "Applied", "Used", "Expired"];
+const FILTERS = [
+  { label: "All", value: "All" },
+  { label: "Active", value: "Active" },
+  { label: "Reserved", value: "Applied" },
+  { label: "Used", value: "Used" },
+  { label: "Expired", value: "Expired" },
+];
 
 export default function RewardFilters({
   search,
@@ -35,15 +41,15 @@ export default function RewardFilters({
         <div className="flex flex-wrap items-center gap-2">
           {FILTERS.map((item) => (
             <button
-              key={item}
-              onClick={() => setStatus(item)}
+              key={item.value}
+              onClick={() => setStatus(item.value)}
               className={`rounded-xl px-3 py-1.5 text-xs font-medium transition-all md:px-4 md:py-2 md:text-sm ${
-                status === item
+                status === item.value
                   ? "bg-[#F5A623] text-black"
                   : "border border-white/10 bg-zinc-900 text-zinc-400 hover:border-[#F5A623]/40 hover:text-white"
               }`}
             >
-              {item}
+              {item.label}
             </button>
           ))}
         </div>

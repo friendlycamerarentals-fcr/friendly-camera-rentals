@@ -60,6 +60,24 @@ export async function PATCH(request, { params }) {
 
     const body = await request.json();
 
+    const lifecycleFields = [
+      "status",
+      "appliedDate",
+      "usedDate",
+      "expiredDate",
+      "appliedRentalId",
+    ];
+    if (lifecycleFields.some((field) => body[field] !== undefined)) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "Reward lifecycle changes must be made through rental status updates.",
+        },
+        { status: 400 },
+      );
+    }
+
     const reward = await rewardService.getReward(id);
 
     if (!reward) {

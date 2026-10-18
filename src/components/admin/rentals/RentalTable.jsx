@@ -11,13 +11,18 @@ import {
   Trash2,
 } from "lucide-react";
 import RentalStatusBadge from "./RentalStatusBadge";
+import { RENTAL_STATUS_TRANSITIONS } from "@/constants/rentalStatus";
 
 const PAGE_SIZE = 10;
 
 const statusOptions = [
   { value: "Pending", color: "bg-yellow-500" },
   { value: "Confirmed", color: "bg-blue-500" },
+  { value: "Approved", color: "bg-blue-400" },
+  { value: "Picked Up", color: "bg-purple-500" },
+  { value: "Returned", color: "bg-cyan-500" },
   { value: "Rejected", color: "bg-red-500" },
+  { value: "Cancelled", color: "bg-red-700" },
   { value: "Completed", color: "bg-green-500" },
 ];
 
@@ -141,14 +146,16 @@ export default function RentalTable({
                   {booking.rewardDiscount > 0 && (
                     <span className="block text-xs text-emerald-400">
                       ₹{Number(booking.rewardDiscount).toLocaleString("en-IN")}{" "}
-                      reward used
+                      reward discount
+                      {booking.rewardId ? ` · ${booking.rewardId}` : ""}
                     </span>
                   )}
                 </td>
 
                 <td className="px-6 py-5">
-                  {booking.status === "Completed" ||
-                  booking.status === "Cancelled" ? (
+                  {["Completed", "Rejected", "Cancelled"].includes(
+                    booking.status,
+                  ) ? (
                     <div className="flex items-center gap-1.5">
                       <RentalStatusBadge status={booking.status} />
                     </div>
@@ -168,21 +175,30 @@ export default function RentalTable({
                       </summary>
 
                       <div className="absolute left-0 top-10 z-50 w-52 rounded-2xl border border-white/10 bg-zinc-900 p-1.5 shadow-2xl">
-                        {statusOptions.map((s) => (
-                          <button
-                            key={s.value}
-                            onClick={() => updateStatus(booking.id, s.value)}
-                            className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition hover:bg-white/5"
-                          >
-                            <span
-                              className={`h-2.5 w-2.5 shrink-0 rounded-full ${s.color}`}
-                            />
-                            <span className="flex-1 text-white">{s.value}</span>
-                            {booking.status === s.value && (
-                              <span className="text-[#F5A623]">✓</span>
-                            )}
-                          </button>
-                        ))}
+                        {(RENTAL_STATUS_TRANSITIONS[booking.status] || [])
+                          .map((status) =>
+                            statusOptions.find(
+                              (option) => option.value === status,
+                            ),
+                          )
+                          .filter(Boolean)
+                          .map((s) => (
+                            <button
+                              key={s.value}
+                              onClick={() => updateStatus(booking.id, s.value)}
+                              className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition hover:bg-white/5"
+                            >
+                              <span
+                                className={`h-2.5 w-2.5 shrink-0 rounded-full ${s.color}`}
+                              />
+                              <span className="flex-1 text-white">
+                                {s.value}
+                              </span>
+                              {booking.status === s.value && (
+                                <span className="text-[#F5A623]">✓</span>
+                              )}
+                            </button>
+                          ))}
                       </div>
                     </details>
                   )}

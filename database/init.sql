@@ -179,8 +179,11 @@ CREATE TABLE IF NOT EXISTS "RentalRequest" (
     "quantity"       INTEGER NOT NULL DEFAULT 1,
     "rentalPrice"    DOUBLE PRECISION NOT NULL DEFAULT 0,
     "totalAmount"    DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "originalAmount" DOUBLE PRECISION,
     "rewardId"       TEXT,
     "rewardDiscount" DOUBLE PRECISION,
+    "discount"       DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "advanceAmount"  DOUBLE PRECISION NOT NULL DEFAULT 0,
     "bookingDate"    TEXT NOT NULL,
     "pickupTime"     TEXT,
     "notes"          TEXT,
@@ -350,6 +353,22 @@ CREATE INDEX IF NOT EXISTS "idx_reward_expire_date" ON "Reward" ("expireDate");
 
 CREATE UNIQUE INDEX IF NOT EXISTS "Reward_one_active_per_customer_idx"
     ON "Reward" ("customerId") WHERE "status" = 'Active';
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM "Reward"
+        WHERE "status" IN ('Active', 'Applied')
+        GROUP BY "customerId"
+        HAVING COUNT(*) > 1
+    ) THEN
+        CREATE UNIQUE INDEX IF NOT EXISTS "Reward_one_unconsumed_per_customer_idx"
+            ON "Reward" ("customerId")
+            WHERE "status" IN ('Active', 'Applied');
+    ELSE
+        RAISE NOTICE 'Skipped reward reservation index: duplicate Active/Applied rewards require review.';
+    END IF;
+END $$;
 
 
 -- ============================================================================
@@ -657,3 +676,12 @@ GROUP BY c."id", c."customerId", c."name", c."email";
 -- CREATE INDEX IF NOT EXISTS "idx_rentalproduct_sku" ON "RentalProduct" ("sku");
 --
 -- (Add new dated entries below this line as your schema evolves.)
+
+-- 2026-10-18: Preserve rental amount and payment breakdown.
+ALTER TABLE "RentalRequest" ADD COLUMN IF NOT EXISTS "originalAmount" DOUBLE PRECISION;
+ALTER TABLE "RentalRequest" ADD COLUMN IF NOT EXISTS "discount" DOUBLE PRECISION NOT NULL DEFAULT 0;
+ALTER TABLE "RentalRequest" ADD COLUMN IF NOT EXISTS "advanceAmount" DOUBLE PRECISION NOT NULL DEFAULT 0;
+
+UPDATE "RentalRequest"
+SET "originalAmount" = "totalAmount" + COALESCE("rewardDiscount", 0)
+WHERE "originalAmount" IS NULL;

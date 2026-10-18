@@ -60,7 +60,7 @@ export async function POST(request) {
 
     return NextResponse.json(
       {
-        success: true,
+        success: result.success,
         rewardApplied: result.rewardApplied,
         reward: result.reward,
         rewardDiscount: result.rewardDiscount,
@@ -68,7 +68,7 @@ export async function POST(request) {
         message: result.message,
       },
       {
-        status: 200,
+        status: result.success ? 200 : 409,
       },
     );
   } catch (error) {

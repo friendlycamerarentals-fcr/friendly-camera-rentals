@@ -1,37 +1,16 @@
 import { NextResponse } from "next/server";
 import { createId } from "@/lib/createId";
-import { query } from "@/db/query";
+import { query, transaction } from "@/db/query";
+import { reserveRewardForRental } from "@/lib/rewards/applyReward";
+import rewardService from "@/services/rewardService";
 import { createAdminNotification } from "@/lib/adminNotificationService";
+import { isRewardEligible } from "@/lib/rewards/rewardValidation";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 function buildRequestId(idNumber) {
   return `FCR-R${String(idNumber).padStart(6, "0")}`;
-}
-
-async function getRentalRequestRewardColumnSupport() {
-  try {
-    const rows = await query(`
-      SELECT column_name
-      FROM information_schema.columns
-      WHERE table_schema = current_schema()
-        AND table_name = 'RentalRequest'
-        AND column_name IN ('rewardId', 'rewardDiscount')
-    `);
-    const columns = new Set(rows.map((row) => row.column_name));
-
-    return {
-      rewardId: columns.has("rewardId"),
-      rewardDiscount: columns.has("rewardDiscount"),
-    };
-  } catch (error) {
-    console.warn("[RENTAL_REQUEST_SCHEMA_CHECK]", error.message);
-    return {
-      rewardId: false,
-      rewardDiscount: false,
-    };
-  }
 }
 
 export async function GET() {
@@ -51,6 +30,7 @@ export async function GET() {
 
 export async function POST(request) {
   try {
+    await rewardService.expireRewards();
     const body = await request.json();
 
     if (
@@ -87,7 +67,7 @@ export async function POST(request) {
     }
 
     const productRows = await query(
-      'SELECT "id", "name", "available" FROM "RentalProduct" WHERE "id" = $1 LIMIT 1',
+      'SELECT "id", "name", "available", "category" FROM "RentalProduct" WHERE "id" = $1 LIMIT 1',
       [body.productId],
     );
     const product = productRows[0];
@@ -104,6 +84,16 @@ export async function POST(request) {
       );
     }
 
+    if (body.rewardId && !isRewardEligible(product.category)) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "This reward is only valid for camera rentals.",
+        },
+        { status: 400 },
+      );
+    }
+
     const existingRows = await query(
       `SELECT * FROM "RentalRequest"
        WHERE "productId" = $1
@@ -111,7 +101,7 @@ export async function POST(request) {
          AND "bookingDate" = $3
          AND "pickupTime" IS NOT DISTINCT FROM $4
          AND "rentalDuration" = $5
-         AND "status" IN ('Pending', 'Approved', 'Completed')
+         AND "status" IN ('Pending', 'Confirmed', 'Approved', 'Picked Up', 'Returned', 'Completed')
        LIMIT 1`,
       [
         body.productId,
@@ -149,20 +139,28 @@ export async function POST(request) {
 
     const id = createId();
     const now = new Date();
-    const rewardColumns = await getRentalRequestRewardColumnSupport();
+    const result = await transaction(async (client) => {
+      let reservation = null;
+      if (body.rewardId) {
+        const customerRows = await client.query(
+          'SELECT "id" FROM "Customer" WHERE "customerId" = $1 AND LOWER("email") = LOWER($2) LIMIT 1',
+          [body.customerId, body.email],
+        );
+        if (!customerRows.rows.length) {
+          const error = new Error("Reward does not belong to this customer.");
+          error.status = 403;
+          throw error;
+        }
+      }
 
-    let insertSql;
-    let insertParams;
-
-    if (rewardColumns.rewardId && rewardColumns.rewardDiscount) {
-      insertSql = `INSERT INTO "RentalRequest" (
+      const insertSql = `INSERT INTO "RentalRequest" (
         "id", "requestId", "customerId", "userId", "fullName", "email", "phone",
         "address", "productId", "productName", "productImage", "rentalDuration",
-        "quantity", "rentalPrice", "totalAmount", "rewardId", "rewardDiscount",
+        "quantity", "rentalPrice", "totalAmount", "originalAmount", "rewardId", "rewardDiscount",
         "bookingDate", "pickupTime", "notes", "status", "paymentStatus", "createdAt", "updatedAt"
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24)
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25)
       RETURNING *`;
-      insertParams = [
+      const insertParams = [
         id,
         requestId,
         body.customerId,
@@ -178,40 +176,9 @@ export async function POST(request) {
         quantity,
         rentalPrice,
         totalAmount,
-        null,
-        null,
-        body.bookingDate,
-        body.pickupTime || null,
-        body.notes || null,
-        "Pending",
-        "Pending",
-        now,
-        now,
-      ];
-    } else {
-      insertSql = `INSERT INTO "RentalRequest" (
-        "id", "requestId", "customerId", "userId", "fullName", "email", "phone",
-        "address", "productId", "productName", "productImage", "rentalDuration",
-        "quantity", "rentalPrice", "totalAmount",
-        "bookingDate", "pickupTime", "notes", "status", "paymentStatus", "createdAt", "updatedAt"
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
-      RETURNING *`;
-      insertParams = [
-        id,
-        requestId,
-        body.customerId,
-        body.userId || null,
-        body.fullName,
-        body.email || null,
-        body.phone,
-        body.address || null,
-        body.productId,
-        body.productName,
-        body.productImage || null,
-        body.rentalDuration,
-        quantity,
-        rentalPrice,
         totalAmount,
+        null,
+        0,
         body.bookingDate,
         body.pickupTime || null,
         body.notes || null,
@@ -220,10 +187,37 @@ export async function POST(request) {
         now,
         now,
       ];
-    }
 
-    const rows = await query(insertSql, insertParams);
-    const rentalRequest = rows[0];
+      let rentalRequest = (await client.query(insertSql, insertParams)).rows[0];
+
+      if (body.rewardId) {
+        reservation = await reserveRewardForRental(client, {
+          customerId: body.customerId,
+          rewardId: body.rewardId,
+          rentalRequestId: requestId,
+          originalAmount: totalAmount,
+        });
+        if (!reservation.success) {
+          const error = new Error(reservation.message);
+          error.status = 409;
+          throw error;
+        }
+
+        const updatedRentalRows = await client.query(
+          'UPDATE "RentalRequest" SET "rewardId" = $1, "rewardDiscount" = $2, "totalAmount" = $3, "updatedAt" = NOW() WHERE "id" = $4 RETURNING *',
+          [
+            reservation.reward.rewardId,
+            reservation.rewardDiscount,
+            reservation.finalAmount,
+            id,
+          ],
+        );
+        rentalRequest = updatedRentalRows.rows[0];
+      }
+
+      return { rentalRequest, reservation };
+    });
+    const { rentalRequest, reservation } = result;
 
     // Create admin notification for new rental booking
     await createAdminNotification({
@@ -238,10 +232,10 @@ export async function POST(request) {
       {
         success: true,
         data: rentalRequest,
-        rewardApplied: false,
-        reward: null,
-        rewardDiscount: 0,
-        finalAmount: totalAmount,
+        rewardApplied: Boolean(reservation),
+        reward: reservation?.reward || null,
+        rewardDiscount: reservation?.rewardDiscount || 0,
+        finalAmount: reservation?.finalAmount ?? totalAmount,
       },
       { status: 201 },
     );
@@ -249,7 +243,7 @@ export async function POST(request) {
     console.error("[RENTAL_REQUESTS_POST]", error);
     return NextResponse.json(
       { success: false, message: "Failed to create rental request" },
-      { status: 500 },
+      { status: error.status || 500 },
     );
   }
 }

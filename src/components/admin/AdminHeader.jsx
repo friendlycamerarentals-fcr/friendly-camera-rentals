@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { CalendarDays, User, Menu, X } from "lucide-react";
 
 import NotificationBell from "./notifications/NotificationBell";
@@ -8,6 +8,36 @@ import NotificationDropdown from "./notifications/NotificationDropdown";
 
 export default function AdminHeader() {
   const [openNotifications, setOpenNotifications] = useState(false);
+  const [adminEmail, setAdminEmail] = useState("");
+
+  useEffect(() => {
+    let active = true;
+
+    const loadAdminEmail = async () => {
+      try {
+        const response = await fetch("/api/admin/session", {
+          cache: "no-store",
+        });
+        const result = await response.json();
+        if (active) {
+          setAdminEmail(
+            response.ok && result.success && typeof result.email === "string"
+              ? result.email
+              : "",
+          );
+        }
+      } catch {
+        if (active) setAdminEmail("");
+      }
+    };
+
+    loadAdminEmail();
+    window.addEventListener("focus", loadAdminEmail);
+    return () => {
+      active = false;
+      window.removeEventListener("focus", loadAdminEmail);
+    };
+  }, []);
 
   const currentDate = new Date().toLocaleDateString("en-IN", {
     weekday: "long",
@@ -79,10 +109,16 @@ export default function AdminHeader() {
               <User size={18} className="text-[#F5A623]" />
             </div>
 
-            <div className="hidden md:block">
+            <div className="hidden min-w-0 max-w-[min(14rem,32vw)] md:block">
               <p className="text-sm font-medium text-white">Administrator</p>
 
-              <p className="text-xs text-zinc-400">admin@fcr.in</p>
+              <p
+                className="max-w-full truncate text-xs text-zinc-400"
+                title={adminEmail || undefined}
+                aria-label={adminEmail || "Administrator email unavailable"}
+              >
+                {adminEmail || " "}
+              </p>
             </div>
           </div>
         </div>

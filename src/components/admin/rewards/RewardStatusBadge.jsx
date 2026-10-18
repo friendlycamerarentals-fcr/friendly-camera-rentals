@@ -11,17 +11,15 @@ const STATUS_CONFIG = {
   },
 
   Applied: {
-    label: "Applied",
+    label: "Reserved",
     icon: WalletCards,
-    className:
-      "bg-amber-500/10 text-amber-400 border border-amber-500/20",
+    className: "bg-amber-500/10 text-amber-400 border border-amber-500/20",
   },
 
   Used: {
     label: "Used",
     icon: CheckCircle2,
-    className:
-      "bg-blue-500/10 text-blue-400 border border-blue-500/20",
+    className: "bg-blue-500/10 text-blue-400 border border-blue-500/20",
   },
 
   Expired: {

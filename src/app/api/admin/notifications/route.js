@@ -5,6 +5,7 @@ import {
   markNotificationAsRead,
   markAllNotificationsAsRead,
   deleteNotification,
+  deleteAllNotifications,
 } from "@/lib/adminNotificationService";
 
 export const dynamic = "force-dynamic";
@@ -104,6 +105,17 @@ export async function POST(request) {
           success: true,
           data: notification,
           message: "Notification deleted",
+        },
+        { status: 200 },
+      );
+    } else if (action === "clear-all") {
+      const deleted = await deleteAllNotifications();
+
+      return NextResponse.json(
+        {
+          success: true,
+          deletedCount: deleted.length,
+          message: "All notifications cleared",
         },
         { status: 200 },
       );

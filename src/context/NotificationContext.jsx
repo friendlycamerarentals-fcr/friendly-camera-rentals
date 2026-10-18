@@ -6,6 +6,7 @@ import {
   useState,
   useEffect,
   useCallback,
+  useRef,
 } from "react";
 import { toast } from "sonner";
 
@@ -14,7 +15,9 @@ const NotificationContext = createContext();
 export function NotificationProvider({ children }) {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [clearing, setClearing] = useState(false);
   const [error, setError] = useState(null);
+  const clearingRef = useRef(false);
 
   const playSound = () => {
     const audio = new Audio("/sounds/admin-notification.mp3");
@@ -30,7 +33,7 @@ export function NotificationProvider({ children }) {
       const response = await fetch("/api/admin/notifications?limit=50");
       const result = await response.json();
 
-      if (result.success && result.data) {
+      if (result.success && result.data && !clearingRef.current) {
         setNotifications(result.data);
       }
     } catch (err) {
@@ -114,6 +117,36 @@ export function NotificationProvider({ children }) {
     }
   };
 
+  const clearAllNotifications = async () => {
+    if (clearingRef.current || notifications.length === 0) return false;
+
+    clearingRef.current = true;
+    setClearing(true);
+    try {
+      const response = await fetch("/api/admin/notifications", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "clear-all" }),
+      });
+      const result = await response.json().catch(() => null);
+
+      if (!response.ok || !result?.success) {
+        throw new Error(result?.message || "Failed to clear notifications");
+      }
+
+      setNotifications([]);
+      toast.success("All notifications cleared");
+      return true;
+    } catch (err) {
+      console.error("Failed to clear notifications:", err);
+      toast.error(err.message || "Failed to clear notifications");
+      return false;
+    } finally {
+      clearingRef.current = false;
+      setClearing(false);
+    }
+  };
+
   const unreadCount = notifications.filter((item) => !item.read).length;
 
   return (
@@ -123,9 +156,11 @@ export function NotificationProvider({ children }) {
         addNotification: undefined,
         markAsRead,
         markAllAsRead,
+        clearAllNotifications,
         deleteNotification,
         unreadCount,
         loading,
+        clearing,
         error,
         refetch: fetchNotifications,
       }}

@@ -18,6 +18,12 @@ import { formatDate } from "@/lib/rewards/rewardHelpers";
 export default function RewardDetailsModal({ open, onClose, reward }) {
   if (!open || !reward) return null;
 
+  const appliedRentalId =
+    reward.appliedRentalId || reward.lastAppliedRentalId || "-";
+  const reservationReleased =
+    !reward.appliedRentalId &&
+    ["Cancelled", "Rejected"].includes(reward.lastAppliedRentalStatus);
+
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-5 backdrop-blur-sm">
       <div className="relative max-h-[90vh] w-full max-w-4xl overflow-hidden rounded-2xl border border-white/10 bg-zinc-950 shadow-[0_0_60px_rgba(0,0,0,.45)]">
@@ -31,7 +37,6 @@ export default function RewardDetailsModal({ open, onClose, reward }) {
               Complete reward information
             </p>
           </div>
-
           <button
             onClick={onClose}
             className="rounded-xl border border-white/10 p-2 text-zinc-400 transition hover:bg-white/5 hover:text-white"
@@ -125,14 +130,28 @@ export default function RewardDetailsModal({ open, onClose, reward }) {
 
               <InfoCard
                 icon={WalletCards}
-                label="Applied Rental"
-                value={reward.appliedRentalId || "-"}
+                label={
+                  reward.status === "Used"
+                    ? "Redeemed by Rental"
+                    : reward.status === "Applied"
+                      ? "Reserved for Rental"
+                      : "Last Reservation Rental"
+                }
+                value={appliedRentalId}
               />
 
               <InfoCard
                 icon={CalendarDays}
-                label="Applied Date"
-                value={reward.appliedDate || "-"}
+                label="Reserved Date"
+                value={formatDate(reward.appliedDate)}
+              />
+
+              <InfoCard
+                icon={CalendarDays}
+                label="Redemption Date"
+                value={
+                  reward.status === "Used" ? formatDate(reward.usedDate) : "-"
+                }
               />
 
               <InfoCard
@@ -158,8 +177,24 @@ export default function RewardDetailsModal({ open, onClose, reward }) {
                 />
 
                 <TimelineItem
-                  title={reward.status}
-                  date={reward.appliedDate || reward.expireDate}
+                  title={
+                    reservationReleased
+                      ? "Reservation Released"
+                      : reward.status === "Applied"
+                        ? "Reward Reserved"
+                        : reward.status === "Used"
+                          ? "Reward Redeemed"
+                          : `Reward ${reward.status}`
+                  }
+                  date={
+                    reservationReleased
+                      ? reward.lastAppliedRentalUpdatedAt
+                      : reward.status === "Applied"
+                        ? reward.appliedDate
+                        : reward.status === "Used"
+                          ? reward.usedDate
+                          : reward.expiredDate || reward.expireDate
+                  }
                 />
               </div>
             </div>

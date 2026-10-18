@@ -37,7 +37,9 @@ export default function RewardTable({ rewards = [], onView }) {
 
               <th className="px-6 py-4">Contact</th>
 
-              <th className="px-6 py-4">Rental ID</th>
+              <th className="px-6 py-4">Generated From</th>
+
+              <th className="px-6 py-4">Reserved / Redeemed By</th>
 
               <th className="px-6 py-4">Reward</th>
 
@@ -83,6 +85,10 @@ export default function RewardTable({ rewards = [], onView }) {
 
                 <td className="px-6 py-5 text-zinc-300">
                   {reward.rentalRequestId || "-"}
+                </td>
+
+                <td className="px-6 py-5 text-zinc-300">
+                  {reward.appliedRentalId || reward.lastAppliedRentalId || "-"}
                 </td>
 
                 <td className="px-6 py-5">

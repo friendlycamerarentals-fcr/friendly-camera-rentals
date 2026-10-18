@@ -42,7 +42,7 @@ export default function RewardStats({
       <RewardCard
         title="Applied Rewards"
         value={stats.applied}
-        subtitle="Discount Applied"
+        subtitle="Reserved pending redemption"
         icon={WalletCards}
         color="text-amber-400"
         bg="bg-amber-500/10"

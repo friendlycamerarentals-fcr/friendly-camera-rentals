@@ -12,12 +12,14 @@ export default function RentalStatusBadge({ status }) {
 
     Completed: "bg-green-500/10 text-green-400 border border-green-500/20",
 
+    Rejected: "bg-red-700/10 text-red-400 border border-red-700/20",
+
     Cancelled: "bg-red-500/10 text-red-400 border border-red-500/20",
   };
 
   return (
     <span
-      className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${styles[status]}`}
+      className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${styles[status] || "border border-zinc-700 text-zinc-400"}`}
     >
       {status}
     </span>
