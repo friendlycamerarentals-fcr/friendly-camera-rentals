@@ -338,7 +338,7 @@ export default function ProductDetails({ product }) {
                       ₹{selectedPrice}
                     </motion.span>
                   </AnimatePresence>
-                  <span className="mb-1 text-xs text-zinc-500 capitalize">
+                  <span className="mb-1 text-lg leading-none text-zinc-500 capitalize sm:text-xl">
                     / {selectedDuration}
                   </span>
                 </div>

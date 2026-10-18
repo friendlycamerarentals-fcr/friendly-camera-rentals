@@ -1,13 +1,7 @@
-
 "use client";
 
 import { motion } from "framer-motion";
-import {
-  FaShieldAlt,
-  FaCamera,
-  FaHeadset,
-  FaStar,
-} from "react-icons/fa";
+import { FaShieldAlt, FaCamera, FaHeadset, FaStar } from "react-icons/fa";
 
 const features = [
   {
@@ -25,14 +19,12 @@ const features = [
   {
     icon: FaHeadset,
     title: "24/7 Support",
-    description:
-      "Get quick assistance and support whenever you need it.",
+    description: "Get quick assistance and support whenever you need it.",
   },
   {
     icon: FaStar,
     title: "Affordable Pricing",
-    description:
-      "Premium quality gear and services at competitive prices.",
+    description: "Premium quality gear and services at competitive prices.",
   },
 ];
 
@@ -52,13 +44,13 @@ export default function WhyChooseUs() {
           </h2>
 
           <p className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-zinc-400">
-            We provide professional camera equipment and creative
-            services with reliability, quality, and customer satisfaction.
+            We provide professional camera equipment and creative services with
+            reliability, quality, and customer satisfaction.
           </p>
         </div>
 
         {/* Features Grid */}
-        <div className="mt-16 grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-16 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
           {features.map((feature, index) => {
             const Icon = feature.icon;
 
@@ -76,22 +68,24 @@ export default function WhyChooseUs() {
                   y: -8,
                   scale: 1.02,
                 }}
-                className="group rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur-xl transition-all duration-300 hover:border-amber-500/40 hover:bg-white/[0.07] cursor-pointer"
+                className="group min-w-0 cursor-pointer"
               >
-                {/* Icon */}
-                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-400 transition-all duration-300 group-hover:bg-amber-500 group-hover:text-black">
-                  <Icon size={30} />
+                <div className="group flex min-h-40 w-full min-w-0 flex-col rounded-2xl border border-white/10 bg-white/5 p-2 backdrop-blur-xl transition-all duration-300 hover:border-amber-500/40 hover:bg-white/[0.07] sm:aspect-square sm:min-h-60 sm:p-5 lg:aspect-auto lg:min-h-0 lg:p-6">
+                  {/* Icon */}
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 text-amber-400 transition-all duration-300 group-hover:bg-amber-500 group-hover:text-black sm:h-12 sm:w-12 sm:rounded-2xl lg:h-14 lg:w-14">
+                    <Icon className="h-4 w-4 sm:h-6 sm:w-6 lg:h-7 lg:w-7" />
+                  </div>
+
+                  {/* Title */}
+                  <h3 className="font-heading mt-1.5 text-base leading-tight font-semibold text-white sm:mt-4 sm:text-xl lg:mt-6 lg:text-3xl">
+                    {feature.title}
+                  </h3>
+
+                  {/* Description */}
+                  <p className="mt-1.5 text-xs leading-[1.15] text-zinc-400 sm:mt-3 sm:text-sm sm:leading-6 lg:text-base lg:leading-7">
+                    {feature.description}
+                  </p>
                 </div>
-
-                {/* Title */}
-                <h3 className="font-heading mt-6 text-3xl font-semibold text-white">
-                  {feature.title}
-                </h3>
-
-                {/* Description */}
-                <p className="mt-3 leading-7 text-zinc-400">
-                  {feature.description}
-                </p>
               </motion.div>
             );
           })}

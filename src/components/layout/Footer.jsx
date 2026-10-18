@@ -1,6 +1,11 @@
 import Link from "next/link";
 import Image from "next/image";
-import { FaWhatsapp, FaInstagram, FaPhoneAlt, FaFacebook } from "react-icons/fa";
+import {
+  FaWhatsapp,
+  FaInstagram,
+  FaPhoneAlt,
+  FaFacebook,
+} from "react-icons/fa";
 import { MdLocationOn } from "react-icons/md";
 
 const links = [
@@ -15,8 +20,8 @@ const links = [
 export default function Footer() {
   return (
     <footer className="border-t border-white/10 bg-black">
-      <div className="mx-auto max-w-7xl px-6 py-16">
-        <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-4">
+      <div className="mx-auto max-w-7xl px-6 py-16 pb-28 md:pb-16">
+        <div className="grid gap-10 text-center md:grid-cols-2 md:text-left lg:grid-cols-4">
           {/* Brand */}
           <div>
             <Image
@@ -24,14 +29,14 @@ export default function Footer() {
               alt="FCR Logo"
               width={100}
               height={100}
-              className="mb-4"
+              className="mx-auto mb-4 md:mx-0"
             />
 
             <h3 className="text-xl font-bold text-white">
               Friendly Camera Rentals
             </h3>
 
-            <p className="mt-3 text-sm leading-7 text-zinc-400">
+            <p className="mx-auto mt-3 max-w-sm text-sm leading-7 text-zinc-400 md:mx-0">
               Rent, Buy, and Sell professional cameras, lenses, and accessories.
               We also provide photography, videography, and editing services.
             </p>
@@ -81,14 +86,14 @@ export default function Footer() {
             </h4>
 
             <div className="space-y-4 text-zinc-400">
-              <div className="flex items-center gap-3">
+              <div className="flex items-center justify-center gap-3 md:justify-start">
                 <MdLocationOn className="text-[#F5A623]" />
                 <span>Allur, Andhra Pradesh</span>
               </div>
 
               <a
                 href="tel:+918639852224"
-                className="flex items-center gap-3 hover:text-white"
+                className="flex items-center justify-center gap-3 hover:text-white md:justify-start"
               >
                 <FaPhoneAlt className="text-[#F5A623]" />
                 <span>+91 8639852224</span>
@@ -97,7 +102,7 @@ export default function Footer() {
               <a
                 href="https://instagram.com/friendly_camera_rentals"
                 target="_blank"
-                className="flex items-center gap-3 hover:text-white"
+                className="flex items-center justify-center gap-3 hover:text-white md:justify-start"
               >
                 <FaInstagram className="text-pink-500" />
                 <span>Instagram</span>
@@ -107,7 +112,7 @@ export default function Footer() {
                 href="https://facebook.com/friendly_camera_rentals"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-3 hover:text-white"
+                className="flex items-center justify-center gap-3 hover:text-white md:justify-start"
               >
                 <FaFacebook className="text-blue-500" />
                 <span>Facebook</span>
@@ -122,11 +127,8 @@ export default function Footer() {
             © {new Date().getFullYear()} Friendly Camera Rentals. All rights
             reserved.
           </p>
-          <div className="mt-2 flex items-center justify-center gap-2">
-            <Link
-              href="/terms"
-              className="transition hover:text-amber-400"
-            >
+          <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
+            <Link href="/terms" className="transition hover:text-amber-400">
               Terms &amp; Conditions
             </Link>
             <span className="text-zinc-700">•</span>

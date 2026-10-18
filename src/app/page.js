@@ -1,4 +1,5 @@
 import Hero from "@/components/home/Hero";
+import FeaturedProducts from "@/components/home/FeaturedProducts";
 import Services from "@/components/home/Services";
 import Categories from "@/components/home/Categories";
 import WhyChooseUs from "@/components/home/WhyChooseUs";
@@ -21,6 +22,7 @@ export default async function HomePage() {
   return (
     <>
       <Hero />
+      <FeaturedProducts />
       <Services />
       <Categories />
       <WhyChooseUs />

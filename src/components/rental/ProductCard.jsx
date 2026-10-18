@@ -3,13 +3,15 @@
 import Image from "next/image";
 import Link from "next/link";
 
-export default function ProductCard({ product }) {
+export default function ProductCard({ product, featured = false }) {
   const imageUrl = product.image?.trim() || null;
 
   return (
-    <div className="group flex h-full flex-col overflow-hidden rounded-2xl cursor-pointer border border-white/10 bg-white/5 backdrop-blur-xl transition-all duration-500 hover:-translate-y-2 hover:border-amber-500/40 hover:shadow-[0_0_40px_rgba(245,158,11,0.12)]">
+    <div className="group flex h-full min-w-0 flex-col overflow-hidden rounded-2xl cursor-pointer border border-white/10 bg-white/5 backdrop-blur-xl transition-all duration-500 hover:-translate-y-2 hover:border-amber-500/40 hover:shadow-[0_0_40px_rgba(245,158,11,0.12)]">
       {/* Image */}
-      <div className="relative h-55 overflow-hidden">
+      <div
+        className={`relative overflow-hidden ${featured ? "aspect-video" : "h-55"}`}
+      >
         {imageUrl ? (
           <Image
             src={imageUrl}
@@ -45,19 +47,25 @@ export default function ProductCard({ product }) {
       </div>
 
       {/* Content */}
-      <div className="flex flex-1 flex-col p-5">
+      <div
+        className={`flex min-w-0 flex-1 flex-col ${featured ? "p-2 sm:p-5" : "p-5"}`}
+      >
         {/* Brand */}
         <p className="text-xs uppercase tracking-[0.3em] text-amber-400">
           {product.brand}
         </p>
 
         {/* Product Name */}
-        <h3 className="font-heading mt-3 text-2xl leading-tight font-semibold text-white">
+        <h3
+          className={`font-heading mt-3 leading-tight font-semibold text-white ${featured ? "text-base sm:text-2xl" : "text-2xl"}`}
+        >
           {product.name}
         </h3>
 
         {/* Specifications */}
-        <div className="mt-4 flex justify-around space-y-1.5 text-sm text-zinc-400">
+        <div
+          className={`mt-4 flex text-zinc-400 ${featured ? "flex-wrap justify-start gap-x-2 gap-y-1 text-xs sm:flex-nowrap sm:justify-around sm:gap-x-0 sm:gap-y-0 sm:space-y-1.5 sm:text-sm" : "justify-around space-y-1.5 text-sm"}`}
+        >
           {product.megapixels != null && product.megapixels !== "" && (
             <span>{product.megapixels}</span>
           )}
@@ -72,7 +80,9 @@ export default function ProductCard({ product }) {
         {/* Bottom Section */}
         <div className="mt-auto pt-2">
           {/* Price */}
-          <div className="mb-4 inline-flex rounded-full border border-amber-500/20 bg-amber-500/10 px-4 py-2 text-sm font-semibold text-amber-400">
+          <div
+            className={`mb-4 inline-flex rounded-full border border-amber-500/20 bg-amber-500/10 font-semibold text-amber-400 ${featured ? "px-2 py-1 text-xs sm:px-4 sm:py-2 sm:text-sm" : "px-4 py-2 text-sm"}`}
+          >
             From ₹{product.pricing["1hr"]}/hr
           </div>
 
