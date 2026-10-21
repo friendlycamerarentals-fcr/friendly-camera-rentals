@@ -4,14 +4,15 @@ import { useState } from "react";
 import {
   Eye,
   Phone,
-  MessageCircle,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
   Trash2,
 } from "lucide-react";
+import { FaWhatsapp } from "react-icons/fa";
 import RentalStatusBadge from "./RentalStatusBadge";
 import { RENTAL_STATUS_TRANSITIONS } from "@/constants/rentalStatus";
+import { openRentalWhatsApp } from "@/lib/whatsappBookingMessage";
 
 const PAGE_SIZE = 10;
 
@@ -31,6 +32,8 @@ export default function RentalTable({
   onView,
   onStatusChange,
   onDelete,
+  onWhatsApp,
+  actionLoadingId,
 }) {
   const [page, setPage] = useState(1);
   const [openStatusRow, setOpenStatusRow] = useState(null);
@@ -95,9 +98,16 @@ export default function RentalTable({
                 className="border-b border-white/5 transition hover:bg-white/[0.02]"
               >
                 <td className="px-6 py-5">
-                  <span className="font-semibold text-[#F5A623]">
-                    {booking.requestId}
-                  </span>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-semibold text-[#F5A623]">
+                      {booking.requestId}
+                    </span>
+                    {booking.bookingSource === "Manual" && (
+                      <span className="rounded-md border border-[#F5A623]/30 bg-[#F5A623]/10 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-[#F5A623]">
+                        Manual
+                      </span>
+                    )}
+                  </div>
                 </td>
 
                 <td className="px-6 py-5">
@@ -220,15 +230,13 @@ export default function RentalTable({
                     >
                       <Phone size={16} />
                     </a>
-                    <a
-                      href={`https://wa.me/91${booking.phone}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      title="WhatsApp"
+                    <button
+                      onClick={() => (onWhatsApp ? onWhatsApp(booking) : openRentalWhatsApp(booking))}
+                      title={booking.status === "Confirmed" ? "Confirmed-booking WhatsApp message" : "Request status WhatsApp message"}
                       className="rounded-xl border border-white/10 p-2 text-green-500 transition hover:bg-green-500/10"
                     >
-                      <MessageCircle size={16} />
-                    </a>
+                      <FaWhatsapp size={16} />
+                    </button>
                     <button
                       onClick={() => deleteBooking(booking.id)}
                       title="Delete"

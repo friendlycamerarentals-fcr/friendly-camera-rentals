@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
@@ -64,13 +65,13 @@ function SidebarContent({
           {collapsed ? (
             <div className="flex items-center justify-center w-full">
               <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#F5A623]/15">
-                <span className="text-2xl">📸</span>
+                <Image src="/logo.png" alt="Friendly Camera Rentals logo" width={32} height={32} className="h-8 w-8 object-contain" />
               </div>
             </div>
           ) : (
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#F5A623]/15">
-                <span className="text-2xl">📸</span>
+                <Image src="/logo.png" alt="Friendly Camera Rentals logo" width={32} height={32} className="h-8 w-8 object-contain" />
               </div>
 
               <div className="flex flex-col">

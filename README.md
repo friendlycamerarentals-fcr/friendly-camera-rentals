@@ -208,7 +208,11 @@ Apply the initial schema:
 psql "$DATABASE_URL" -f database/init.sql
 ```
 
-Apply future schema changes:
+Apply future schema changes to the intended database before deploying code that
+depends on them. Confirm `DATABASE_URL` points to that environment first; local,
+staging, and production databases may have different schemas. The payment
+ledger migration in `database/migrations.sql` creates `RentalPayment` and
+imports only explicitly verified legacy advances. It is safe to re-run.
 
 ```bash
 psql "$DATABASE_URL" -f database/migrations.sql
@@ -220,7 +224,7 @@ Start the app:
 npm run dev
 ```
 
-For production deployments, configure `JWT_EXPIRES_IN=7d` as a server-side environment variable (do not use a `NEXT_PUBLIC_` prefix). For Vercel deployments, keep the same Neon PostgreSQL connection string in the environment variables and apply the SQL files through the Neon SQL Editor before the first deployment.
+For production deployments, configure `JWT_EXPIRES_IN=7d` as a server-side environment variable (do not use a `NEXT_PUBLIC_` prefix). For Vercel deployments, apply `database/migrations.sql` to the matching Neon environment through the Neon SQL Editor before deploying any code that requires the migration. Repeat for every environment; do not assume the development and production schemas match.
 
 ---
 

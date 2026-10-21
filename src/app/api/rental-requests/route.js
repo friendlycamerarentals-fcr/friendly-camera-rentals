@@ -5,19 +5,59 @@ import { reserveRewardForRental } from "@/lib/rewards/applyReward";
 import rewardService from "@/services/rewardService";
 import { createAdminNotification } from "@/lib/adminNotificationService";
 import { isRewardEligible } from "@/lib/rewards/rewardValidation";
+import { generateNextRequestId } from "@/lib/rentalRequestId";
+import { withRentalPaymentSummary } from "@/lib/rentalPayments";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
-
-function buildRequestId(idNumber) {
-  return `FCR-R${String(idNumber).padStart(6, "0")}`;
-}
 
 export async function GET() {
   try {
     const requests = await query(
       'SELECT * FROM "RentalRequest" ORDER BY "createdAt" DESC',
     );
+
+    // Attach the persisted rental items (multi-item manual bookings) so the
+    // admin list/details show every item of a booking in one response.
+    if (requests.length) {
+      const requestIds = requests.map((row) => row.requestId);
+      const itemRows = await query(
+        `SELECT * FROM "RentalRequestItem"
+         WHERE "rentalRequestId" = ANY($1)
+         ORDER BY "itemOrder" ASC, "id" ASC`,
+        [requestIds],
+      );
+      const itemsByRequestId = itemRows.reduce((acc, row) => {
+        if (!acc[row.rentalRequestId]) acc[row.rentalRequestId] = [];
+        acc[row.rentalRequestId].push(row);
+        return acc;
+      }, {});
+      requests.forEach((row) => {
+        const items = itemsByRequestId[row.requestId];
+        if (items && items.length) {
+          row.items = items;
+        }
+      });
+
+      const paymentRows = await query(
+        `SELECT * FROM "RentalPayment"
+         WHERE "rentalRequestId" = ANY($1)
+         ORDER BY "createdAt" ASC, "id" ASC`,
+        [requestIds],
+      );
+      const paymentsByRequestId = paymentRows.reduce((acc, payment) => {
+        if (!acc[payment.rentalRequestId]) acc[payment.rentalRequestId] = [];
+        acc[payment.rentalRequestId].push(payment);
+        return acc;
+      }, {});
+      for (let index = 0; index < requests.length; index += 1) {
+        requests[index] = withRentalPaymentSummary(
+          requests[index],
+          paymentsByRequestId[requests[index].requestId] || [],
+        );
+      }
+    }
+
     return NextResponse.json({ success: true, data: requests });
   } catch (error) {
     console.error("[RENTAL_REQUESTS_GET]", error);
@@ -119,23 +159,7 @@ export async function POST(request) {
       );
     }
 
-    const requestRows = await query(
-      `SELECT "requestId" FROM "RentalRequest" WHERE "requestId" LIKE 'FCR-R%' ORDER BY "requestId" DESC LIMIT 50`,
-    );
-
-    const numericSequences = requestRows
-      .map((item) => String(item.requestId).match(/^FCR-R(\d{6})$/)?.[1])
-      .filter(Boolean)
-      .map(Number);
-
-    const lastSequence = numericSequences.length
-      ? Math.max(...numericSequences)
-      : NaN;
-    const nextSequence = Number.isInteger(lastSequence)
-      ? Math.max(lastSequence + 1, 100001)
-      : 100001;
-
-    const requestId = buildRequestId(nextSequence);
+    const requestId = await generateNextRequestId();
 
     const id = createId();
     const now = new Date();

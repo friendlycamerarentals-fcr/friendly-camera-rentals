@@ -7,6 +7,8 @@ import RentalStats from "@/components/admin/rentals/RentalStats";
 import RentalFilters from "@/components/admin/rentals/RentalFilters";
 import RentalTable from "@/components/admin/rentals/RentalTable";
 import RentalDetailsModal from "@/components/admin/rentals/RentalDetailsModal";
+import ManualRentalForm from "@/components/admin/rentals/ManualRentalForm";
+import { openRentalWhatsApp } from "@/lib/whatsappBookingMessage";
 
 const MS = { "24h": 864e5, "7d": 6048e5, "30d": 2592e6, "365d": 31536e6 };
 
@@ -59,26 +61,32 @@ export default function RentalsPage() {
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [openModal, setOpenModal] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [manualFormOpen, setManualFormOpen] = useState(false);
+  const [actionLoadingId, setActionLoadingId] = useState(null);
   const [now] = useState(() => Date.now());
 
-  const fetchBookings = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch("/api/rental-requests");
-      const result = await response.json();
-      if (result.success) {
-        setBookings(result.data || []);
-      }
-    } catch (error) {
-      console.error(error);
-      toast.error("Failed to load rental requests");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    fetchBookings();
+    let active = true;
+
+    fetch("/api/rental-requests")
+      .then(async (response) => {
+        const result = await response.json();
+        if (!response.ok || !result.success) {
+          throw new Error(result.message || "Failed to load rental requests");
+        }
+        if (active) setBookings(result.data || []);
+      })
+      .catch((error) => {
+        console.error(error);
+        toast.error("Failed to load rental requests");
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   const filteredBookings = useMemo(
@@ -98,6 +106,7 @@ export default function RentalsPage() {
 
   const handleStatusChange = async (id, nextStatus) => {
     try {
+      setActionLoadingId(id);
       const response = await fetch(`/api/rental-requests/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -114,11 +123,61 @@ export default function RentalsPage() {
       if (selectedBooking?.id === id) {
         setSelectedBooking((prev) => ({ ...prev, ...result.data }));
       }
-      toast.success("Rental request updated.");
+      toast.success(
+        nextStatus === "Confirmed"
+          ? "Rental confirmed."
+          : "Rental request updated.",
+      );
       return true;
     } catch (error) {
       toast.error(error.message || "Failed to update status");
       return false;
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
+  const handleRecordPayment = async (id, paymentPayload) => {
+    try {
+      setActionLoadingId(id);
+      const response = await fetch(`/api/rental-requests/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ payment: paymentPayload }),
+      });
+      const result = await response.json();
+      if (!response.ok || !result.success)
+        throw new Error(result.message || "Failed to record advance payment");
+
+      setBookings((prev) =>
+        prev.map((booking) =>
+          booking.id === id ? { ...booking, ...result.data } : booking,
+        ),
+      );
+      if (selectedBooking?.id === id) {
+        setSelectedBooking((prev) => ({ ...prev, ...result.data }));
+      }
+      toast.success(
+        `${result.paymentRecord?.paymentType || paymentPayload.paymentType || "Payment"} payment recorded and verified (${result.paymentRecord?.method || "payment"}).`,
+      );
+      return true;
+    } catch (error) {
+      toast.error(error.message || "Failed to record advance payment");
+      return false;
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
+  const handleManualCreated = (booking) => {
+    if (booking) {
+      setBookings((prev) => [booking, ...prev]);
+    }
+  };
+
+  const handleWhatsAppAction = (booking) => {
+    if (!openRentalWhatsApp(booking)) {
+      toast.error("No valid phone number is saved on this booking.");
     }
   };
 
@@ -142,6 +201,7 @@ export default function RentalsPage() {
 
   const handleSavePayment = async (id, payload) => {
     try {
+      setActionLoadingId(id);
       const response = await fetch(`/api/rental-requests/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -165,16 +225,26 @@ export default function RentalsPage() {
     } catch (error) {
       toast.error(error.message || "Failed to save payment details");
       return false;
+    } finally {
+      setActionLoadingId(null);
     }
   };
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold text-white">📸 Rentals</h1>
-        <p className="mt-2 text-zinc-400">
-          Manage rental bookings and customers.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-white">📸 Rentals</h1>
+          <p className="mt-2 text-zinc-400">
+            Manage rental bookings and customers.
+          </p>
+        </div>
+        <button
+          onClick={() => setManualFormOpen(true)}
+          className="flex items-center gap-2 rounded-xl bg-[#F5A623] px-4 py-2.5 text-sm font-bold text-black transition hover:bg-[#F5A623]/90 cursor-pointer"
+        >
+          + Manual Booking
+        </button>
       </div>
 
       <RentalStats bookings={filteredBookings} />
@@ -198,6 +268,8 @@ export default function RentalsPage() {
           onView={handleView}
           onStatusChange={handleStatusChange}
           onDelete={handleDelete}
+          onWhatsApp={handleWhatsAppAction}
+          actionLoadingId={actionLoadingId}
         />
       )}
 
@@ -208,6 +280,15 @@ export default function RentalsPage() {
         onStatusChange={handleStatusChange}
         onDelete={handleDelete}
         onSave={handleSavePayment}
+        onRecordPayment={handleRecordPayment}
+        onWhatsApp={handleWhatsAppAction}
+        actionLoading={Boolean(actionLoadingId)}
+      />
+
+      <ManualRentalForm
+        open={manualFormOpen}
+        onClose={() => setManualFormOpen(false)}
+        onCreated={handleManualCreated}
       />
     </div>
   );

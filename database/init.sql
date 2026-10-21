@@ -685,3 +685,113 @@ ALTER TABLE "RentalRequest" ADD COLUMN IF NOT EXISTS "advanceAmount" DOUBLE PREC
 UPDATE "RentalRequest"
 SET "originalAmount" = "totalAmount" + COALESCE("rewardDiscount", 0)
 WHERE "originalAmount" IS NULL;
+
+-- 2026-10-19: Manual rental requests booked by admins (phone / WhatsApp
+-- enquiries). Booking source, expected advance, verified advance payments,
+-- and lightweight audit fields. All additive, safe for existing rows.
+ALTER TABLE "RentalRequest" ADD COLUMN IF NOT EXISTS "bookingSource" TEXT NOT NULL DEFAULT 'Website';
+ALTER TABLE "RentalRequest" ADD COLUMN IF NOT EXISTS "advanceExpected" DOUBLE PRECISION NOT NULL DEFAULT 0;
+ALTER TABLE "RentalRequest" ADD COLUMN IF NOT EXISTS "advanceVerified" BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE "RentalRequest" ADD COLUMN IF NOT EXISTS "advanceVerifiedAt" TIMESTAMP(3);
+ALTER TABLE "RentalRequest" ADD COLUMN IF NOT EXISTS "advanceVerifiedBy" TEXT;
+ALTER TABLE "RentalRequest" ADD COLUMN IF NOT EXISTS "advancePaymentMethod" TEXT;
+ALTER TABLE "RentalRequest" ADD COLUMN IF NOT EXISTS "advancePaymentRef" TEXT;
+ALTER TABLE "RentalRequest" ADD COLUMN IF NOT EXISTS "createdByAdmin" TEXT;
+ALTER TABLE "RentalRequest" ADD COLUMN IF NOT EXISTS "confirmedByAdmin" TEXT;
+
+CREATE INDEX IF NOT EXISTS "idx_rentalrequest_booking_source" ON "RentalRequest" ("bookingSource");
+CREATE INDEX IF NOT EXISTS "idx_rentalrequest_advance_verified" ON "RentalRequest" ("advanceVerified");
+-- 2026-10-19: Multiple rental items per manual rental request.
+-- One RentalRequest row remains the booking (website bookings keep working
+-- unchanged with a single product on the main row). Manual bookings may carry
+-- any number of item rows in RentalRequestItem, each with its own product,
+-- normalized duration and admin-agreed price.
+CREATE TABLE IF NOT EXISTS "RentalRequestItem" (
+    "id"               TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    "rentalRequestId"  TEXT NOT NULL,
+    "productId"        TEXT NOT NULL,
+    "productName"      TEXT NOT NULL,
+    "productImage"     TEXT,
+    "category"         TEXT,
+    "durationValue"    DOUBLE PRECISION,
+    "durationUnit"     TEXT,
+    "durationDisplay"  TEXT NOT NULL,
+    "rentalPrice"      DOUBLE PRECISION NOT NULL,
+    "isCustomDuration" BOOLEAN NOT NULL DEFAULT FALSE,
+    "isCustomPrice"    BOOLEAN NOT NULL DEFAULT FALSE,
+    "createdAt"        TIMESTAMP(3) NOT NULL DEFAULT now(),
+    "updatedAt"        TIMESTAMP(3) NOT NULL DEFAULT now()
+);
+
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'RentalRequestItem_rentalRequestId_fkey') THEN
+        ALTER TABLE "RentalRequestItem"
+            ADD CONSTRAINT "RentalRequestItem_rentalRequestId_fkey"
+            FOREIGN KEY ("rentalRequestId") REFERENCES "RentalRequest"("requestId")
+            ON DELETE CASCADE ON UPDATE CASCADE;
+    END IF;
+END $$;
+
+CREATE INDEX IF NOT EXISTS "idx_rentalitem_request_id" ON "RentalRequestItem" ("rentalRequestId");
+CREATE INDEX IF NOT EXISTS "idx_rentalitem_product_id" ON "RentalRequestItem" ("productId");
+
+-- 2026-10-19: stable item ordering for multi-item bookings.
+ALTER TABLE "RentalRequestItem" ADD COLUMN IF NOT EXISTS "itemOrder" INTEGER NOT NULL DEFAULT 0;
+
+-- 2026-10-21: Persist each verified rental payment as an auditable transaction.
+CREATE TABLE IF NOT EXISTS "RentalPayment" (
+    "id"               TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    "rentalRequestId"  TEXT NOT NULL,
+    "paymentType"      TEXT NOT NULL CHECK ("paymentType" IN ('Advance', 'Balance')),
+    "amount"           DOUBLE PRECISION NOT NULL CHECK ("amount" > 0),
+    "method"           TEXT,
+    "reference"        TEXT,
+    "verified"         BOOLEAN NOT NULL DEFAULT FALSE,
+    "verifiedAt"       TIMESTAMP(3),
+    "verifiedBy"       TEXT,
+    "idempotencyKey"   TEXT NOT NULL,
+    "source"           TEXT NOT NULL DEFAULT 'Admin',
+    "createdAt"        TIMESTAMP(3) NOT NULL DEFAULT now(),
+    CONSTRAINT "RentalPayment_rentalRequestId_idempotencyKey_key"
+      UNIQUE ("rentalRequestId", "idempotencyKey")
+);
+
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'RentalPayment_rentalRequestId_fkey') THEN
+        ALTER TABLE "RentalPayment"
+            ADD CONSTRAINT "RentalPayment_rentalRequestId_fkey"
+            FOREIGN KEY ("rentalRequestId") REFERENCES "RentalRequest"("requestId")
+            ON DELETE RESTRICT ON UPDATE CASCADE;
+    END IF;
+END $$;
+
+CREATE INDEX IF NOT EXISTS "idx_rentalpayment_request_created"
+  ON "RentalPayment" ("rentalRequestId", "createdAt", "id");
+CREATE INDEX IF NOT EXISTS "idx_rentalpayment_verified"
+  ON "RentalPayment" ("rentalRequestId", "verified");
+
+-- Import only explicitly verified legacy advances. Amounts without verification
+-- are omitted; conflict protection makes this safe to re-run.
+INSERT INTO "RentalPayment" (
+    "id", "rentalRequestId", "paymentType", "amount", "method", "reference",
+    "verified", "verifiedAt", "verifiedBy", "idempotencyKey", "source", "createdAt"
+)
+SELECT
+    'legacy-advance-' || rental."id",
+    rental."requestId",
+    'Advance',
+    rental."advanceAmount",
+    rental."advancePaymentMethod",
+    rental."advancePaymentRef",
+    TRUE,
+    COALESCE(rental."advanceVerifiedAt", rental."updatedAt", rental."createdAt"),
+    rental."advanceVerifiedBy",
+    'legacy-advance:' || rental."id",
+    'LegacySnapshot',
+    COALESCE(rental."advanceVerifiedAt", rental."updatedAt", rental."createdAt")
+FROM "RentalRequest" rental
+WHERE COALESCE(rental."advanceVerified", FALSE) = TRUE
+  AND COALESCE(rental."advanceAmount", 0) > 0
+ON CONFLICT ("rentalRequestId", "idempotencyKey") DO NOTHING;
