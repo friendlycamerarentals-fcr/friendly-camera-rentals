@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
@@ -33,6 +33,20 @@ const menuItems = [
   { title: "Testimonials", href: "/admin/testimonials", icon: Star },
   { title: "Hero Marquee", href: "/admin/hero-marquee", icon: Megaphone },
 ];
+
+const subscribeSidebarPreference = (callback) => {
+  window.addEventListener("storage", callback);
+  window.addEventListener("admin-sidebar-preference-change", callback);
+  return () => {
+    window.removeEventListener("storage", callback);
+    window.removeEventListener("admin-sidebar-preference-change", callback);
+  };
+};
+
+const getSidebarPreference = () =>
+  window.localStorage.getItem("admin-sidebar-collapsed") === "true";
+
+const getServerSidebarPreference = () => false;
 
 function SidebarTooltip({ label, show, children }) {
   if (!show) return children;
@@ -181,11 +195,11 @@ export default function AdminSidebar() {
   const router = useRouter();
 
   const [open, setOpen] = useState(false);
-  const [collapsed, setCollapsed] = useState(() => {
-    if (typeof window === "undefined") return false;
-    const stored = window.localStorage.getItem("admin-sidebar-collapsed");
-    return stored === "true";
-  });
+  const collapsed = useSyncExternalStore(
+    subscribeSidebarPreference,
+    getSidebarPreference,
+    getServerSidebarPreference,
+  );
 
   useEffect(() => {
     const handleOpen = () => setOpen(true);
@@ -194,8 +208,6 @@ export default function AdminSidebar() {
   }, []);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    window.localStorage.setItem("admin-sidebar-collapsed", String(collapsed));
     document.documentElement.style.setProperty(
       "--admin-sidebar-width",
       collapsed ? "80px" : "240px",
@@ -203,6 +215,10 @@ export default function AdminSidebar() {
   }, [collapsed]);
 
   const closeSidebar = () => setOpen(false);
+  const toggleCollapsed = () => {
+    window.localStorage.setItem("admin-sidebar-collapsed", String(!collapsed));
+    window.dispatchEvent(new Event("admin-sidebar-preference-change"));
+  };
 
   const handleLogout = async () => {
     try {
@@ -225,7 +241,7 @@ export default function AdminSidebar() {
           closeSidebar={closeSidebar}
           handleLogout={handleLogout}
           collapsed={collapsed}
-          toggleCollapsed={() => setCollapsed((v) => !v)}
+          toggleCollapsed={toggleCollapsed}
         />
       </aside>
 
@@ -246,7 +262,7 @@ export default function AdminSidebar() {
           closeSidebar={closeSidebar}
           handleLogout={handleLogout}
           collapsed={false}
-          toggleCollapsed={() => setCollapsed((v) => !v)}
+          toggleCollapsed={toggleCollapsed}
         />
       </aside>
     </>
