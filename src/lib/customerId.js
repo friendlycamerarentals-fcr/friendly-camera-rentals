@@ -24,8 +24,18 @@ export function formatCustomerId(number) {
 }
 
 // Use a single SQL query instead of scanning every customer row in JavaScript.
-export async function getNextCustomerId() {
-  const rows = await query(
+export async function getNextCustomerId(client = null) {
+  const execute = client?.query
+    ? (sql, params) => client.query(sql, params).then((result) => result.rows)
+    : query;
+
+  if (client?.query) {
+    await client.query(
+      "SELECT pg_advisory_xact_lock(hashtext('fcr_customer_id_generation'))",
+    );
+  }
+
+  const rows = await execute(
     `SELECT COALESCE(
       MAX(CAST(regexp_replace("customerId", '^[A-Za-z]+-C', '') AS INTEGER)),
       $1

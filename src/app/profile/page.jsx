@@ -69,7 +69,8 @@ export default function ProfilePage() {
     if (!user?.email) return;
 
     const hasLoadedProfile = Boolean(
-      profile?.email && profile.email === user.email,
+      profile?.email &&
+        profile.email.toLowerCase() === user.email.toLowerCase(),
     );
 
     if (!hasLoadedProfile) {
@@ -78,15 +79,6 @@ export default function ProfilePage() {
   }, [loadProfile, profile?.email, user?.email]);
 
   useEffect(() => {
-    const savedDraft = readDraftProfile();
-    if (savedDraft) {
-      window.requestAnimationFrame(() => {
-        setFormData(savedDraft);
-        setSavedProfile(savedDraft);
-      });
-      return;
-    }
-
     const nextFormData = {
       fullName: profile?.name || "",
       email: user?.email || "",
@@ -94,18 +86,31 @@ export default function ProfilePage() {
       address: profile?.address || "",
       customerId: profile?.customerId || "",
     };
+    const savedDraft = readDraftProfile();
+    const draftFormData =
+      savedDraft && typeof savedDraft === "object" ? savedDraft : null;
+    const editableFormData = draftFormData
+      ? {
+          ...nextFormData,
+          fullName: draftFormData.fullName ?? nextFormData.fullName,
+          phoneNumber: draftFormData.phoneNumber ?? nextFormData.phoneNumber,
+          address: draftFormData.address ?? nextFormData.address,
+        }
+      : nextFormData;
 
     const frameId = window.requestAnimationFrame(() => {
       setFormData((prev) =>
-        prev.fullName === nextFormData.fullName &&
-        prev.phoneNumber === nextFormData.phoneNumber &&
-        prev.address === nextFormData.address &&
-        prev.customerId === nextFormData.customerId
+        prev.fullName === editableFormData.fullName &&
+        prev.email === editableFormData.email &&
+        prev.phoneNumber === editableFormData.phoneNumber &&
+        prev.address === editableFormData.address &&
+        prev.customerId === editableFormData.customerId
           ? prev
-          : nextFormData,
+          : editableFormData,
       );
       setSavedProfile((prev) =>
         prev.fullName === nextFormData.fullName &&
+        prev.email === nextFormData.email &&
         prev.phoneNumber === nextFormData.phoneNumber &&
         prev.address === nextFormData.address &&
         prev.customerId === nextFormData.customerId

@@ -91,7 +91,7 @@ export async function POST(request) {
         };
       }
 
-      const customerId = await getNextCustomerId();
+      const customerId = await getNextCustomerId(client);
 
       const id = createId();
       const createdRows = await client.query(
@@ -111,7 +111,7 @@ export async function POST(request) {
           id,
           customerId,
           body.name || "Customer",
-          emailValue,
+          normalizedEmail,
           body.profileImage || "",
           body.phoneNumber || "",
           body.address || "",

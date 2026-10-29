@@ -107,7 +107,7 @@ export async function PUT(request) {
         return updatedRows.rows[0];
       }
 
-      const customerId = await getNextCustomerId();
+      const customerId = await getNextCustomerId(client);
       const id = createId();
       const createdRows = await client.query(
         `INSERT INTO "Customer" ("id", "customerId", "name", "email", "profileImage", "phoneNumber", "address")
@@ -117,7 +117,7 @@ export async function PUT(request) {
           id,
           customerId,
           body.fullName,
-          emailValue,
+          normalizedEmail,
           body.profileImage || "",
           body.phoneNumber,
           body.address,

@@ -57,7 +57,7 @@ The admin area supports product management, request review, customer listings, t
 ## Project Folder Structure
 
 ```text
-project-root/
+friendly-camera-rentals/
 ├── database/
 │   ├── init.sql
 │   └── migrations.sql
@@ -70,29 +70,16 @@ project-root/
 │   └── logo.png
 ├── src/
 │   ├── app/
-│   │   ├── (admin)/admin/
-│   │   │   ├── bookings/page.jsx
-│   │   │   ├── buy/page.jsx
+│   │   ├── (admin)/admin/       # Admin pages: bookings, products, rentals, rewards, etc.
+│   │   ├── (auth)/admin/login/  # Admin login
+│   │   ├── api/                 # Route handlers, grouped by resource
+│   │   │   ├── admin/           # Login, logout, session, notifications, rentals
 │   │   │   ├── buy-products/
-│   │   │   ├── customers/page.jsx
-│   │   │   ├── hero-marquee/page.jsx
-│   │   │   ├── layout.jsx
-│   │   │   ├── page.jsx
-│   │   │   ├── rental-products/
-│   │   │   ├── rentals/page.jsx
-│   │   │   ├── rewards/
-│   │   │   ├── sell/page.jsx
-│   │   │   ├── sell-requests/page.jsx
-│   │   │   └── testimonials/page.jsx
-│   │   ├── (auth)/admin/login/page.jsx
-│   │   ├── api/
-│   │   │   ├── admin/
-│   │   │   ├── buy-products/
-│   │   │   ├── contact/route.js
+│   │   │   ├── contact/
+│   │   │   ├── cron/expire-rewards/
 │   │   │   ├── customers/
-│   │   │   ├── cron/expire-rewards/route.js
 │   │   │   ├── hero-marquee/
-│   │   │   ├── profile/route.js
+│   │   │   ├── profile/
 │   │   │   ├── rental-products/
 │   │   │   ├── rental-requests/
 │   │   │   ├── rewards/
@@ -100,18 +87,19 @@ project-root/
 │   │   │   ├── testimonials/
 │   │   │   └── upload/
 │   │   ├── buy/
-│   │   ├── contact/page.jsx
-│   │   ├── fonts/
+│   │   ├── contact/
+│   │   ├── privacy-policy/
+│   │   ├── profile/
+│   │   ├── rental/
+│   │   ├── sell/
+│   │   ├── services/
+│   │   ├── terms/
 │   │   ├── globals.css
 │   │   ├── layout.js
 │   │   ├── not-found.jsx
-│   │   ├── page.js
-│   │   ├── profile/page.jsx
-│   │   ├── rental/
-│   │   ├── sell/page.jsx
-│   │   └── services/page.jsx
+│   │   └── page.js
 │   ├── components/
-│   │   ├── admin/
+│   │   ├── admin/               # Admin UI, organized by feature
 │   │   ├── auth/
 │   │   ├── buy/
 │   │   ├── cart/
@@ -119,22 +107,25 @@ project-root/
 │   │   ├── contact/
 │   │   ├── home/
 │   │   ├── layout/
+│   │   ├── legal/
 │   │   ├── rental/
 │   │   ├── sell/
 │   │   ├── services/
 │   │   ├── testimonials/
 │   │   └── ui/
-│   ├── constants/rewardStatus.js
-│   ├── context/
-│   ├── data/
-│   ├── db/
+│   ├── constants/               # Rental and reward status constants
+│   ├── context/                 # Auth, booking, cart, notifications
+│   ├── data/                    # Product, service, testimonial data
+│   ├── db/                      # PostgreSQL connection and query helpers
 │   ├── hooks/
-│   ├── lib/
-│   ├── proxy.js
-│   ├── services/rewardService.js
-│   └── utils/
-├── FCR_DATABASE_UPDATES.sql
+│   ├── lib/                     # Shared business logic and helpers
+│   │   └── rewards/
+│   ├── services/
+│   └── proxy.js
 ├── AGENTS.md
+├── .env.example
+├── FCR_DATABASE_UPDATES.sql
+├── SERVICE_BOOKING_IMPLEMENTATION.md
 ├── eslint.config.mjs
 ├── jsconfig.json
 ├── next.config.mjs
@@ -142,7 +133,6 @@ project-root/
 ├── package-lock.json
 ├── postcss.config.mjs
 ├── README.md
-├── SERVICE_BOOKING_IMPLEMENTATION.md
 └── test_security.js
 ```
 
