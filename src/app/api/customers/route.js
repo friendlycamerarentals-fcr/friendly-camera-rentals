@@ -62,6 +62,10 @@ export async function POST(request) {
     const body = await request.json();
 
     if (!body?.email) {
+      console.warn("[CUSTOMER_SYNC]", {
+        outcome: "invalid_request",
+        reason: "missing_email",
+      });
       return NextResponse.json(
         {
           success: false,
@@ -75,8 +79,22 @@ export async function POST(request) {
 
     const emailValue = (body.email || "").trim();
     const normalizedEmail = emailValue.toLowerCase();
+    const customerName =
+      typeof body.name === "string" && body.name.trim()
+        ? body.name.trim()
+        : "Customer";
+    const profileImage =
+      typeof body.profileImage === "string" ? body.profileImage : "";
+    const phoneNumber =
+      typeof body.phoneNumber === "string" ? body.phoneNumber : "";
+    const address = typeof body.address === "string" ? body.address : "";
 
     const customer = await transaction(async (client) => {
+      await client.query(
+        "SELECT pg_advisory_xact_lock(hashtext('fcr_customer_email:' || $1))",
+        [normalizedEmail],
+      );
+
       const existingRows = await client.query(
         `SELECT ${selectColumns.join(", ")} FROM "Customer"
          WHERE LOWER("email") = LOWER($1)
@@ -102,19 +120,21 @@ export async function POST(request) {
           "email",
           "profileImage",
           "phoneNumber",
-          "address"
+          "address",
+          "createdAt",
+          "updatedAt"
         )
-         VALUES ($1, $2, $3, $4, $5, $6, $7)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
          ON CONFLICT ("email") DO NOTHING
          RETURNING ${selectColumns.join(", ")}`,
         [
           id,
           customerId,
-          body.name || "Customer",
+          customerName,
           normalizedEmail,
-          body.profileImage || "",
-          body.phoneNumber || "",
-          body.address || "",
+          profileImage,
+          phoneNumber,
+          address,
         ],
       );
       if (createdRows.rows[0]) {
@@ -137,6 +157,19 @@ export async function POST(request) {
       };
     });
 
+    if (!customer?.customer) {
+      console.error("[CUSTOMER_SYNC]", {
+        outcome: "missing_transaction_result",
+      });
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Customer synchronization did not return a customer",
+        },
+        { status: 500 },
+      );
+    }
+
     invalidateCachePrefix("/api/profile");
     invalidateCachePrefix("/api/customers");
 
@@ -151,6 +184,11 @@ export async function POST(request) {
       });
     }
 
+    console.info("[CUSTOMER_SYNC]", {
+      outcome: customer.created ? "created" : "existing",
+      hasCustomerId: Boolean(customer.customer?.customerId),
+    });
+
     return NextResponse.json(
       {
         success: true,
@@ -161,7 +199,14 @@ export async function POST(request) {
       },
     );
   } catch (error) {
-    console.error("[CUSTOMER_CREATE]", error);
+    console.error("[CUSTOMER_SYNC]", {
+      outcome: "database_error",
+      errorName: error.name,
+      errorCode: error.code,
+      column: error.column,
+      constraint: error.constraint,
+      table: error.table,
+    });
 
     return NextResponse.json(
       {

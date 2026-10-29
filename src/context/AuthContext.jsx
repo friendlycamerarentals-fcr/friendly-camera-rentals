@@ -20,12 +20,28 @@ import { auth } from "@/lib/firebase";
 import { fetchJsonWithCache, invalidateCachePrefix } from "@/lib/dataCache";
 
 const AuthContext = createContext();
+const AUTH_REQUEST_TIMEOUT_MS = 10_000;
+
+async function fetchWithTimeout(input, init = {}) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(
+    () => controller.abort(),
+    AUTH_REQUEST_TIMEOUT_MS,
+  );
+
+  try {
+    return await fetch(input, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [profileLoading, setProfileLoading] = useState(false);
+  const [profileError, setProfileError] = useState(null);
   const profileRef = useRef(null);
   const profileEmailRef = useRef(null);
   const inFlightProfileRequestsRef = useRef(new Map());
@@ -42,6 +58,7 @@ export function AuthProvider({ children }) {
     authUserKeyRef.current = null;
     setProfile(null);
     setProfileLoading(false);
+    setProfileError(null);
   }, []);
 
   const loadProfile = useCallback(
@@ -68,6 +85,7 @@ export function AuthProvider({ children }) {
       }
 
       setProfileLoading(true);
+      setProfileError(null);
 
       const requestPromise = (async () => {
         try {
@@ -76,38 +94,73 @@ export function AuthProvider({ children }) {
               ? `${window.location.origin}/api/profile`
               : "/api/profile";
 
-          const result = await fetchJsonWithCache(
-            apiUrl,
-            {
-              headers: {
-                "Content-Type": "application/json",
-                "x-user-email": userEmail,
-              },
-            },
-            { cacheKey: `/api/profile:${normalizedEmail}`, ttlMs: 60_000 },
-          );
+          for (let attempt = 1; attempt <= 2; attempt += 1) {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(
+              () => controller.abort(),
+              AUTH_REQUEST_TIMEOUT_MS,
+            );
 
-          if (!result.ok) {
-            console.error("Profile load HTTP error:", result.status);
-            clearProfileState();
-            return null;
-          }
+            try {
+              const result = await fetchJsonWithCache(
+                apiUrl,
+                {
+                  signal: controller.signal,
+                  headers: {
+                    "Content-Type": "application/json",
+                    "x-user-email": userEmail,
+                  },
+                },
+                {
+                  cacheKey: `/api/profile:${normalizedEmail}`,
+                  ttlMs: 60_000,
+                },
+              );
 
-          const payload = result.data;
-          if (payload && payload.success) {
-            const nextProfile = payload.data || null;
-            profileRef.current = nextProfile;
-            profileEmailRef.current = nextProfile?.email
-              ? nextProfile.email.toLowerCase()
-              : normalizedEmail;
-            setProfile(nextProfile);
-            return nextProfile;
+              if (result.ok) {
+                const payload = result.data;
+                if (
+                  payload?.success &&
+                  payload.data &&
+                  typeof payload.data === "object" &&
+                  payload.data.customerId &&
+                  payload.data.email
+                ) {
+                  const nextProfile = payload.data || null;
+                  profileRef.current = nextProfile;
+                  profileEmailRef.current = nextProfile?.email
+                    ? nextProfile.email.toLowerCase()
+                    : normalizedEmail;
+                  setProfile(nextProfile);
+                  return nextProfile;
+                }
+
+                console.error("[AUTH_PROFILE_LOAD]", {
+                  outcome: "missing_customer_data",
+                  attempt,
+                });
+                break;
+              }
+
+              console.error("[AUTH_PROFILE_LOAD]", {
+                outcome: "http_error",
+                status: result.status,
+                attempt,
+              });
+              if (result.status < 500 && result.status !== 0) break;
+            } finally {
+              clearTimeout(timeoutId);
+            }
           }
         } catch (error) {
-          console.error("Profile load failed:", error);
+          console.error("[AUTH_PROFILE_LOAD]", {
+            outcome: "request_error",
+            errorName: error.name,
+          });
         }
 
         clearProfileState();
+        setProfileError("Unable to load your saved customer profile.");
         return null;
       })();
 
@@ -137,45 +190,61 @@ export function AuthProvider({ children }) {
     }
 
     const syncPromise = (async () => {
-      try {
-        const apiUrl =
-          typeof window !== "undefined"
-            ? `${window.location.origin}/api/customers`
-            : "/api/customers";
+      const apiUrl =
+        typeof window !== "undefined"
+          ? `${window.location.origin}/api/customers`
+          : "/api/customers";
 
-        const response = await fetch(apiUrl, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            name: userToSync.displayName || "Customer",
-            email: userToSync.email,
-            profileImage: userToSync.photoURL || "",
-          }),
-        });
+      for (let attempt = 1; attempt <= 2; attempt += 1) {
+        try {
+          const response = await fetchWithTimeout(apiUrl, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              name: userToSync.displayName || "Customer",
+              email: userToSync.email,
+              profileImage: userToSync.photoURL || "",
+            }),
+          });
 
-        if (!response.ok) {
-          console.error("Customer sync HTTP error:", response.status);
+          if (!response.ok) {
+            console.error("[AUTH_CUSTOMER_SYNC]", {
+              outcome: "http_error",
+              status: response.status,
+              attempt,
+            });
+            if (response.status < 500 || attempt === 2) return null;
+            continue;
+          }
+
+          const result = await response.json();
+          if (result?.success && result.data?.id && result.data?.customerId) {
+            syncedCustomerEmailRef.current = normalizedEmail;
+            invalidateCachePrefix("/api/profile");
+            invalidateCachePrefix("/api/customers");
+            return result.data;
+          }
+
+          console.error("[AUTH_CUSTOMER_SYNC]", {
+            outcome: "invalid_response",
+            status: response.status,
+            success: result?.success === true,
+            attempt,
+          });
           return null;
-        }
-
-        const result = await response.json();
-        if (result && result.success) {
-          syncedCustomerEmailRef.current = normalizedEmail;
-          invalidateCachePrefix("/api/profile");
-          return result.data;
-        }
-
-        return null;
-      } catch (error) {
-        console.error("Customer sync failed:", error);
-        return null;
-      } finally {
-        if (syncCustomerInFlightRef.current?.email === normalizedEmail) {
-          syncCustomerInFlightRef.current = null;
+        } catch (error) {
+          console.error("[AUTH_CUSTOMER_SYNC]", {
+            outcome: error.name === "AbortError" ? "timeout" : "request_error",
+            errorName: error.name,
+            attempt,
+          });
+          if (attempt === 2) return null;
         }
       }
+
+      return null;
     })();
 
     syncCustomerInFlightRef.current = {
@@ -200,10 +269,24 @@ export function AuthProvider({ children }) {
 
       const user = result.user;
 
-      // Create / Update Customer
-      await syncCustomer(user);
+      const customer = await syncCustomer(user);
+      if (!customer) {
+        const error = new Error(
+          "We could not finish setting up your customer account. Please try again.",
+        );
+        error.code = "customer-sync-failed";
+        throw error;
+      }
 
-      await loadProfile(user.email, { force: true });
+      const loadedProfile = await loadProfile(user.email, { force: true });
+      if (!loadedProfile) {
+        const error = new Error(
+          "We could not load your customer profile. Please try again.",
+        );
+        error.code = "profile-load-failed";
+        throw error;
+      }
+
       return result;
     } catch (error) {
       if (error.code === "auth/cancelled-popup-request") {
@@ -240,8 +323,14 @@ export function AuthProvider({ children }) {
       setUser(nextUser);
 
       if (nextUser) {
-        await syncCustomer(nextUser);
-        await loadProfile(nextUser.email, { force: false });
+        const customer = await syncCustomer(nextUser);
+        if (customer) {
+          await loadProfile(nextUser.email, { force: false });
+        } else {
+          console.error("[AUTH_STATE_SYNC]", {
+            outcome: "customer_sync_failed",
+          });
+        }
       } else {
         clearProfileState();
       }
@@ -263,6 +352,7 @@ export function AuthProvider({ children }) {
         ),
         loading,
         profileLoading,
+        profileError,
         login,
         logout,
         loadProfile,

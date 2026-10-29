@@ -78,9 +78,13 @@ export async function PUT(request) {
     }
 
     const normalizedEmail = email.trim().toLowerCase();
-    const emailValue = email.trim();
 
     const result = await transaction(async (client) => {
+      await client.query(
+        "SELECT pg_advisory_xact_lock(hashtext('fcr_customer_email:' || $1))",
+        [normalizedEmail],
+      );
+
       const existingRows = await client.query(
         `SELECT ${selectColumns.join(", ")} FROM "Customer" WHERE LOWER("email") = LOWER($1) LIMIT 1`,
         [normalizedEmail],
@@ -110,8 +114,8 @@ export async function PUT(request) {
       const customerId = await getNextCustomerId(client);
       const id = createId();
       const createdRows = await client.query(
-        `INSERT INTO "Customer" ("id", "customerId", "name", "email", "profileImage", "phoneNumber", "address")
-         VALUES ($1, $2, $3, $4, $5, $6, $7)
+        `INSERT INTO "Customer" ("id", "customerId", "name", "email", "profileImage", "phoneNumber", "address", "createdAt", "updatedAt")
+         VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
          RETURNING ${selectColumns.join(", ")}`,
         [
           id,
@@ -129,7 +133,14 @@ export async function PUT(request) {
     invalidateCachePrefix("/api/profile");
     return NextResponse.json({ success: true, data: result });
   } catch (error) {
-    console.error("[PROFILE_PUT]", error);
+    console.error("[PROFILE_PUT]", {
+      outcome: "database_error",
+      errorName: error.name,
+      errorCode: error.code,
+      column: error.column,
+      constraint: error.constraint,
+      table: error.table,
+    });
     return NextResponse.json(
       { success: false, message: "Failed to update profile" },
       { status: 500 },

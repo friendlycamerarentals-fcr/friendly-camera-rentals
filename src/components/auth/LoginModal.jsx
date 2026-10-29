@@ -8,6 +8,8 @@ import { toast } from "sonner";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 
+const LOGIN_TIMEOUT_MS = 45_000;
+
 export default function LoginModal({ open, onClose, onLoginSuccess }) {
   const { login } = useAuth();
   const [isLoggingIn, setIsLoggingIn] = useState(false);
@@ -43,7 +45,7 @@ export default function LoginModal({ open, onClose, onLoginSuccess }) {
       setIsLoggingIn(false);
       setErrorMessage("Login request timed out. Please try again.");
       toast.error("Login request timed out. Please try again.");
-    }, 15000);
+    }, LOGIN_TIMEOUT_MS);
 
     try {
       const result = await login();
@@ -59,6 +61,12 @@ export default function LoginModal({ open, onClose, onLoginSuccess }) {
       } else if (error.message === "Login already in progress") {
         setErrorMessage("A login is already in progress. Please wait.");
         toast.error("A login is already in progress. Please wait.");
+      } else if (
+        error.code === "customer-sync-failed" ||
+        error.code === "profile-load-failed"
+      ) {
+        setErrorMessage(error.message);
+        toast.error(error.message);
       } else {
         setErrorMessage("Login failed. Please try again.");
         toast.error("Login failed. Please try again.");

@@ -52,7 +52,14 @@ const clearPendingRedirect = () => {
 
 export default function ProfilePage() {
   const router = useRouter();
-  const { user, profile, loading, profileLoading, loadProfile } = useAuth();
+  const {
+    user,
+    profile,
+    loading,
+    profileLoading,
+    profileError,
+    loadProfile,
+  } = useAuth();
   const { closeProfile } = useBookingFlow();
   const [formData, setFormData] = useState(initialFormState);
   const [savedProfile, setSavedProfile] = useState(initialFormState);
@@ -247,6 +254,24 @@ export default function ProfilePage() {
       <div className="flex min-h-[70vh] items-center justify-center px-4 text-white">
         Loading profile...
       </div>
+    );
+  }
+
+  if (profileError) {
+    return (
+      <main className="flex min-h-[70vh] items-center justify-center px-4 py-16 text-white">
+        <div className="w-full max-w-xl rounded-2xl border border-red-400/30 bg-red-950/20 p-6 text-center">
+          <h1 className="text-xl font-semibold">Profile unavailable</h1>
+          <p className="mt-2 text-sm text-red-200">{profileError}</p>
+          <button
+            type="button"
+            onClick={() => loadProfile(user.email, { force: true })}
+            className="mt-5 rounded-2xl bg-[#F5A623] px-5 py-3 text-sm font-semibold text-black"
+          >
+            Try again
+          </button>
+        </div>
+      </main>
     );
   }
 
