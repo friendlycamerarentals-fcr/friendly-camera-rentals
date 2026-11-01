@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { X } from "lucide-react";
 import { toast } from "sonner";
@@ -64,6 +64,7 @@ export default function ProfilePage() {
   const [formData, setFormData] = useState(initialFormState);
   const [savedProfile, setSavedProfile] = useState(initialFormState);
   const [submitting, setSubmitting] = useState(false);
+  const submitLockRef = useRef(false);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -177,6 +178,8 @@ export default function ProfilePage() {
   );
 
   const handleSave = async () => {
+    if (submitLockRef.current) return;
+
     if (!formData.fullName.trim()) {
       toast.error("Full Name is required.");
       return;
@@ -194,6 +197,7 @@ export default function ProfilePage() {
       return;
     }
 
+    submitLockRef.current = true;
     try {
       setSubmitting(true);
       const response = await fetch("/api/profile", {
@@ -229,22 +233,16 @@ export default function ProfilePage() {
       clearDraftProfile();
       toast.success("Profile updated successfully.");
 
-      const pending = localStorage.getItem("fcr-pending-booking");
-      if (pending) {
-        clearPendingRedirect();
-        closeProfile();
+      if (localStorage.getItem("fcr-pending-booking")) {
         window.dispatchEvent(new Event("resume-pending-booking"));
-
-        if (window.history.length > 1) {
-          router.back();
-        } else {
-          router.push("/");
-        }
       }
+
+      handleClose();
     } catch (error) {
       console.error(error);
       toast.error(error.message || "Failed to save profile.");
     } finally {
+      submitLockRef.current = false;
       setSubmitting(false);
     }
   };
