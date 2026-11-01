@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useEffect, useCallback, useRef } from "react";
+import { useMemo, useState, useEffect } from "react";
 
 import SearchBar from "@/components/rental/SearchBar";
 import CategoryFilter from "@/components/rental/CategoryFilter";
@@ -10,80 +10,84 @@ import { fetchJsonWithCache, prefetchJson } from "@/lib/dataCache";
 
 export default function RentalPage() {
   const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [query, setQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
-  const isMountedRef = useRef(true);
+  const [retryCount, setRetryCount] = useState(0);
+  const [requestState, setRequestState] = useState(null);
+  const requestKey = JSON.stringify([query, selectedCategory, retryCount]);
+  const loading = requestState?.key !== requestKey;
+  const error =
+    requestState?.key === requestKey ? requestState.error : "";
 
   useEffect(() => {
-    return () => {
-      isMountedRef.current = false;
-    };
-  }, []);
+    let active = true;
 
-  const fetchProducts = useCallback(async () => {
-    // console.log("Fetch start", { query, selectedCategory, loading });
-    setLoading(true);
-    setError("");
+    const params = new URLSearchParams();
+    if (query) {
+      params.set("search", query);
+    }
+    if (selectedCategory !== "all") {
+      params.set("category", selectedCategory);
+    }
 
-    try {
-      const params = new URLSearchParams();
+    const queryString = params.toString();
+    const url = queryString
+      ? `/api/rental-products?${queryString}`
+      : "/api/rental-products";
 
-      if (query) {
-        params.set("search", query);
-      }
+    async function loadProducts() {
+      try {
+        const result = await fetchJsonWithCache(
+          url,
+          {},
+          {
+            cacheKey: url,
+            ttlMs: 30_000,
+          },
+        );
+        const data = result.data;
 
-      if (selectedCategory !== "all") {
-        params.set("category", selectedCategory);
-      }
+        if (!result.ok || data?.success === false) {
+          throw new Error(
+            data?.message ||
+              result.error?.message ||
+              "Failed to load rental products.",
+          );
+        }
 
-      const url = `/api/rental-products?${params.toString()}`;
-      const result = await fetchJsonWithCache(
-        url,
-        {},
-        {
-          cacheKey: url,
-          ttlMs: 30_000,
-        },
-      );
-
-      const data = result.data;
-      // console.log("API response:", data);
-
-      if (!result.ok || !data?.success) {
-        throw new Error(data?.message || "Failed to load rental products.");
-      }
-
-      const productsList = Array.isArray(data?.data)
-        ? data.data
-        : Array.isArray(data)
+        const productsList = Array.isArray(data)
           ? data
-          : [];
+          : data?.success === true && Array.isArray(data.data)
+            ? data.data
+            : null;
 
-      // console.log("Products:", productsList);
-      if (isMountedRef.current) {
-        setProducts(productsList);
-      }
-    } catch (fetchError) {
-      console.error("Failed to fetch rental products:", fetchError);
-      if (isMountedRef.current) {
-        setError(fetchError.message || "Unable to load rental products.");
-        setProducts([]);
-      }
-    } finally {
-      // console.log("Fetch end", { query, selectedCategory, loading });
-      // console.log("Loading:", loading);
-      if (isMountedRef.current) {
-        setLoading(false);
+        if (!productsList) {
+          throw new Error("Received an invalid rental products response.");
+        }
+
+        if (active) {
+          setProducts(productsList);
+          setRequestState({ key: requestKey, error: "" });
+        }
+      } catch (fetchError) {
+        console.error("Failed to fetch rental products:", fetchError);
+        if (active) {
+          setProducts([]);
+          setRequestState({
+            key: requestKey,
+            error: fetchError.message || "Unable to load rental products.",
+          });
+        }
       }
     }
-  }, [query, selectedCategory, loading]);
 
-  useEffect(() => {
-    fetchProducts();
-  }, [fetchProducts]);
+    loadProducts();
+
+    return () => {
+      active = false;
+    };
+  }, [query, selectedCategory, retryCount, requestKey]);
 
   const handleSearch = () => {
     setQuery(searchTerm.trim());
@@ -168,6 +172,13 @@ export default function RentalPage() {
               </h3>
 
               <p className="mt-4 text-zinc-400">{error}</p>
+              <button
+                type="button"
+                onClick={() => setRetryCount((count) => count + 1)}
+                className="mt-6 rounded-full bg-amber-500 px-6 py-3 font-semibold text-black transition-colors hover:bg-amber-400"
+              >
+                Try Again
+              </button>
             </div>
           ) : products.length === 0 ? (
             <div className="rounded-4xl border border-white/10 bg-white/5 py-20 text-center backdrop-blur-xl">
