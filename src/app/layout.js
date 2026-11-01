@@ -1,3 +1,4 @@
+import "react-datepicker/dist/react-datepicker.css";
 import "./globals.css";
 import Script from "next/script";
 import { Toaster } from "sonner";

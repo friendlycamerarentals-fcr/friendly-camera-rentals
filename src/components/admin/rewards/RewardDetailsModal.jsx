@@ -13,7 +13,10 @@ import {
 } from "lucide-react";
 
 import RewardStatusBadge from "./RewardStatusBadge";
-import { formatDate } from "@/lib/rewards/rewardHelpers";
+import {
+  formatDate,
+  formatRewardGeneratedDate,
+} from "@/lib/rewards/rewardHelpers";
 
 export default function RewardDetailsModal({ open, onClose, reward }) {
   if (!open || !reward) return null;
@@ -60,14 +63,18 @@ export default function RewardDetailsModal({ open, onClose, reward }) {
 
               <InfoCard
                 icon={BadgePercent}
-                label="Reward"
-                value={`${reward.rewardPercentage}% Discount`}
+                label={reward.source === "Manual" ? "Reward Amount" : "Reward"}
+                value={
+                  reward.source === "Manual"
+                    ? `₹${Number(reward.rewardAmount || 0).toLocaleString("en-IN")}`
+                    : `${reward.rewardPercentage}% Discount`
+                }
               />
 
               <InfoCard
                 icon={CalendarDays}
                 label="Generated Date"
-                value={formatDate(reward.createdAt)}
+                value={formatRewardGeneratedDate(reward)}
               />
 
               <InfoCard
@@ -124,8 +131,12 @@ export default function RewardDetailsModal({ open, onClose, reward }) {
             <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
               <InfoCard
                 icon={Camera}
-                label="Generated From Rental"
-                value={reward.rentalRequestId || "-"}
+                label="Generated From"
+                value={
+                  reward.source === "Manual"
+                    ? "Manual"
+                    : reward.rentalRequestId || reward.source || "-"
+                }
               />
 
               <InfoCard
@@ -172,7 +183,7 @@ export default function RewardDetailsModal({ open, onClose, reward }) {
             <div className="rounded-2xl border border-white/10 bg-black/20 p-6">
               <div className="space-y-5">
                 <TimelineItem
-                  title="Reward Generated"
+                  title="Reward Created"
                   date={reward.createdAt}
                 />
 

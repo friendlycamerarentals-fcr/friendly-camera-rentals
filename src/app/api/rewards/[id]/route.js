@@ -33,6 +33,7 @@ export async function GET(request, { params }) {
       },
       {
         status: 200,
+        headers: { "Cache-Control": "private, no-store, max-age=0" },
       },
     );
   } catch (error) {

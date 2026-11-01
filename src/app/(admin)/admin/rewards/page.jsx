@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Gift } from "lucide-react";
+import { Gift, Plus } from "lucide-react";
+import { toast } from "sonner";
 
 import RewardStats from "@/components/admin/rewards/RewardStats";
 import RewardFilters from "@/components/admin/rewards/RewardFilters";
@@ -10,6 +11,7 @@ import RewardDetailsModal from "@/components/admin/rewards/RewardDetailsModal";
 import RewardSkeleton from "@/components/admin/rewards/RewardSkeleton";
 import RewardPagination from "@/components/admin/rewards/RewardPagination";
 import RewardEmptyState from "@/components/admin/rewards/RewardEmptyState";
+import CreateManualRewardModal from "@/components/admin/rewards/CreateManualRewardModal";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -34,6 +36,7 @@ export default function RewardsPage() {
 
   const [selectedReward, setSelectedReward] = useState(null);
   const [openModal, setOpenModal] = useState(false);
+  const [createModalOpen, setCreateModalOpen] = useState(false);
 
   useEffect(() => {
     loadRewards();
@@ -43,7 +46,7 @@ export default function RewardsPage() {
     try {
       setLoading(true);
 
-      const response = await fetch("/api/rewards");
+      const response = await fetch("/api/rewards", { cache: "no-store" });
 
       const data = await response.json();
 
@@ -64,6 +67,7 @@ export default function RewardsPage() {
       );
     } catch (error) {
       console.error("[Rewards]", error);
+      toast.error(error.message || "Failed to load rewards.");
     } finally {
       setLoading(false);
     }
@@ -97,10 +101,6 @@ export default function RewardsPage() {
     return filteredRewards.slice(start, start + ITEMS_PER_PAGE);
   }, [filteredRewards, currentPage]);
 
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [search, status]);
-
   function handleView(reward) {
     setSelectedReward(reward);
     setOpenModal(true);
@@ -109,6 +109,16 @@ export default function RewardsPage() {
   function handleCloseModal() {
     setOpenModal(false);
     setSelectedReward(null);
+  }
+
+  function handleSearchChange(value) {
+    setSearch(value);
+    setCurrentPage(1);
+  }
+
+  function handleStatusChange(value) {
+    setStatus(value);
+    setCurrentPage(1);
   }
 
   return (
@@ -131,6 +141,14 @@ export default function RewardsPage() {
             </p>
           </div>
         </div>
+        <button
+          type="button"
+          onClick={() => setCreateModalOpen(true)}
+          className="flex items-center justify-center gap-2 self-start rounded-xl bg-[#F5A623] px-4 py-2.5 text-sm font-semibold text-black transition hover:bg-[#FFB800] lg:self-auto"
+        >
+          <Plus size={18} />
+          Add Reward
+        </button>
       </div>
 
       {/* Statistics */}
@@ -150,9 +168,9 @@ export default function RewardsPage() {
 
       <RewardFilters
         search={search}
-        setSearch={setSearch}
+        setSearch={handleSearchChange}
         status={status}
-        setStatus={setStatus}
+        setStatus={handleStatusChange}
         total={filteredRewards.length}
         onRefresh={loadRewards}
       />
@@ -181,6 +199,12 @@ export default function RewardsPage() {
         open={openModal}
         reward={selectedReward}
         onClose={handleCloseModal}
+      />
+      <CreateManualRewardModal
+        key={createModalOpen ? "open" : "closed"}
+        open={createModalOpen}
+        onClose={() => setCreateModalOpen(false)}
+        onCreated={loadRewards}
       />
     </div>
   );

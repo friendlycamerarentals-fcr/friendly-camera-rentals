@@ -2,7 +2,10 @@
 
 import { Eye, Clock3 } from "lucide-react";
 import RewardStatusBadge from "./RewardStatusBadge";
-import { formatDate } from "@/lib/rewards/rewardHelpers";
+import {
+  formatDate,
+  formatRewardGeneratedDate,
+} from "@/lib/rewards/rewardHelpers";
 
 export default function RewardRow({ index, reward, onView, onTimeline }) {
   return (
@@ -31,13 +34,19 @@ export default function RewardRow({ index, reward, onView, onTimeline }) {
       {/* Contact */}
       <td className="px-5 py-4 text-zinc-300">{reward.contactNumber || "-"}</td>
 
-      {/* Rental Request */}
+      {/* Reward source */}
       <td className="px-5 py-4">
-        <span className="text-sm text-zinc-300">{reward.rentalRequestId}</span>
+        <span className="text-sm text-zinc-300">
+          {reward.source === "Manual"
+            ? "Manual"
+            : reward.rentalRequestId || reward.source || "-"}
+        </span>
       </td>
 
-      {/* Rental Date */}
-      <td className="px-5 py-4 text-sm text-zinc-300">{reward.rentalDate}</td>
+      {/* Generated Date */}
+      <td className="px-5 py-4 text-sm text-zinc-300">
+        {formatRewardGeneratedDate(reward)}
+      </td>
 
       {/* Reward */}
       <td className="px-5 py-4">
@@ -47,7 +56,7 @@ export default function RewardRow({ index, reward, onView, onTimeline }) {
           </span>
 
           <span className="text-xs text-zinc-500">
-            {reward.rewardPercentage}%
+            {reward.source === "Manual" ? "Manual" : `${reward.rewardPercentage}%`}
           </span>
         </div>
       </td>

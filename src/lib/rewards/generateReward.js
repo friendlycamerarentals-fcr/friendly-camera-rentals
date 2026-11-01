@@ -8,30 +8,129 @@ import {
 } from "@/constants/rewardStatus";
 
 import { calculateReward, calculateExpiryDate } from "./rewardValidation";
+import {
+  getNextRewardId,
+  validateManualRewardInput,
+} from "./manualReward";
+import { getManualRewardLifecycle } from "./rewardDates";
 
 /**
  * Generate next Reward ID
- * Example:
- * RWD-100001
- * RWD-100002
+ * Example: FCR-R100001
  */
-async function generateRewardId(client) {
+export async function generateRewardId(client) {
   await client.query("SELECT pg_advisory_xact_lock(100001)");
   const result = await client.query(
-    'SELECT "rewardId" FROM "Reward" ORDER BY "createdAt" DESC LIMIT 1',
+    `SELECT "rewardId" FROM "Reward"
+     WHERE "rewardId" ~ '^${REWARD_ID_PREFIX}[0-9]+$'
+     ORDER BY substring("rewardId" from '([0-9]+)$')::BIGINT DESC
+     LIMIT 1`,
   );
-  const rows = result.rows;
+  return getNextRewardId(
+    result.rows[0]?.rewardId,
+    REWARD_ID_PREFIX,
+    REWARD_START_NUMBER,
+  );
+}
 
-  if (!rows.length) {
-    return `${REWARD_ID_PREFIX}${REWARD_START_NUMBER}`;
+export async function createManualReward({
+  customerRecordId,
+  rewardAmount,
+  generatedAt,
+}) {
+  const validation = validateManualRewardInput({
+    customerRecordId,
+    rewardAmount,
+    generatedAt,
+  });
+  if (!validation.ok) {
+    const error = new Error(validation.message);
+    error.status = 400;
+    throw error;
   }
 
-  const lastReward = rows[0];
-  const lastNumber = Number(
-    String(lastReward.rewardId || "").replace(REWARD_ID_PREFIX, "") || 0,
-  );
+  return transaction(async (client) => {
+    const customerRows = await client.query(
+      'SELECT "id", "customerId", "name", "phoneNumber" FROM "Customer" WHERE "id" = $1 LIMIT 1 FOR UPDATE',
+      [customerRecordId],
+    );
+    const customer = customerRows.rows[0];
+    if (!customer) {
+      const error = new Error("Select an existing customer.");
+      error.status = 400;
+      throw error;
+    }
 
-  return `${REWARD_ID_PREFIX}${String(lastNumber + 1).padStart(6, "0")}`;
+    const duplicateRows = await client.query(
+      `SELECT "rewardId" FROM "Reward"
+       WHERE "customerRecordId" = $1
+         AND "source" = 'Manual'
+         AND "generatedAt" = $2::date
+         AND "rewardAmount" = $3
+       LIMIT 1 FOR UPDATE`,
+      [customer.id, generatedAt, validation.amount],
+    );
+    if (duplicateRows.rows.length) {
+      const error = new Error(
+        `This manual reward already exists (${duplicateRows.rows[0].rewardId}).`,
+      );
+      error.status = 409;
+      throw error;
+    }
+
+    const outstandingRows = await client.query(
+      `SELECT "id" FROM "Reward"
+       WHERE "customerId" = $1
+         AND (
+           "status" = $2
+           OR "status" = $3
+         )
+       LIMIT 1 FOR UPDATE`,
+      [
+        customer.customerId,
+        REWARD_STATUS.APPLIED,
+        REWARD_STATUS.ACTIVE,
+      ],
+    );
+    if (outstandingRows.rows.length) {
+      const error = new Error(
+        "This customer already has an active or reserved reward.",
+      );
+      error.status = 409;
+      throw error;
+    }
+
+    const expireDate = calculateExpiryDate(generatedAt);
+    const lifecycle = getManualRewardLifecycle(expireDate);
+    const rewardId = await generateRewardId(client);
+    const result = await client.query(
+      `INSERT INTO "Reward" (
+        "id", "rewardId", "customerId", "customerRecordId", "customerName",
+        "contactNumber", "rentalRequestId", "rentalDate", "rewardPercentage",
+        "rewardAmount", "status", "generatedAt", "source", "expireDate",
+        "appliedRentalId", "appliedDate", "usedDate", "expiredDate"
+      ) VALUES (
+        $1, $2, $3, $4, $5, $6, NULL, NULL, 0,
+        $7, $8, $9, 'Manual', $10, NULL, NULL, NULL, $11
+      )
+      RETURNING *, "generatedAt"::text AS "generatedAt"`,
+      [
+        createId(),
+        rewardId,
+        customer.customerId,
+        customer.id,
+        customer.name,
+        customer.phoneNumber || "",
+        validation.amount,
+        lifecycle.status,
+        generatedAt,
+        expireDate,
+        lifecycle.expiredDate,
+      ],
+    );
+
+    return result.rows[0];
+  });
 }
 
 /**

@@ -115,6 +115,89 @@ input[type="time"]::-webkit-datetime-edit {
   text-align: left;
 }
 
+#manual-reward-calendar-portal {
+  position: fixed;
+  inset: 0;
+  z-index: 130;
+  pointer-events: none;
+}
+
+.manual-reward-calendar-popper {
+  z-index: 131 !important;
+  max-width: calc(100vw - 1rem);
+  pointer-events: auto;
+}
+
+.manual-reward-calendar {
+  overflow: hidden;
+  border: 1px solid rgb(255 255 255 / 12%) !important;
+  border-radius: 0.875rem !important;
+  background: #09090b !important;
+  color: #fff !important;
+  box-shadow: 0 16px 40px rgb(0 0 0 / 55%);
+}
+
+.manual-reward-calendar .react-datepicker__header {
+  border-bottom: 1px solid rgb(255 255 255 / 10%);
+  background: #18181b;
+}
+
+.manual-reward-calendar .react-datepicker__current-month,
+.manual-reward-calendar .react-datepicker__day-name,
+.manual-reward-calendar .react-datepicker__month-read-view,
+.manual-reward-calendar .react-datepicker__year-read-view {
+  color: #e4e4e7;
+}
+
+.manual-reward-calendar .react-datepicker__navigation-icon::before {
+  border-color: #f5a623;
+}
+
+.manual-reward-calendar .react-datepicker__month-select,
+.manual-reward-calendar .react-datepicker__year-select {
+  margin: 0 0.2rem;
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 0.375rem;
+  background: #09090b;
+  color: #fff;
+}
+
+.manual-reward-calendar .react-datepicker__day {
+  color: #e4e4e7;
+}
+
+.manual-reward-calendar .react-datepicker__day:hover {
+  background: rgb(245 166 35 / 20%);
+  color: #fff;
+}
+
+.manual-reward-calendar .react-datepicker__day--today {
+  border: 1px solid #f5a623;
+  border-radius: 0.3rem;
+  font-weight: 700;
+}
+
+.manual-reward-calendar .react-datepicker__day--selected,
+.manual-reward-calendar .react-datepicker__day--keyboard-selected {
+  border-radius: 0.3rem;
+  background: #f5a623;
+  color: #09090b;
+}
+
+.manual-reward-calendar .react-datepicker__day--disabled {
+  color: #52525b;
+}
+
+.manual-reward-calendar .react-datepicker__today-button {
+  border-top: 1px solid rgb(255 255 255 / 10%);
+  background: #18181b;
+  color: #f5a623;
+}
+
+.manual-reward-calendar-popper .react-datepicker__triangle {
+  display: none;
+}
+
 /* Remove inner padding weirdness on Safari */
 input.booking-field::-webkit-inner-spin-button,
 input.booking-field::-webkit-outer-spin-button {

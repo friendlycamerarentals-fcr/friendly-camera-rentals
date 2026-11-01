@@ -1,5 +1,6 @@
 import { query } from "@/db/query";
 import { REWARD_STATUS } from "@/constants/rewardStatus";
+export { calculateExpiryDate } from "./rewardDates";
 
 export function normalizeProductCategory(category) {
   return typeof category === "string" ? category.trim().toLowerCase() : "";
@@ -136,13 +137,4 @@ export async function hasAnotherActiveReward(customerId) {
  */
 export function calculateReward(totalAmount) {
   return Number((totalAmount * 0.1).toFixed(2));
-}
-
-/**
- * Calculate reward expiry date.
- */
-export function calculateExpiryDate(baseDate = new Date()) {
-  const date = new Date(baseDate);
-  date.setMonth(date.getMonth() + 3);
-  return date;
 }

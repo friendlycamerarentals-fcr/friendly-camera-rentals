@@ -117,7 +117,9 @@ export function formatDate(date) {
     return "—";
   }
 
-  const parsedDate = new Date(date);
+  const isDateOnly =
+    typeof date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(date);
+  const parsedDate = new Date(isDateOnly ? `${date}T00:00:00.000Z` : date);
 
   if (Number.isNaN(parsedDate.getTime())) {
     return "—";
@@ -127,5 +129,15 @@ export function formatDate(date) {
     day: "2-digit",
     month: "short",
     year: "numeric",
+    ...(isDateOnly ? { timeZone: "UTC" } : {}),
   });
+}
+
+export function formatRewardGeneratedDate(reward) {
+  const generatedDate =
+    reward?.source === "Manual"
+      ? reward.generatedDate ?? reward.generatedAt
+      : reward?.generatedAt || reward?.rentalDate || reward?.createdAt;
+
+  return formatDate(generatedDate);
 }

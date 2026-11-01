@@ -5,7 +5,10 @@ import {
   validateReward,
 } from "@/lib/rewards/rewardValidation";
 
-import { generateReward } from "@/lib/rewards/generateReward";
+import {
+  createManualReward,
+  generateReward,
+} from "@/lib/rewards/generateReward";
 
 import { applyReward, completeAppliedReward } from "@/lib/rewards/applyReward";
 
@@ -16,6 +19,12 @@ import {
 } from "@/lib/rewards/expireRewards";
 
 const rewardSelect = `SELECT reward.*,
+  reward."generatedAt"::text AS "generatedAt",
+  CASE
+    WHEN reward."source" = 'Manual' AND reward."generatedAt" IS NOT NULL
+      THEN to_char(reward."generatedAt", 'YYYY-MM-DD')
+    ELSE NULL
+  END AS "generatedDate",
   (SELECT rental."requestId" FROM "RentalRequest" rental
    WHERE rental."rewardId" = reward."rewardId"
   ORDER BY rental."createdAt" DESC LIMIT 1) AS "lastAppliedRentalId",
@@ -127,6 +136,10 @@ class RewardService {
   async generateReward(rentalRequestId) {
     await expireRewards();
     return generateReward(rentalRequestId);
+  }
+
+  async createManualReward(input) {
+    return createManualReward(input);
   }
 
   async applyReward(data) {

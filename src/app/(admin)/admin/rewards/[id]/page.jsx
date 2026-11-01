@@ -23,30 +23,36 @@ export default function RewardDetailsPage() {
   const [showDetails, setShowDetails] = useState(false);
 
   useEffect(() => {
-    loadReward();
-  }, []);
+    const controller = new AbortController();
 
-  async function loadReward() {
-    try {
-      setLoading(true);
+    fetch(`/api/rewards/${rewardId}`, {
+      cache: "no-store",
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        const data = await response.json();
 
-      const response = await fetch(`/api/rewards/${rewardId}`);
+        if (!response.ok) {
+          throw new Error(data.message || "Failed to load reward.");
+        }
 
-      const data = await response.json();
+        return data;
+      })
+      .then((data) => {
+        setReward(data.reward);
+        setHistory(data.history || []);
+      })
+      .catch((err) => {
+        if (controller.signal.aborted) return;
+        console.error(err);
+        setError(err.message);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
 
-      if (!response.ok) {
-        throw new Error(data.message || "Failed to load reward.");
-      }
-
-      setReward(data.reward);
-      setHistory(data.history || []);
-    } catch (err) {
-      console.error(err);
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  }
+    return () => controller.abort();
+  }, [rewardId]);
 
   if (loading) {
     return (

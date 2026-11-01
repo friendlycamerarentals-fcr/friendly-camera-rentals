@@ -331,6 +331,12 @@ npm start
 - List collected customers from application interactions
 - Manage customer records in admin
 
+### Rewards
+
+- Rewards are generated automatically after completed rentals and can also be created manually for existing customers.
+- Manual rewards use an admin-entered amount and start date; expiry follows the existing three-month reward rule.
+- Apply the additive Reward schema changes in `database/migrations.sql` to the intended database before enabling manual reward creation.
+
 ### Testimonials Moderation
 
 - Approve or reject testimonials
@@ -365,6 +371,7 @@ npm start
 | `/api/services`                | Submit service bookings            |
 | `/api/testimonials`            | Submit testimonials                |
 | `/api/customers`               | List customer records              |
+| `/api/rewards`                 | List rewards; admin POST creates a manual reward |
 | `/api/contact`                 | Contact form submissions           |
 | `/api/upload`                  | Upload and delete images           |
 | `/api/admin/login`             | Admin login                        |

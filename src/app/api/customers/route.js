@@ -24,23 +24,37 @@ const selectColumns = [
   '"updatedAt"',
 ];
 
-export async function GET() {
-  const cacheKey = "/api/customers";
-  const cachedPayload = getCachedValue(cacheKey);
-  if (cachedPayload !== null) {
-    return NextResponse.json(cachedPayload);
-  }
-
+export async function GET(request) {
   try {
-    const customers = await query(
-      `SELECT ${selectColumns.join(", ")} FROM "Customer" ORDER BY "createdAt" DESC`,
-    );
+    const search = new URL(request.url).searchParams.get("search")?.trim() || "";
+    const cacheKey = "/api/customers";
+    if (!search) {
+      const cachedPayload = getCachedValue(cacheKey);
+      if (cachedPayload !== null) {
+        return NextResponse.json(cachedPayload);
+      }
+    }
+
+    const customers = search
+      ? await query(
+          `SELECT ${selectColumns.join(", ")} FROM "Customer"
+           WHERE "name" ILIKE $1
+              OR "customerId" ILIKE $1
+              OR "phoneNumber" ILIKE $1
+              OR "email" ILIKE $1
+           ORDER BY "createdAt" DESC
+           LIMIT 20`,
+          [`%${search}%`],
+        )
+      : await query(
+          `SELECT ${selectColumns.join(", ")} FROM "Customer" ORDER BY "createdAt" DESC`,
+        );
 
     const payload = {
       success: true,
       data: customers,
     };
-    setCachedValue(cacheKey, payload, 30_000);
+    if (!search) setCachedValue(cacheKey, payload, 30_000);
     return NextResponse.json(payload);
   } catch (error) {
     console.error("[CUSTOMERS_GET]", error);

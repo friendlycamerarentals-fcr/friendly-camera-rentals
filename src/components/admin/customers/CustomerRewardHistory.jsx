@@ -2,6 +2,10 @@
 
 import { Gift, CalendarDays, Clock3 } from "lucide-react";
 import RewardStatusBadge from "@/components/admin/rewards/RewardStatusBadge";
+import {
+  formatDate,
+  formatRewardGeneratedDate,
+} from "@/lib/rewards/rewardHelpers";
 
 export default function CustomerRewardHistory({
   rewards = [],
@@ -71,7 +75,9 @@ export default function CustomerRewardHistory({
                     </h3>
 
                     <p className="mt-1 text-sm text-zinc-500">
-                      Rental ID : {reward.rentalRequestId}
+                      {reward.source === "Manual"
+                        ? "Source : Manual"
+                        : `Rental ID : ${reward.rentalRequestId || "-"}`}
                     </p>
                   </div>
 
@@ -92,22 +98,24 @@ export default function CustomerRewardHistory({
 
                   <div>
                     <p className="text-xs uppercase tracking-wider text-zinc-500">
-                      Reward %
+                      {reward.source === "Manual" ? "Reward Type" : "Reward %"}
                     </p>
 
                     <p className="mt-1 font-semibold text-white">
-                      {reward.rewardPercentage}%
+                      {reward.source === "Manual"
+                        ? "Manual amount"
+                        : `${reward.rewardPercentage}%`}
                     </p>
                   </div>
 
                   <div>
                     <p className="text-xs uppercase tracking-wider text-zinc-500">
-                      Rental Date
+                      Generated Date
                     </p>
 
                     <div className="mt-2 flex items-center gap-2 text-white">
                       <CalendarDays size={16} />
-                      {reward.rentalDate}
+                      {formatRewardGeneratedDate(reward)}
                     </div>
                   </div>
 
@@ -169,12 +177,12 @@ export default function CustomerRewardHistory({
                 <div className="mt-5 flex justify-between border-t border-white/10 pt-4 text-sm text-zinc-500">
                   <span>
                     Created :{" "}
-                    {new Date(reward.createdAt).toLocaleDateString("en-IN")}
+                    {formatDate(reward.createdAt)}
                   </span>
 
                   <span>
                     Last Updated :{" "}
-                    {new Date(reward.updatedAt).toLocaleDateString("en-IN")}
+                    {formatDate(reward.updatedAt)}
                   </span>
                 </div>
               </div>

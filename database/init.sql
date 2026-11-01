@@ -795,3 +795,30 @@ FROM "RentalRequest" rental
 WHERE COALESCE(rental."advanceVerified", FALSE) = TRUE
   AND COALESCE(rental."advanceAmount", 0) > 0
 ON CONFLICT ("rentalRequestId", "idempotencyKey") DO NOTHING;
+
+-- 2026-11-01: Support manually created rewards without a rental.
+-- This is additive for reward data; existing reward rows and createdAt values
+-- are not rewritten. Apply the equivalent block from database/migrations.sql
+-- to an existing database before enabling manual reward creation.
+ALTER TABLE "Reward" ALTER COLUMN "rentalRequestId" DROP NOT NULL;
+ALTER TABLE "Reward" ALTER COLUMN "rentalDate" DROP NOT NULL;
+ALTER TABLE "Reward" ADD COLUMN IF NOT EXISTS "customerRecordId" TEXT;
+ALTER TABLE "Reward" ADD COLUMN IF NOT EXISTS "generatedAt" DATE;
+ALTER TABLE "Reward" ADD COLUMN IF NOT EXISTS "source" TEXT;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'Reward_customerRecordId_fkey'
+    ) THEN
+        ALTER TABLE "Reward"
+            ADD CONSTRAINT "Reward_customerRecordId_fkey"
+            FOREIGN KEY ("customerRecordId") REFERENCES "Customer"("id")
+            ON DELETE RESTRICT ON UPDATE CASCADE
+            NOT VALID;
+    END IF;
+END $$;
+
+CREATE INDEX IF NOT EXISTS "idx_reward_customer_record_id"
+  ON "Reward" ("customerRecordId");

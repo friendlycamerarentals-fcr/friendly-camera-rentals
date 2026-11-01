@@ -2,7 +2,7 @@
 
 import { Eye, Gift } from "lucide-react";
 import RewardStatusBadge from "./RewardStatusBadge";
-import { formatDate } from "@/lib/rewards/rewardHelpers";
+import { formatDate, formatRewardGeneratedDate } from "@/lib/rewards/rewardHelpers";
 
 export default function RewardTable({ rewards = [], onView }) {
   if (!rewards.length) {
@@ -88,7 +88,9 @@ export default function RewardTable({ rewards = [], onView }) {
                 </td>
 
                 <td className="break-all px-4 py-3.5 text-xs leading-4 text-zinc-300 sm:px-6">
-                  {reward.rentalRequestId || "-"}
+                  {reward.source === "Manual"
+                    ? "Manual"
+                    : reward.rentalRequestId || reward.source || "-"}
                 </td>
 
                 <td className="break-all px-4 py-3.5 text-xs leading-4 text-zinc-300 sm:px-6">
@@ -106,7 +108,7 @@ export default function RewardTable({ rewards = [], onView }) {
                 </td>
 
                 <td className="whitespace-nowrap px-4 py-3.5 text-xs leading-4 text-zinc-400 sm:px-6">
-                  {formatDate(reward.createdAt)}
+                  {formatRewardGeneratedDate(reward)}
                 </td>
 
                 <td className="whitespace-nowrap px-4 py-3.5 text-xs leading-4 text-zinc-400 sm:px-6">

@@ -7,6 +7,7 @@ import {
   Clock3,
   XCircle,
 } from "lucide-react";
+import { formatDate } from "@/lib/rewards/rewardHelpers";
 
 export default function RewardTimeline({ reward }) {
   if (!reward) return null;
@@ -14,10 +15,15 @@ export default function RewardTimeline({ reward }) {
   const reservationReleased =
     !reward.appliedRentalId &&
     ["Cancelled", "Rejected"].includes(reward.lastAppliedRentalStatus);
+  const generatedDate =
+    reward.source === "Manual"
+      ? reward.generatedDate ?? reward.generatedAt
+      : reward.generatedAt || reward.rentalDate || reward.createdAt;
   const timeline = [
     {
       title: "Reward Created",
-      date: reward.createdAt,
+      date: generatedDate,
+      dateOnly: reward.source === "Manual" || /^\d{4}-\d{2}-\d{2}$/.test(generatedDate || ""),
       icon: <Gift size={18} />,
       color: "text-[#F5A623]",
       active: true,
@@ -25,7 +31,8 @@ export default function RewardTimeline({ reward }) {
     },
     {
       title: "Reward Activated",
-      date: reward.createdAt,
+      date: generatedDate,
+      dateOnly: reward.source === "Manual" || /^\d{4}-\d{2}-\d{2}$/.test(generatedDate || ""),
       color: "text-green-400",
       active: true,
       state: "Active",
@@ -118,7 +125,9 @@ export default function RewardTimeline({ reward }) {
                     <CalendarDays size={15} />
 
                     {item.date ? (
-                      new Date(item.date).toLocaleString("en-IN")
+                      item.dateOnly
+                        ? formatDate(item.date)
+                        : new Date(item.date).toLocaleString("en-IN")
                     ) : (
                       <span>Pending</span>
                     )}
