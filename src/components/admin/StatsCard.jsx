@@ -8,29 +8,29 @@ export default function StatsCard({
   change = "+12%",
 }) {
   return (
-    <div className="group rounded-2xl border border-white/10 bg-white/[0.03] p-4 md:p-6 backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:border-[#F5A623]/30 hover:shadow-[0_0_40px_rgba(245,166,35,0.12)] cursor-pointer h-full">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="text-xs md:text-sm text-zinc-400">{title}</p>
+    <div className="group h-full min-w-0 cursor-pointer rounded-2xl border border-white/10 bg-white/[0.03] p-3 backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:border-[#F5A623]/30 hover:shadow-[0_0_40px_rgba(245,166,35,0.12)] sm:p-4 md:p-6">
+      <div className="flex items-start justify-between gap-2 sm:gap-4">
+        <div className="min-w-0">
+          <p className="text-[11px] text-zinc-400 sm:text-xs md:text-sm">{title}</p>
 
-          <h3 className="mt-2 text-2xl md:text-4xl font-bold text-white">
+          <h3 className="mt-2 text-xl font-bold text-white sm:text-2xl md:text-4xl">
             {value}
           </h3>
 
-          <div className="mt-3 flex items-center gap-2 text-xs md:text-sm text-green-400">
-            <TrendingUp size={14} />
+          <div className="mt-3 flex min-w-0 items-center gap-1 text-[10px] text-green-400 sm:gap-2 sm:text-xs md:text-sm">
+            <TrendingUp size={12} className="shrink-0 sm:size-[14px]" />
             {change}
           </div>
         </div>
 
         <div
-          className="flex h-11 w-11 md:h-14 md:w-14 items-center justify-center rounded-2xl"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl sm:h-11 sm:w-11 sm:rounded-2xl md:h-14 md:w-14"
           style={{
             backgroundColor: `${color}20`,
             color,
           }}
         >
-          <Icon size={20} className="md:size-[28]" />
+          <Icon size={16} className="sm:size-5 md:size-7" />
         </div>
       </div>
     </div>
