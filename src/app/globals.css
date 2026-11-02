@@ -124,8 +124,40 @@ input[type="time"]::-webkit-datetime-edit {
 
 .manual-reward-calendar-popper {
   z-index: 131 !important;
-  max-width: calc(100vw - 1rem);
+  max-width: calc(
+    100dvw - 1rem - env(safe-area-inset-left) - env(safe-area-inset-right)
+  );
   pointer-events: auto;
+}
+
+.admin-panel .overflow-x-auto {
+  max-width: 100%;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.admin-modal-panel {
+  max-height: calc(
+    100dvh - 1.5rem - env(safe-area-inset-top) - env(safe-area-inset-bottom)
+  );
+}
+
+@media (max-width: 767px) {
+  .admin-modal-backdrop {
+    padding-top: max(0.75rem, env(safe-area-inset-top));
+    padding-right: max(0.75rem, env(safe-area-inset-right));
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+    padding-left: max(0.75rem, env(safe-area-inset-left));
+  }
+
+  .admin-panel :is(
+      input:not([type="checkbox"]):not([type="radio"]),
+      select,
+      textarea
+    ) {
+    min-height: 44px;
+    font-size: 16px;
+  }
 }
 
 .manual-reward-calendar {

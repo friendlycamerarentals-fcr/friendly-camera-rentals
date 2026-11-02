@@ -56,7 +56,7 @@ export default function RewardDetailsPage() {
 
   if (loading) {
     return (
-      <div className="flex h-[70vh] items-center justify-center">
+      <div className="flex h-[70dvh] items-center justify-center">
         <Loader2 className="h-10 w-10 animate-spin text-[#F5A623]" />
       </div>
     );
@@ -64,7 +64,7 @@ export default function RewardDetailsPage() {
 
   if (error) {
     return (
-      <div className="flex h-[70vh] flex-col items-center justify-center gap-4">
+      <div className="flex h-[70dvh] flex-col items-center justify-center gap-4">
         <AlertCircle size={55} className="text-red-500" />
 
         <h2 className="text-2xl font-bold text-white">{error}</h2>

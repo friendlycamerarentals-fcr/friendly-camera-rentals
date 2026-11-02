@@ -11,8 +11,8 @@ export default function DeleteProductDialog({
   if (!open || !product) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
-      <div className="w-full max-w-md rounded-2xl border border-white/10 bg-zinc-950 p-6">
+    <div className="admin-modal-backdrop fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
+      <div className="admin-modal-panel w-full max-w-md overflow-y-auto rounded-2xl border border-white/10 bg-zinc-950 p-4 sm:p-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">

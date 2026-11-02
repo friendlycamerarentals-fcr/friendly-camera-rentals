@@ -303,13 +303,13 @@ export default function HeroMarqueePage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[80] flex items-center justify-center bg-black/70 px-4 backdrop-blur-sm"
+            className="admin-modal-backdrop fixed inset-0 z-[80] flex items-center justify-center bg-black/70 px-4 py-3 backdrop-blur-sm sm:py-4"
           >
             <motion.div
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: 20, opacity: 0 }}
-              className="w-full max-w-xl rounded-2xl border border-white/10 bg-zinc-950 p-6 shadow-2xl"
+              className="admin-modal-panel w-full max-w-xl overflow-y-auto rounded-2xl border border-white/10 bg-zinc-950 p-4 shadow-2xl sm:p-6"
             >
               <div className="flex items-start justify-between gap-4">
                 <div>

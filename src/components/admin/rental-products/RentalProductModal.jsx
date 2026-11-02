@@ -14,11 +14,11 @@ export default function RentalProductModal({ open, onClose, product }) {
   return (
     <div
       onClick={onClose}
-      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 p-3 md:p-6 backdrop-blur-sm"
+      className="admin-modal-backdrop fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 p-3 md:p-6 backdrop-blur-sm"
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="max-h-[95vh] w-full max-w-6xl overflow-y-auto rounded-2xl border border-white/10 bg-zinc-950 shadow-[0_0_50px_rgba(245,166,35,0.1)]"
+        className="admin-modal-panel w-full max-w-6xl overflow-y-auto rounded-2xl border border-white/10 bg-zinc-950 shadow-[0_0_50px_rgba(245,166,35,0.1)]"
       >
         {/* Header */}
         <div className="sticky top-0 z-10 flex items-center justify-between border-b border-white/10 bg-zinc-950 p-4 md:p-6">

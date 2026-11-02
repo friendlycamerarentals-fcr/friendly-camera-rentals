@@ -14,11 +14,11 @@ export default function DeleteProductDialog({
   return (
     <div
       onClick={onClose}
-      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
+      className="admin-modal-backdrop fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-md rounded-2xl border border-white/10 bg-zinc-950 p-6 shadow-2xl"
+        className="admin-modal-panel w-full max-w-md overflow-y-auto rounded-2xl border border-white/10 bg-zinc-950 p-4 shadow-2xl sm:p-6"
       >
         {/* Header */}
         <div className="flex items-start justify-between">

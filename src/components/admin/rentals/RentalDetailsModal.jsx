@@ -204,13 +204,13 @@ export default function RentalDetailsModal({
 
   return (
     <div
-      className="fixed inset-0 z-9999 flex items-center justify-center bg-black/70 p-3 backdrop-blur-sm sm:p-4"
+      className="admin-modal-backdrop fixed inset-0 z-9999 flex items-center justify-center bg-black/70 p-3 backdrop-blur-sm sm:p-4"
       onClick={onClose}
     >
       {/* Modal card */}
       <div
         onClick={(e) => e.stopPropagation()}
-        className="flex max-h-[90vh] w-full flex-col overflow-hidden rounded-2xl border border-white/10 bg-zinc-950 shadow-[0_0_60px_rgba(245,166,35,0.10)] sm:rounded-2xl sm:max-w-140 lg:max-w-180 xl:max-w-205"
+        className="admin-modal-panel flex w-full flex-col overflow-hidden rounded-2xl border border-white/10 bg-zinc-950 shadow-[0_0_60px_rgba(245,166,35,0.10)] sm:rounded-2xl sm:max-w-140 lg:max-w-180 xl:max-w-205"
       >
         {/* ── Sticky header ─────────────────────────────────────────────── */}
         <div className="flex shrink-0 items-center justify-between border-b border-white/10 px-4 py-4 sm:px-6">

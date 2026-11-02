@@ -69,7 +69,7 @@ function SidebarContent({
   toggleCollapsed,
 }) {
   return (
-    <div className="flex h-full flex-col bg-zinc-950">
+    <div className="flex h-full flex-col bg-zinc-950 pl-[env(safe-area-inset-left)]">
       {/* Branding/header */}
       <div
         className={`border-b border-white/10 transition-all duration-300 ${collapsed ? "p-3" : "p-6"}`}
@@ -104,7 +104,8 @@ function SidebarContent({
             {!collapsed && (
               <button
                 onClick={closeSidebar}
-                className="rounded-xl p-2 text-zinc-400 hover:bg-white/5 lg:hidden"
+                aria-label="Close admin navigation"
+                className="rounded-xl p-2 text-zinc-400 hover:bg-white/5 md:hidden"
               >
                 <X size={18} />
               </button>
@@ -208,9 +209,39 @@ export default function AdminSidebar() {
   }, []);
 
   useEffect(() => {
+    const desktopQuery = window.matchMedia("(min-width: 768px)");
+    const closeOnDesktop = (event) => {
+      if (event.matches) setOpen(false);
+    };
+
+    desktopQuery.addEventListener("change", closeOnDesktop);
+    return () => desktopQuery.removeEventListener("change", closeOnDesktop);
+  }, []);
+
+  useEffect(() => {
+    if (!open) return undefined;
+
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    const main = document.querySelector("[data-admin-main]");
+    const previousOverflowY = main?.style.overflowY;
+
+    if (main) main.style.overflowY = "hidden";
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      if (main) main.style.overflowY = previousOverflowY;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [open]);
+
+  useEffect(() => {
     document.documentElement.style.setProperty(
       "--admin-sidebar-width",
-      collapsed ? "80px" : "240px",
+      collapsed
+        ? "calc(80px + env(safe-area-inset-left))"
+        : "calc(240px + env(safe-area-inset-left))",
     );
   }, [collapsed]);
 
@@ -234,7 +265,7 @@ export default function AdminSidebar() {
     <>
       {/* Desktop/Tablet Sidebar */}
       <aside
-        className={`fixed left-0 top-0 z-50 hidden h-screen border-r border-white/10 bg-zinc-950 transition-all duration-300 ease-out md:flex md:flex-col ${collapsed ? "w-20" : "w-60"}`}
+        className={`fixed left-0 top-0 z-50 hidden h-dvh border-r border-white/10 bg-zinc-950 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] transition-all duration-300 ease-out md:flex md:flex-col ${collapsed ? "w-[calc(5rem+env(safe-area-inset-left))]" : "w-[calc(15rem+env(safe-area-inset-left))]"}`}
       >
         <SidebarContent
           pathname={pathname}
@@ -247,7 +278,9 @@ export default function AdminSidebar() {
 
       {/* Overlay for mobile */}
       {open && (
-        <div
+        <button
+          type="button"
+          aria-label="Close admin navigation"
           onClick={closeSidebar}
           className="fixed inset-0 z-60 bg-black/60 backdrop-blur-sm md:hidden"
         />
@@ -255,7 +288,13 @@ export default function AdminSidebar() {
 
       {/* Mobile Sidebar */}
       <aside
-        className={`fixed left-0 top-0 z-70 h-screen w-60 transform border-r border-white/10 bg-zinc-950 transition-transform duration-300 md:hidden ${open ? "translate-x-0" : "-translate-x-full"}`}
+        id="admin-mobile-navigation"
+        role="dialog"
+        aria-label="Admin navigation"
+        aria-modal={open}
+        aria-hidden={!open}
+        inert={!open}
+        className={`fixed left-0 top-0 z-70 h-dvh w-[calc(15rem+env(safe-area-inset-left))] transform border-r border-white/10 bg-zinc-950 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] transition-transform duration-300 md:hidden ${open ? "translate-x-0" : "-translate-x-full"}`}
       >
         <SidebarContent
           pathname={pathname}

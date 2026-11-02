@@ -509,7 +509,7 @@ export default function ManualRentalForm({ open, onClose, onCreated }) {
   if (createdBooking) {
     return (
       <div
-        className="fixed inset-0 z-9999 flex items-center justify-center bg-black/70 p-3 backdrop-blur-sm sm:p-4"
+        className="admin-modal-backdrop fixed inset-0 z-9999 flex items-center justify-center bg-black/70 p-3 backdrop-blur-sm sm:p-4"
         onClick={handleClose}
       >
         <div
@@ -564,12 +564,12 @@ export default function ManualRentalForm({ open, onClose, onCreated }) {
 
   return (
     <div
-      className="fixed inset-0 z-9999 flex items-start justify-center overflow-y-auto bg-black/70 p-3 backdrop-blur-sm sm:items-center sm:p-6"
+      className="admin-modal-backdrop fixed inset-0 z-9999 flex items-start justify-center overflow-y-auto bg-black/70 p-3 backdrop-blur-sm sm:items-center sm:p-6"
       onClick={handleClose}
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="my-4 flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-white/10 bg-zinc-950"
+        className="admin-modal-panel my-1 flex w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-white/10 bg-zinc-950 sm:my-4"
       >
         <div className="flex shrink-0 items-center justify-between border-b border-white/10 px-4 py-4 sm:px-6">
           <div>

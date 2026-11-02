@@ -386,7 +386,7 @@ export default function TestimonialsPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
+            className="admin-modal-backdrop fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
             onClick={() => !deleting && setDeleteConfirm(null)}
           >
             <motion.div
@@ -394,7 +394,7 @@ export default function TestimonialsPage() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-sm rounded-2xl border border-red-500/20 bg-gradient-to-br from-white/[0.08] to-white/[0.02] p-8 backdrop-blur-xl"
+              className="admin-modal-panel w-full max-w-sm overflow-y-auto rounded-2xl border border-red-500/20 bg-gradient-to-br from-white/[0.08] to-white/[0.02] p-5 backdrop-blur-xl sm:p-8"
             >
               <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-red-500/10">
                 <span className="text-2xl">⚠️</span>

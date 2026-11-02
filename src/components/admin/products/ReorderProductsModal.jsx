@@ -100,12 +100,12 @@ export default function ReorderProductsModal({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end overflow-y-auto bg-black/60 sm:items-center sm:justify-center">
+    <div className="admin-modal-backdrop fixed inset-0 z-50 flex items-end overflow-y-auto bg-black/60 sm:items-center sm:justify-center">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 20 }}
-        className="w-full max-h-[90vh] overflow-y-auto rounded-t-3xl sm:rounded-2xl bg-zinc-950 border border-white/10 p-6 sm:max-w-2xl"
+        className="admin-modal-panel w-full overflow-y-auto rounded-t-3xl border border-white/10 bg-zinc-950 p-4 sm:max-w-2xl sm:rounded-2xl sm:p-6"
       >
         {/* Header */}
         <div className="mb-6 flex items-center justify-between">
@@ -124,7 +124,7 @@ export default function ReorderProductsModal({
         </div>
 
         {/* Products List */}
-        <div className="mb-6 space-y-2 max-h-[60vh] overflow-y-auto">
+        <div className="mb-6 max-h-[60dvh] space-y-2 overflow-y-auto">
           {items.length === 0 ? (
             <div className="rounded-xl border border-white/10 bg-white/5 py-8 text-center text-zinc-500">
               No products to reorder

@@ -454,7 +454,7 @@ export default function RentalProductForm({
                 key={item.id}
                 className="rounded-2xl border border-white/10 bg-black/30 p-2"
               >
-                <div className="grid grid-cols-[1.3fr_0.8fr_1.5fr_44px] gap-3 items-center md:grid-cols-[1.4fr_1fr_1.2fr_44px] md:gap-4">
+                <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_44px] items-center gap-3 sm:grid-cols-[minmax(0,1.3fr)_minmax(0,0.8fr)_minmax(0,1.5fr)_44px] md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,1.2fr)_44px] md:gap-4">
                   {/* Unit */}
                   <select
                     value={item.unit}
@@ -495,7 +495,7 @@ export default function RentalProductForm({
                   </div>
 
                   {/* Price */}
-                  <div className="flex min-w-0 flex-col gap-1">
+                  <div className="col-span-2 flex min-w-0 flex-col gap-1 sm:col-span-1">
                     <div className="relative">
                       <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500 text-sm">
                         ₹

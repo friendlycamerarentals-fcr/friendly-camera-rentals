@@ -155,8 +155,8 @@ export default function CreateManualRewardModal({ open, onClose, onCreated }) {
   }
 
   return (
-    <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/75 p-3 backdrop-blur-sm sm:p-5">
-      <div className="max-h-[94vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-white/10 bg-zinc-950 shadow-[0_0_60px_rgba(0,0,0,.45)]">
+    <div className="admin-modal-backdrop fixed inset-0 z-[110] flex items-center justify-center bg-black/75 p-3 backdrop-blur-sm sm:p-5">
+      <div className="admin-modal-panel w-full max-w-2xl overflow-y-auto rounded-2xl border border-white/10 bg-zinc-950 shadow-[0_0_60px_rgba(0,0,0,.45)]">
         <div className="flex items-start justify-between border-b border-white/10 px-5 py-4 sm:px-7 sm:py-5">
           <div>
             <h2 className="text-xl font-bold text-white sm:text-2xl">

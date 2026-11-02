@@ -24,7 +24,7 @@ export default function RewardPagination({
       </p>
 
       {/* Right */}
-      <div className="flex items-center gap-2">
+      <div className="flex max-w-full items-center gap-2 overflow-x-auto pb-2 sm:pb-0">
         {/* Previous */}
         <button
           onClick={() => onPageChange(currentPage - 1)}

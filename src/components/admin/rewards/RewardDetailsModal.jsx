@@ -28,12 +28,12 @@ export default function RewardDetailsModal({ open, onClose, reward }) {
     ["Cancelled", "Rejected"].includes(reward.lastAppliedRentalStatus);
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-5 backdrop-blur-sm">
-      <div className="relative max-h-[90vh] w-full max-w-4xl overflow-hidden rounded-2xl border border-white/10 bg-zinc-950 shadow-[0_0_60px_rgba(0,0,0,.45)]">
+    <div className="admin-modal-backdrop fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-3 backdrop-blur-sm sm:p-5">
+      <div className="admin-modal-panel relative flex w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-white/10 bg-zinc-950 shadow-[0_0_60px_rgba(0,0,0,.45)]">
         {/* Header */}
 
-        <div className="flex items-center justify-between border-b border-white/10 px-8 py-6">
-          <div>
+        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-white/10 px-4 py-4 sm:px-8 sm:py-6">
+          <div className="min-w-0">
             <h2 className="text-2xl font-bold text-white">Reward Details</h2>
 
             <p className="mt-1 text-sm text-zinc-500">
@@ -50,7 +50,7 @@ export default function RewardDetailsModal({ open, onClose, reward }) {
 
         {/* Body */}
 
-        <div className="max-h-[70vh] space-y-8 overflow-y-auto p-8">
+        <div className="min-h-0 space-y-8 overflow-y-auto p-4 sm:p-8">
           {/* Reward Information */}
 
           <div>

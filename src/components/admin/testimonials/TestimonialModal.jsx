@@ -116,13 +116,13 @@ export default function TestimonialModal({
           animate="visible"
           exit="hidden"
           variants={backdropVariants}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
+          className="admin-modal-backdrop fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-3 backdrop-blur-sm sm:p-4"
           onClick={onClose}
         >
           <motion.div
             variants={modalVariants}
             onClick={(e) => e.stopPropagation()}
-            className="relative w-full max-w-md rounded-2xl bg-white p-8 overflow-hidden"
+            className="admin-modal-panel relative w-full max-w-md overflow-y-auto rounded-2xl bg-white p-5 sm:p-8"
           >
             {/* Close Button */}
             <motion.button

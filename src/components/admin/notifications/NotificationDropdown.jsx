@@ -1,6 +1,7 @@
 "use client";
 
 import { Bell } from "lucide-react";
+import { createPortal } from "react-dom";
 import { useNotifications } from "@/context/NotificationContext";
 
 export default function NotificationDropdown() {
@@ -33,15 +34,14 @@ export default function NotificationDropdown() {
     }
   };
 
-  return (
-    /*
-     * Position strategy:
-     * - `right-0`  anchors to the bell button's right edge on all screens
-     * - `w-screen sm:w-96` fills viewport width on mobile, fixed 384px on sm+
-     * - `max-w-[calc(100vw-2rem)]` stops it from ever touching screen edges
-     * - No `left-0` so it doesn't over-extend to the left on mobile
-     */
-    <div className="absolute -right-18 top-12 z-999 w-screen max-w-[calc(100vw-2rem)] sm:w-96 sm:max-w-[384px] rounded-2xl border border-white/10 bg-zinc-950 shadow-[0_8px_40px_rgba(0,0,0,0.6)] overflow-hidden">
+  if (typeof document === "undefined") return null;
+
+  return createPortal(
+    <div
+      role="dialog"
+      aria-label="Notifications"
+      className="fixed right-[calc(1rem+env(safe-area-inset-right))] top-[calc(4rem+env(safe-area-inset-top))] z-[999] flex max-h-[calc(100dvh-5rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] w-[min(24rem,calc(100dvw-2rem-env(safe-area-inset-left)-env(safe-area-inset-right)))] flex-col overflow-hidden rounded-2xl border border-white/10 bg-zinc-950 shadow-[0_8px_40px_rgba(0,0,0,0.6)] md:top-[calc(5rem+env(safe-area-inset-top))]"
+    >
       {/* Header */}
       <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
         <div className="flex items-center gap-2">
@@ -74,7 +74,7 @@ export default function NotificationDropdown() {
           <p className="text-sm text-zinc-500">No notifications yet</p>
         </div>
       ) : (
-        <div className="max-h-[60vh] divide-y divide-white/5 overflow-y-auto">
+        <div className="min-h-0 divide-y divide-white/5 overflow-y-auto">
           {notifications.map((n) => (
             <div
               key={n.id}
@@ -120,6 +120,7 @@ export default function NotificationDropdown() {
           </button>
         </div>
       )}
-    </div>
+    </div>,
+    document.body,
   );
 }

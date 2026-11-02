@@ -279,7 +279,7 @@ export default function BuyProductForm({
       </div>
 
       {/* Images */}
-      <div className="rounded-2xl border border-white/10 bg-zinc-950 p-6">
+      <div className="rounded-2xl border border-white/10 bg-zinc-950 p-4 md:p-6">
         <h2 className="mb-6 text-xl font-semibold text-white">
           Product Images
         </h2>
@@ -293,7 +293,7 @@ export default function BuyProductForm({
       </div>
 
       {/* Purchase Price */}
-      <div className="rounded-2xl border border-white/10 bg-zinc-950 p-6">
+      <div className="rounded-2xl border border-white/10 bg-zinc-950 p-4 md:p-6">
         <h2 className="mb-6 text-xl font-semibold text-white">
           Purchase Price
         </h2>
@@ -316,7 +316,7 @@ export default function BuyProductForm({
       </div>
 
       {/* Specifications */}
-      <div className="rounded-2xl border border-white/10 bg-zinc-950 p-6">
+      <div className="rounded-2xl border border-white/10 bg-zinc-950 p-4 md:p-6">
         <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h2 className="text-xl font-semibold text-white">Specifications</h2>
 
@@ -368,7 +368,7 @@ export default function BuyProductForm({
       </div>
 
       {/* Accessories */}
-      <div className="rounded-2xl border border-white/10 bg-zinc-950 p-6">
+      <div className="rounded-2xl border border-white/10 bg-zinc-950 p-4 md:p-6">
         <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h2 className="text-xl font-semibold text-white">Accessories</h2>
 

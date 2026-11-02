@@ -16,11 +16,11 @@ export default function BuyProductModal({ open, onClose, product }) {
   const status = getStatus(product);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
-      <div className="max-h-[90vh] w-full max-w-5xl overflow-y-auto rounded-2xl border border-white/10 bg-zinc-950">
+    <div className="admin-modal-backdrop fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-3 sm:p-4">
+      <div className="admin-modal-panel w-full max-w-5xl overflow-y-auto rounded-2xl border border-white/10 bg-zinc-950">
         {/* Header */}
-        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-white/10 bg-zinc-950 p-6">
-          <h2 className="text-2xl font-bold text-white">Product Details</h2>
+        <div className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-white/10 bg-zinc-950 p-4 sm:p-6">
+          <h2 className="text-xl font-bold text-white sm:text-2xl">Product Details</h2>
 
           <button
             onClick={onClose}
@@ -30,7 +30,7 @@ export default function BuyProductModal({ open, onClose, product }) {
           </button>
         </div>
 
-        <div className="space-y-6 p-6">
+        <div className="space-y-6 p-4 sm:p-6">
           {/* Images */}
           <div>
             <h3 className="mb-4 text-lg font-semibold text-white">
@@ -56,7 +56,7 @@ export default function BuyProductModal({ open, onClose, product }) {
           </div>
 
           {/* Basic Details */}
-          <div className="rounded-2xl border border-white/10 bg-black/20 p-6">
+          <div className="rounded-2xl border border-white/10 bg-black/20 p-4 sm:p-6">
             <h3 className="mb-6 text-lg font-semibold text-white">
               Product Information
             </h3>
@@ -85,7 +85,7 @@ export default function BuyProductModal({ open, onClose, product }) {
 
           {/* Description */}
           {product.description && (
-            <div className="rounded-2xl border border-white/10 bg-black/20 p-6">
+            <div className="rounded-2xl border border-white/10 bg-black/20 p-4 sm:p-6">
               <h3 className="mb-4 text-lg font-semibold text-white">
                 Description
               </h3>
@@ -112,7 +112,7 @@ export default function BuyProductModal({ open, onClose, product }) {
 
             return (
               specifications.length > 0 && (
-                <div className="rounded-2xl border border-white/10 bg-black/20 p-6">
+                <div className="rounded-2xl border border-white/10 bg-black/20 p-4 sm:p-6">
                   <h3 className="mb-4 text-lg font-semibold text-white">
                     Specifications
                   </h3>

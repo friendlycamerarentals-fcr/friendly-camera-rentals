@@ -42,9 +42,9 @@ export default function SellRequestModal({
   if (!open || !request) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
-      <div className="max-h-[90vh] w-full max-w-7xl overflow-y-auto rounded-2xl border border-white/10 bg-zinc-950 shadow-2xl">
-        <div className="sticky top-0 z-20 flex items-center justify-between border-b border-white/10 bg-zinc-950/95 p-6 backdrop-blur-md">
+    <div className="admin-modal-backdrop fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-3 sm:p-4">
+      <div className="admin-modal-panel w-full max-w-7xl overflow-y-auto rounded-2xl border border-white/10 bg-zinc-950 shadow-2xl">
+        <div className="sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-white/10 bg-zinc-950/95 p-4 sm:p-6 backdrop-blur-md">
           <div>
             <h2 className="text-2xl font-bold text-white">
               Sell Request Details
@@ -63,7 +63,7 @@ export default function SellRequestModal({
           </button>
         </div>
 
-        <div className="grid gap-6 p-6 lg:grid-cols-[1.3fr_0.9fr]">
+        <div className="grid min-w-0 gap-4 p-4 sm:gap-6 sm:p-6 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,0.9fr)]">
           {/* Gallery */}
           <section className="space-y-5 rounded-2xl border border-white/10 bg-black/20 p-5">
             <div className="flex items-center justify-between gap-4">
@@ -281,12 +281,12 @@ export default function SellRequestModal({
       <AnimatePresence>
         {isFullViewOpen && images.length > 0 && (
           <motion.div
-            className="fixed inset-0 z-60 flex items-center justify-center bg-black/90 p-4"
+            className="admin-modal-backdrop fixed inset-0 z-60 flex items-center justify-center bg-black/90 p-3 sm:p-4"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
           >
-            <div className="relative h-full w-full max-w-5xl overflow-hidden rounded-[32px] border border-white/10 bg-zinc-950 shadow-2xl">
+            <div className="admin-modal-panel relative h-full w-full max-w-5xl overflow-hidden rounded-2xl border border-white/10 bg-zinc-950 shadow-2xl sm:rounded-[32px]">
               <button
                 type="button"
                 onClick={() => setIsFullViewOpen(false)}
