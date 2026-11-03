@@ -45,12 +45,12 @@ export default function CustomersPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-white">Customers</h1>
+        <h1 className="text-2xl font-bold text-white sm:text-3xl">Customers</h1>
 
-        <p className="mt-2 text-zinc-500">
+        <p className="mt-1 text-sm text-zinc-500 sm:mt-2 sm:text-base">
           View and manage all registered customers.
         </p>
       </div>
@@ -67,7 +67,7 @@ export default function CustomersPage() {
           placeholder="Search by Name, Customer ID or Phone Number..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full rounded-2xl border border-white/10 bg-zinc-950 py-4 pl-12 pr-4 text-white outline-none focus:border-[#F5A623]"
+          className="w-full rounded-2xl border border-white/10 bg-zinc-950 py-3 pl-12 pr-4 text-white outline-none focus:border-[#F5A623] sm:py-4"
         />
       </div>
 
@@ -83,7 +83,7 @@ export default function CustomersPage() {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-2 gap-x-3 gap-y-2 md:gap-6 lg:grid-cols-3">
           {filteredCustomers.map((customer) => (
             <CustomerCard
               key={customer.id}
