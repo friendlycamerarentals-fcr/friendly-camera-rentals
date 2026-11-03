@@ -342,6 +342,16 @@ npm start
 - Approve or reject testimonials
 - Control testimonial display on the site
 
+### Dashboard Recent Activity
+
+- The admin dashboard combines recent rental bookings, pending testimonials,
+  sell requests, and recorded buy-product sold events.
+- Apply the additive `BuyProductSoldEvent` table and index block at the bottom
+  of `database/migrations.sql` in the intended PostgreSQL database before
+  deploying the activity API. Do not execute unrelated migration statements
+  as part of this step.
+- Fresh installations receive the same table from `database/init.sql`.
+
 ### Product Ordering (Drag & Drop)
 
 - Reorder rental and buy products in admin
@@ -376,6 +386,7 @@ npm start
 | `/api/upload`                  | Upload and delete images           |
 | `/api/admin/login`             | Admin login                        |
 | `/api/admin/logout`            | Admin logout                       |
+| `/api/admin/dashboard/activity` | Authenticated recent dashboard activity |
 
 ---
 

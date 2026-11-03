@@ -26,9 +26,7 @@ export async function getClient() {
   return client;
 }
 
-export async function transaction(callback) {
-  const client = await getClient();
-
+export async function runTransactionWithClient(client, callback) {
   try {
     await executeQuery(client, "BEGIN");
     const result = await callback(client);
@@ -44,6 +42,14 @@ export async function transaction(callback) {
     }
 
     throw error;
+  }
+}
+
+export async function transaction(callback) {
+  const client = await getClient();
+
+  try {
+    return await runTransactionWithClient(client, callback);
   } finally {
     client.release();
   }

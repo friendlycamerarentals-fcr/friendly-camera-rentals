@@ -292,3 +292,18 @@ END $$;
 
 CREATE INDEX IF NOT EXISTS "idx_reward_customer_record_id"
   ON "Reward" ("customerRecordId");
+
+-- 2026-11-03: Persist actual transitions of buy products to Sold.
+-- Deliberately has no foreign key so the event remains available if a product
+-- is later removed from the catalog.
+CREATE TABLE IF NOT EXISTS "BuyProductSoldEvent" (
+    "id"             TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    "productId"      TEXT NOT NULL,
+    "productName"    TEXT NOT NULL,
+    "previousStatus" TEXT NOT NULL,
+    "newStatus"      TEXT NOT NULL,
+    "occurredAt"     TIMESTAMP(3) NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS "idx_buyproductsold_event_occurred_at"
+  ON "BuyProductSoldEvent" ("occurredAt" DESC, "id" DESC);

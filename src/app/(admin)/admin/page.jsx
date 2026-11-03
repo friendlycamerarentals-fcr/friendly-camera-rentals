@@ -10,6 +10,7 @@ import {
 
 import { query } from "@/db/query";
 import StatsCard from "@/components/admin/StatsCard";
+import RecentActivity from "@/components/admin/RecentActivity";
 
 export const revalidate = 0;
 
@@ -114,28 +115,7 @@ export default async function AdminDashboard() {
         ))}
       </div>
 
-      {/* Recent Activity */}
-      <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-8 backdrop-blur-xl">
-        <h2 className="text-2xl font-semibold text-white">Recent Activity</h2>
-
-        <div className="mt-6 space-y-4">
-          <div className="rounded-2xl bg-white/5 p-4 text-zinc-300">
-            📸 New rental booking received
-          </div>
-
-          <div className="rounded-2xl bg-white/5 p-4 text-zinc-300">
-            ⭐ New testimonial awaiting approval
-          </div>
-
-          <div className="rounded-2xl bg-white/5 p-4 text-zinc-300">
-            💰 New sell request submitted
-          </div>
-
-          <div className="rounded-2xl bg-white/5 p-4 text-zinc-300">
-            🛍️ Product marked as sold
-          </div>
-        </div>
-      </div>
+      <RecentActivity />
     </div>
   );
 }

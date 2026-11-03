@@ -58,6 +58,9 @@ CREATE TABLE IF NOT EXISTS "RentalProduct" (
     "createdAt"      TIMESTAMP(3) NOT NULL DEFAULT now(),
     "updatedAt"      TIMESTAMP(3) NOT NULL DEFAULT now(),
     "rentalPrice"    JSONB,
+    "specifications" JSONB,
+    "display_order"  INTEGER NOT NULL DEFAULT 0
+);
 
 -- ----------------------------------------------------------------------------
 -- AdminNotification
@@ -72,9 +75,6 @@ CREATE TABLE IF NOT EXISTS "AdminNotification" (
     "read"        BOOLEAN NOT NULL DEFAULT FALSE,
     "createdAt"   TIMESTAMP(3) NOT NULL DEFAULT now(),
     "updatedAt"   TIMESTAMP(3) NOT NULL DEFAULT now()
-);
-    "specifications" JSONB,
-    "display_order"  INTEGER NOT NULL DEFAULT 0
 );
 
 -- ----------------------------------------------------------------------------
@@ -822,3 +822,17 @@ END $$;
 
 CREATE INDEX IF NOT EXISTS "idx_reward_customer_record_id"
   ON "Reward" ("customerRecordId");
+
+-- Actual future transitions to Sold; intentionally retained if the product
+-- is later removed from the catalog.
+CREATE TABLE IF NOT EXISTS "BuyProductSoldEvent" (
+    "id"             TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    "productId"      TEXT NOT NULL,
+    "productName"    TEXT NOT NULL,
+    "previousStatus" TEXT NOT NULL,
+    "newStatus"      TEXT NOT NULL,
+    "occurredAt"     TIMESTAMP(3) NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS "idx_buyproductsold_event_occurred_at"
+  ON "BuyProductSoldEvent" ("occurredAt" DESC, "id" DESC);
