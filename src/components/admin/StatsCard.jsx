@@ -1,14 +1,19 @@
 import { TrendingUp } from "lucide-react";
+import AdminGradientStatCard from "./AdminGradientStatCard";
 
 export default function StatsCard({
   title,
   value,
   icon: Icon,
+  tone = "amber",
   color = "#F5A623",
   change = "+12%",
 }) {
   return (
-    <div className="group h-full min-w-0 cursor-pointer rounded-2xl border border-white/10 bg-white/[0.03] p-3 backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:border-[#F5A623]/30 hover:shadow-[0_0_40px_rgba(245,166,35,0.12)] sm:p-4 md:p-6">
+    <AdminGradientStatCard
+      tone={tone}
+      className="h-full min-w-0 cursor-pointer p-3 sm:p-4 md:p-6"
+    >
       <div className="flex items-start justify-between gap-2 sm:gap-4">
         <div className="min-w-0">
           <p className="text-[11px] text-zinc-400 sm:text-xs md:text-sm">{title}</p>
@@ -33,6 +38,6 @@ export default function StatsCard({
           <Icon size={16} className="sm:size-5 md:size-7" />
         </div>
       </div>
-    </div>
+    </AdminGradientStatCard>
   );
 }

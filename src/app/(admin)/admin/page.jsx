@@ -44,6 +44,7 @@ export default async function AdminDashboard() {
       value: String(rentalsCount),
       icon: Camera,
       color: "#F5A623",
+      tone: "amber",
       change: "Active Products",
     },
     {
@@ -51,6 +52,7 @@ export default async function AdminDashboard() {
       value: String(buyProductsCount),
       icon: ShoppingBag,
       color: "#3B82F6",
+      tone: "blue",
       change: "Available Items",
     },
     {
@@ -58,6 +60,7 @@ export default async function AdminDashboard() {
       value: String(sellRequestsCount),
       icon: IndianRupee,
       color: "#22C55E",
+      tone: "green",
       change: "Total Enquiries",
     },
     {
@@ -65,6 +68,7 @@ export default async function AdminDashboard() {
       value: String(bookingsCount),
       icon: CalendarDays,
       color: "#A855F7",
+      tone: "purple",
       change: "Total Bookings",
     },
     {
@@ -72,6 +76,7 @@ export default async function AdminDashboard() {
       value: String(testimonialsCount),
       icon: Star,
       color: "#F59E0B",
+      tone: "gold",
       change: "Total Reviews",
     },
     {
@@ -79,6 +84,7 @@ export default async function AdminDashboard() {
       value: String(customersCount),
       icon: Users,
       color: "#EF4444",
+      tone: "red",
       change: "Registered",
     },
     {
@@ -86,6 +92,7 @@ export default async function AdminDashboard() {
       value: String(rewardsCount),
       icon: Gift,
       color: "#F5A623",
+      tone: "amber",
       change: "Rewards Generated",
     },
   ];
@@ -109,6 +116,7 @@ export default async function AdminDashboard() {
             title={item.title}
             value={item.value}
             icon={item.icon}
+            tone={item.tone}
             color={item.color}
             change={item.change}
           />

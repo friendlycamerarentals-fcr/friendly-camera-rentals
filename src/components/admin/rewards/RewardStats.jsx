@@ -27,6 +27,7 @@ export default function RewardStats({
         value={stats.total}
         subtitle="Rewards Generated"
         icon={Gift}
+        tone="amber"
       />
 
       <RewardCard
@@ -35,8 +36,7 @@ export default function RewardStats({
         subtitle="Available for Customers"
         icon={BadgeCheck}
         color="text-emerald-400"
-        bg="bg-emerald-500/10"
-        border="border-emerald-500/20"
+        tone="emerald"
       />
 
       <RewardCard
@@ -44,9 +44,8 @@ export default function RewardStats({
         value={stats.applied}
         subtitle="Reserved pending redemption"
         icon={WalletCards}
-        color="text-amber-400"
-        bg="bg-amber-500/10"
-        border="border-amber-500/20"
+        color="text-yellow-400"
+        tone="yellow"
       />
 
       <RewardCard
@@ -55,8 +54,7 @@ export default function RewardStats({
         subtitle="Successfully Redeemed"
         icon={CheckCircle2}
         color="text-blue-400"
-        bg="bg-blue-500/10"
-        border="border-blue-500/20"
+        tone="blue"
       />
 
       <RewardCard
@@ -65,8 +63,7 @@ export default function RewardStats({
         subtitle="All reward amounts"
         icon={Banknote}
         color="text-[#F5A623]"
-        bg="bg-[#F5A623]/10"
-        border="border-[#F5A623]/20"
+        tone="gold"
       />
 
       <RewardCard
@@ -75,8 +72,7 @@ export default function RewardStats({
         subtitle="Reward Validity Ended"
         icon={Clock3}
         color="text-red-400"
-        bg="bg-red-500/10"
-        border="border-red-500/20"
+        tone="red"
       />
     </div>
   );

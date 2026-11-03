@@ -8,6 +8,7 @@ import {
   XCircle,
   RotateCcw,
 } from "lucide-react";
+import AdminGradientStatCard from "@/components/admin/AdminGradientStatCard";
 
 export default function RentalStats({ bookings = [] }) {
   const totalBookings = bookings.length;
@@ -32,42 +33,49 @@ export default function RentalStats({ bookings = [] }) {
       value: totalBookings,
       icon: Camera,
       color: "text-[#F5A623]",
+      tone: "amber",
     },
     {
       title: "Pending",
       value: pending,
       icon: Clock3,
       color: "text-yellow-400",
+      tone: "yellow",
     },
     {
       title: "Confirmed",
       value: confirmed,
       icon: CheckCircle,
       color: "text-blue-400",
+      tone: "blue",
     },
     {
       title: "Completed",
       value: completed,
       icon: RotateCcw,
       color: "text-green-400",
+      tone: "green",
     },
     {
       title: "Cancelled",
       value: cancelled,
       icon: XCircle,
       color: "text-red-400",
+      tone: "red",
     },
     {
       title: "Rejected",
       value: rejected,
       icon: XCircle,
       color: "text-red-300",
+      tone: "rose",
     },
     {
       title: "Revenue",
       value: `₹${revenue.toLocaleString()}`,
       icon: IndianRupee,
       color: "text-emerald-400",
+      tone: "emerald",
     },
   ];
 
@@ -77,9 +85,10 @@ export default function RentalStats({ bookings = [] }) {
         const Icon = stat.icon;
 
         return (
-          <div
+          <AdminGradientStatCard
             key={stat.title}
-            className="rounded-2xl border border-white/10 bg-zinc-950 p-3 md:p-5 transition-all duration-300 hover:border-[#F5A623]/20 hover:bg-zinc-900 cursor-pointer"
+            tone={stat.tone}
+            className="cursor-pointer p-3 md:p-5"
           >
             <div className="flex items-center justify-between gap-2">
               <div className="min-w-0">
@@ -93,12 +102,12 @@ export default function RentalStats({ bookings = [] }) {
               </div>
 
               <div
-                className={`flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-xl md:rounded-2xl bg-white/5 ${stat.color}`}
+                className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/5 md:h-12 md:w-12 md:rounded-2xl"
               >
-                <Icon size={16} className="md:h-5 md:w-5" />
+                <Icon size={16} className={`md:h-5 md:w-5 ${stat.color}`} />
               </div>
             </div>
-          </div>
+          </AdminGradientStatCard>
         );
       })}
     </div>
