@@ -7,6 +7,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { toast } from "sonner";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
+import { lockBodyScroll } from "@/lib/bodyScrollLock";
 
 const LOGIN_TIMEOUT_MS = 45_000;
 
@@ -17,10 +18,8 @@ export default function LoginModal({ open, onClose, onLoginSuccess }) {
 
   // Lock body scroll while modal is open
   useEffect(() => {
-    document.body.style.overflow = open ? "hidden" : "";
-    return () => {
-      document.body.style.overflow = "";
-    };
+    if (!open) return;
+    return lockBodyScroll();
   }, [open]);
 
   const handleClose = () => {

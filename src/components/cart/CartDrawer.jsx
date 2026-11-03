@@ -4,13 +4,21 @@ import Image from "next/image";
 import { toast } from "sonner";
 import { usePathname, useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
-import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { FaWhatsapp } from "react-icons/fa";
 import { FiShoppingBag, FiX, FiArrowRight, FiArrowLeft } from "react-icons/fi";
 import { useAuth } from "@/context/AuthContext";
 import { useCart } from "@/context/CartContext";
 import { useBookingFlow } from "@/context/BookingFlowContext";
+import { lockBodyScroll } from "@/lib/bodyScrollLock";
 import CartItem from "./CartItem";
 
 const fieldCls =
@@ -93,6 +101,9 @@ const formatDuration = (duration) => {
 
 const BOOKING_DRAFT_KEY = "fcr-booking-draft";
 const PROFILE_REDIRECT_SOURCE_KEY = "fcr-profile-redirect-source";
+const subscribeToMount = () => () => {};
+const getMountedSnapshot = () => true;
+const getServerMountedSnapshot = () => false;
 
 const readBookingDraft = () => {
   if (typeof window === "undefined") return null;
@@ -125,6 +136,11 @@ export default function CartDrawer({ open, onClose }) {
     useBookingFlow();
   const router = useRouter();
   const pathname = usePathname();
+  const hasMounted = useSyncExternalStore(
+    subscribeToMount,
+    getMountedSnapshot,
+    getServerMountedSnapshot,
+  );
 
   const userEmail = user?.email || "";
 
@@ -577,10 +593,8 @@ export default function CartDrawer({ open, onClose }) {
   };
 
   useEffect(() => {
-    document.body.style.overflow = open ? "hidden" : "";
-    return () => {
-      document.body.style.overflow = "";
-    };
+    if (!open) return;
+    return lockBodyScroll();
   }, [open]);
 
   // ✅ Booking modal rendered via Portal — completely outside parent DOM tree
@@ -957,92 +971,102 @@ export default function CartDrawer({ open, onClose }) {
       )
     : null;
 
-  return (
-    <>
-      <AnimatePresence>
-        {/* ── Cart Drawer ── */}
-        {showDrawer && (
-          <Fragment key="cart-drawer">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={onClose}
-              className="fixed inset-0 z-[998] bg-black/60 backdrop-blur-sm"
-            />
-            <motion.div
-              initial={{ x: "100%" }}
-              animate={{ x: 0 }}
-              exit={{ x: "100%" }}
-              transition={{ type: "spring", damping: 30 }}
-              className="fixed right-0 top-0 z-[999] flex h-screen w-full max-w-md flex-col border-l border-white/10 bg-black"
-            >
-              <div className="flex items-center justify-between border-b border-white/10 p-5 sm:p-6">
-                <h2 className="text-xl font-semibold text-white sm:text-2xl">
-                  Your Cart
-                </h2>
-                <button
-                  onClick={onClose}
-                  aria-label="Close cart"
-                  className="cursor-pointer rounded-full p-2 text-zinc-400 transition hover:bg-white/10 hover:text-white"
-                >
-                  <FiX size={22} />
-                </button>
-              </div>
-
-              <div className="flex-1 overflow-y-auto p-4 sm:p-5">
-                {cart.length === 0 ? (
-                  <div className="flex h-full flex-col items-center justify-center text-center">
-                    <FiShoppingBag size={70} className="text-zinc-700" />
-                    <h3 className="mt-5 text-xl font-semibold text-white sm:text-2xl">
-                      Your cart is empty
-                    </h3>
-                    <p className="mt-2 text-sm text-zinc-400">
-                      Add rental equipment to continue.
-                    </p>
-                    <button
-                      onClick={() => {
-                        onClose();
-                        setTimeout(() => router.push("/rental"), 200);
-                      }}
-                      className="mt-6 cursor-pointer rounded-full border border-white/10 px-6 py-3 text-sm text-white transition hover:border-[#F5A623] hover:text-[#F5A623]"
-                    >
-                      Continue Browsing
-                    </button>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {cart.map((item, index) => (
-                      <CartItem
-                        key={`${item.id || "item"}-${item.duration || "duration"}-${index}`}
-                        item={item}
-                        onRemove={() => removeFromCart(item.id, item.duration)}
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {cart.length > 0 && (
-                <div className="border-t mb-30 md:mb-2 border-white/10 p-4 sm:p-5">
-                  <div className="mb-4 flex items-center justify-between">
-                    <span className="text-zinc-400">Total</span>
-                    <span className="text-2xl font-bold text-amber-400 sm:text-3xl">
-                      ₹{total.toLocaleString("en-IN")}
-                    </span>
-                  </div>
+  const cartDrawer = hasMounted
+    ? createPortal(
+        <AnimatePresence>
+          {showDrawer && (
+            <Fragment key="cart-drawer">
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={onClose}
+                className="fixed inset-0 z-[998] bg-black/60 backdrop-blur-sm"
+              />
+              <motion.div
+                initial={{ x: "100%" }}
+                animate={{ x: 0 }}
+                exit={{ x: "100%" }}
+                transition={{ type: "spring", damping: 30 }}
+                className="fixed inset-0 z-[999] flex h-dvh w-dvw min-h-0 flex-col overflow-hidden border-l border-white/10 bg-black md:inset-y-0 md:left-auto md:right-0 md:w-full md:max-w-md"
+              >
+                <div className="flex shrink-0 items-center justify-between border-b border-white/10 p-5 pt-[calc(1.25rem+env(safe-area-inset-top))] pl-[calc(1.25rem+env(safe-area-inset-left))] pr-[calc(1.25rem+env(safe-area-inset-right))] sm:p-6 sm:pt-[calc(1.5rem+env(safe-area-inset-top))] sm:pl-[calc(1.5rem+env(safe-area-inset-left))] sm:pr-[calc(1.5rem+env(safe-area-inset-right))]">
+                  <h2 className="text-xl font-semibold text-white sm:text-2xl">
+                    Your Cart
+                  </h2>
                   <button
-                    onClick={handleBookingStart}
-                    className="flex w-full cursor-pointer items-center justify-center gap-3 rounded-2xl bg-green-500 py-4 font-semibold text-white transition hover:bg-green-600 active:scale-[0.98]"
+                    onClick={onClose}
+                    aria-label="Close cart"
+                    className="cursor-pointer rounded-full p-2 text-zinc-400 transition hover:bg-white/10 hover:text-white"
                   >
-                    <FaWhatsapp size={20} /> Book Rent via WhatsApp
+                    <FiX size={22} />
                   </button>
                 </div>
-              )}
-            </motion.div>
-          </Fragment>
-        )}
-      </AnimatePresence>
+
+                <div
+                  className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain p-4 pl-[calc(1rem+env(safe-area-inset-left))] pr-[calc(1rem+env(safe-area-inset-right))] [touch-action:pan-y] [-webkit-overflow-scrolling:touch] sm:p-5 sm:pl-[calc(1.25rem+env(safe-area-inset-left))] sm:pr-[calc(1.25rem+env(safe-area-inset-right))]"
+                >
+                  {cart.length === 0 ? (
+                    <div className="flex h-full flex-col items-center justify-center text-center">
+                      <FiShoppingBag size={70} className="text-zinc-700" />
+                      <h3 className="mt-5 text-xl font-semibold text-white sm:text-2xl">
+                        Your cart is empty
+                      </h3>
+                      <p className="mt-2 text-sm text-zinc-400">
+                        Add rental equipment to continue.
+                      </p>
+                      <button
+                        onClick={() => {
+                          onClose();
+                          setTimeout(() => router.push("/rental"), 200);
+                        }}
+                        className="mt-6 cursor-pointer rounded-full border border-white/10 px-6 py-3 text-sm text-white transition hover:border-[#F5A623] hover:text-[#F5A623]"
+                      >
+                        Continue Browsing
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {cart.map((item, index) => (
+                        <CartItem
+                          key={`${item.id || "item"}-${item.duration || "duration"}-${index}`}
+                          item={item}
+                          onRemove={() =>
+                            removeFromCart(item.id, item.duration)
+                          }
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {cart.length > 0 && (
+                  <div className="shrink-0 border-t border-white/10 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pl-[calc(1rem+env(safe-area-inset-left))] pr-[calc(1rem+env(safe-area-inset-right))] sm:p-5 sm:pb-[calc(1.25rem+env(safe-area-inset-bottom))] sm:pl-[calc(1.25rem+env(safe-area-inset-left))] sm:pr-[calc(1.25rem+env(safe-area-inset-right))]">
+                    <div className="mb-4 flex items-center justify-between">
+                      <span className="text-zinc-400">Total</span>
+                      <span className="text-2xl font-bold text-amber-400 sm:text-3xl">
+                        ₹{total.toLocaleString("en-IN")}
+                      </span>
+                    </div>
+                    <button
+                      onClick={handleBookingStart}
+                      className="flex w-full cursor-pointer items-center justify-center gap-3 rounded-2xl bg-green-500 py-4 font-semibold text-white transition hover:bg-green-600 active:scale-[0.98]"
+                    >
+                      <FaWhatsapp size={20} /> Book Rent via WhatsApp
+                    </button>
+                  </div>
+                )}
+              </motion.div>
+            </Fragment>
+          )}
+        </AnimatePresence>,
+        document.body,
+      )
+    : null;
+
+  return (
+    <>
+      {cartDrawer}
 
       {/* ✅ Portal-rendered booking modal — outside parent DOM entirely */}
       {bookingModal}
