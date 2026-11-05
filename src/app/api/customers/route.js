@@ -198,11 +198,6 @@ export async function POST(request) {
       });
     }
 
-    console.info("[CUSTOMER_SYNC]", {
-      outcome: customer.created ? "created" : "existing",
-      hasCustomerId: Boolean(customer.customer?.customerId),
-    });
-
     return NextResponse.json(
       {
         success: true,

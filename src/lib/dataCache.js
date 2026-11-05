@@ -64,11 +64,9 @@ export function getCachedValue(cacheKey) {
   const entry = getCacheEntry(normalizedCacheKey);
 
   if (entry) {
-    console.info("[CACHE] hit", { cacheKey: normalizedCacheKey });
     return entry.value;
   }
 
-  console.info("[CACHE] miss", { cacheKey: normalizedCacheKey });
   return null;
 }
 

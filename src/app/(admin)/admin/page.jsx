@@ -40,6 +40,14 @@ export default async function AdminDashboard() {
 
   const stats = [
     {
+      title: "Bookings",
+      value: String(bookingsCount),
+      icon: CalendarDays,
+      color: "#A855F7",
+      tone: "purple",
+      change: "Total Bookings",
+    },
+    {
       title: "Rentals",
       value: String(rentalsCount),
       icon: Camera,
@@ -64,22 +72,6 @@ export default async function AdminDashboard() {
       change: "Total Enquiries",
     },
     {
-      title: "Bookings",
-      value: String(bookingsCount),
-      icon: CalendarDays,
-      color: "#A855F7",
-      tone: "purple",
-      change: "Total Bookings",
-    },
-    {
-      title: "Testimonials",
-      value: String(testimonialsCount),
-      icon: Star,
-      color: "#F59E0B",
-      tone: "gold",
-      change: "Total Reviews",
-    },
-    {
       title: "Customers",
       value: String(customersCount),
       icon: Users,
@@ -91,9 +83,17 @@ export default async function AdminDashboard() {
       title: "Rewards",
       value: String(rewardsCount),
       icon: Gift,
-      color: "#F5A623",
-      tone: "amber",
+      color: "#C084FC",
+      tone: "violet",
       change: "Rewards Generated",
+    },
+    {
+      title: "Testimonials",
+      value: String(testimonialsCount),
+      icon: Star,
+      color: "#F59E0B",
+      tone: "gold",
+      change: "Total Reviews",
     },
   ];
 

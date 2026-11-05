@@ -19,6 +19,11 @@ const TONE_STYLES = {
     border: "border-violet-500/20 hover:border-violet-400/40",
     glow: "bg-violet-500/10",
   },
+  violet: {
+    background: "from-purple-500/20 to-fuchsia-500/10",
+    border: "border-purple-500/20 hover:border-fuchsia-400/40",
+    glow: "bg-purple-500/10",
+  },
   red: {
     background: "from-red-500/20 to-rose-500/10",
     border: "border-red-500/20 hover:border-red-400/40",
