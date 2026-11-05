@@ -1,6 +1,7 @@
 "use client";
 
 import { Package, CheckCircle2, XCircle } from "lucide-react";
+import AdminGradientStatCard from "@/components/admin/AdminGradientStatCard";
 
 export default function BuyProductStats({ products = [] }) {
   const totalProducts = products.length;
@@ -19,6 +20,7 @@ export default function BuyProductStats({ products = [] }) {
       value: totalProducts,
       icon: Package,
       color: "text-[#F5A623]",
+      tone: "amber",
       bg: "bg-[#F5A623]/10",
     },
     {
@@ -26,6 +28,7 @@ export default function BuyProductStats({ products = [] }) {
       value: availableProducts,
       icon: CheckCircle2,
       color: "text-green-400",
+      tone: "green",
       bg: "bg-green-500/10",
     },
     {
@@ -33,6 +36,7 @@ export default function BuyProductStats({ products = [] }) {
       value: unavailableProducts,
       icon: XCircle,
       color: "text-red-400",
+      tone: "red",
       bg: "bg-red-500/10",
     },
   ];
@@ -43,9 +47,10 @@ export default function BuyProductStats({ products = [] }) {
         const Icon = stat.icon;
 
         return (
-          <div
+          <AdminGradientStatCard
             key={stat.title}
-            className="rounded-2xl border border-white/10 bg-zinc-950 p-3 md:p-5 transition-all duration-300 hover:border-[#F5A623]/20 hover:bg-zinc-900"
+            tone={stat.tone}
+            className="p-3 md:p-5"
           >
             <div className="flex items-center justify-between gap-3">
               <div className="min-w-0">
@@ -57,14 +62,13 @@ export default function BuyProductStats({ products = [] }) {
                   {stat.value}
                 </h3>
               </div>
-
               <div
                 className={`flex h-10 w-10 items-center justify-center rounded-xl md:h-12 md:w-12 md:rounded-2xl ${stat.bg}`}
               >
                 <Icon size={18} className={stat.color} />
               </div>
             </div>
-          </div>
+          </AdminGradientStatCard>
         );
       })}
     </div>

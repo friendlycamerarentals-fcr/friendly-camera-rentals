@@ -81,6 +81,40 @@ function mapBookingsByDate(bookings) {
   }, {});
 }
 
+function getCalendarStatusStyle(dayBookings, selected) {
+  const statusOrder = Object.keys(STATUS_STYLES);
+  const statuses = [
+    ...new Set(
+      dayBookings.map((booking) =>
+        statusOrder.includes(booking.status) ? booking.status : "Pending",
+      ),
+    ),
+  ].sort((a, b) => statusOrder.indexOf(a) - statusOrder.indexOf(b));
+
+  if (statuses.length === 0) return {};
+
+  const backgroundImage =
+    statuses.length === 1
+      ? `linear-gradient(135deg, ${STATUS_STYLES[statuses[0]].soft}, rgba(9, 9, 11, 0.94))`
+      : `linear-gradient(135deg, ${statuses
+          .map(
+            (status, index) =>
+              `${STATUS_STYLES[status].soft} ${(index / (statuses.length - 1)) * 100}%`,
+          )
+          .join(", ")})`;
+
+  return {
+    backgroundImage,
+    borderColor: selected
+      ? "rgba(245, 166, 35, 0.72)"
+      : STATUS_STYLES[statuses[0]].soft,
+    boxShadow: [
+      ...statuses.map((status) => `0 0 12px ${STATUS_STYLES[status].soft}`),
+      ...(selected ? ["0 0 16px rgba(245, 166, 35, 0.2)"] : []),
+    ].join(", "),
+  };
+}
+
 export default function BookingsPage() {
   const today = new Date();
   const [currentMonth, setCurrentMonth] = useState(
@@ -267,6 +301,7 @@ export default function BookingsPage() {
               selectedDate.getFullYear() === date.getFullYear() &&
               selectedDate.getMonth() === date.getMonth() &&
               selectedDate.getDate() === cell.day;
+            const statusStyle = getCalendarStatusStyle(dayBookings, selected);
 
             return (
               <button
@@ -278,6 +313,7 @@ export default function BookingsPage() {
                     ? "border-[#F5A623]/60 bg-[#F5A623]/10"
                     : "border-white/5 bg-zinc-950/70 hover:bg-white/5"
                 } ${!isCurrentMonth ? "opacity-40" : ""}`}
+                style={statusStyle}
               >
                 <span
                   className={`mt-1 inline-flex h-10 w-10 items-center justify-center rounded-full text-sm font-medium md:text-base ${

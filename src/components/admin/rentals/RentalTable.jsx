@@ -219,28 +219,28 @@ export default function RentalTable({
                     <button
                       onClick={() => onView(booking)}
                       title="View details"
-                      className="cursor-pointer rounded-xl border border-white/10 p-2 text-white transition hover:bg-white/10"
+                      className="cursor-pointer rounded-xl border border-white/10 bg-gradient-to-br from-white/[0.08] to-white/[0.02] p-2 text-white transition hover:bg-white/10"
                     >
                       <Eye size={16} />
                     </button>
                     <a
                       href={`tel:${booking.phone}`}
                       title="Call"
-                      className="rounded-xl border border-white/10 p-2 text-green-400 transition hover:bg-green-500/10"
+                      className="rounded-xl border border-white/10 bg-gradient-to-br from-green-500/20 to-emerald-500/10 p-2 text-green-400 transition hover:bg-green-500/10"
                     >
                       <Phone size={16} />
                     </a>
                     <button
                       onClick={() => (onWhatsApp ? onWhatsApp(booking) : openRentalWhatsApp(booking))}
                       title={booking.status === "Confirmed" ? "Confirmed-booking WhatsApp message" : "Request status WhatsApp message"}
-                      className="rounded-xl border border-white/10 p-2 text-green-500 transition hover:bg-green-500/10"
+                      className="rounded-xl border border-white/10 bg-gradient-to-br from-green-500/20 to-emerald-500/10 p-2 text-green-500 transition hover:bg-green-500/10"
                     >
                       <FaWhatsapp size={16} />
                     </button>
                     <button
                       onClick={() => deleteBooking(booking.id)}
                       title="Delete"
-                      className="rounded-xl border border-white/10 p-2 text-red-400 transition hover:bg-red-500/10"
+                      className="rounded-xl border border-white/10 bg-gradient-to-br from-red-500/20 to-rose-500/10 p-2 text-red-400 transition hover:bg-red-500/10"
                     >
                       <Trash2 size={16} />
                     </button>

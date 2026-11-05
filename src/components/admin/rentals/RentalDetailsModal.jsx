@@ -267,14 +267,14 @@ export default function RentalDetailsModal({
                 <div className="mt-4 flex flex-col gap-2 sm:flex-row">
                   <button
                     onClick={handleCall}
-                    className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-white/10 px-4 py-2 text-sm text-white transition hover:bg-white/5 cursor-pointer"
+                    className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-white/10 bg-gradient-to-br from-green-500/20 to-emerald-500/10 px-4 py-2 text-sm text-white transition hover:bg-white/5 cursor-pointer"
                   >
                     <Phone size={15} />
                     Call
                   </button>
                   <button
                     onClick={handleWhatsApp}
-                    className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-green-600 px-4 py-2 text-sm text-white transition hover:bg-green-700 cursor-pointer"
+                    className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-br from-green-500/20 to-emerald-500/10 px-4 py-2 text-sm text-white transition hover:from-green-500/30 hover:to-emerald-500/20 cursor-pointer"
                   >
                     <FaWhatsapp size={15} />
                     {booking.status === "Confirmed" ? "Confirmation Message" : "Request Status Message"}
@@ -335,7 +335,7 @@ export default function RentalDetailsModal({
             </div>
 
             {/* Rental Products */}
-            <div className="rounded-2xl border border-white/10 bg-black p-4 sm:p-5">
+            <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-amber-500/10 to-zinc-950 p-4 backdrop-blur-xl sm:p-5">
               <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-[#F5A623]">
                 Rental Products
               </h3>
