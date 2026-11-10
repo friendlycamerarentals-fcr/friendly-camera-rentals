@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { transaction } from "@/db/query";
+import { query, transaction } from "@/db/query";
 import rewardService from "@/services/rewardService";
 import {
   completeAppliedRewardInTransaction,
@@ -8,6 +8,7 @@ import {
 import {
   canTransitionRentalStatus,
   isRentalStatus,
+  RENTAL_STATUSES_WITHOUT_EXTRA_CHARGES,
 } from "@/constants/rentalStatus";
 import { requireAdmin } from "@/lib/adminAuth";
 import { createId } from "@/lib/createId";
@@ -36,14 +37,40 @@ export async function PATCH(request, { params }) {
       );
     }
 
-    await rewardService.expireRewards();
-
     const body = await request.json();
 
     const hasField = (field) =>
       Object.prototype.hasOwnProperty.call(body, field);
     const hasPaymentUpdate = ["totalAmount", "discount"].some(hasField);
     const hasPaymentRecord = Boolean(body.payment);
+    const hasPaymentStatusUpdate = typeof body.paymentStatus === "string";
+    const hasPaymentOperation =
+      hasPaymentUpdate || hasPaymentRecord || hasPaymentStatusUpdate;
+
+    if (hasPaymentOperation) {
+      const currentRentalRows = await query(
+        'SELECT "status" FROM "RentalRequest" WHERE "id" = $1 LIMIT 1',
+        [id],
+      );
+      if (
+        RENTAL_STATUSES_WITHOUT_EXTRA_CHARGES.includes(body.status) ||
+        RENTAL_STATUSES_WITHOUT_EXTRA_CHARGES.includes(
+          currentRentalRows[0]?.status,
+        )
+      ) {
+        return NextResponse.json(
+          {
+            success: false,
+            message:
+              "Payment management is unavailable for this rental status.",
+          },
+          { status: 409 },
+        );
+      }
+    }
+
+    await rewardService.expireRewards();
+
     const payload = {};
     if (hasField("status")) {
       if (typeof body.status !== "string" || !isRentalStatus(body.status)) {
@@ -102,6 +129,18 @@ export async function PATCH(request, { params }) {
       if (!existing) {
         const error = new Error("Rental request not found.");
         error.status = 404;
+        throw error;
+      }
+
+      if (
+        hasPaymentOperation &&
+        (RENTAL_STATUSES_WITHOUT_EXTRA_CHARGES.includes(existing.status) ||
+          RENTAL_STATUSES_WITHOUT_EXTRA_CHARGES.includes(payload.status))
+      ) {
+        const error = new Error(
+          "Payment management is unavailable for this rental status.",
+        );
+        error.status = 409;
         throw error;
       }
 

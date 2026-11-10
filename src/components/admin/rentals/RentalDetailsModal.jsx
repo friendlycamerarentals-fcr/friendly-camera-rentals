@@ -56,6 +56,7 @@ export default function RentalDetailsModal({
   const extraChargesUnavailable = RENTAL_STATUSES_WITHOUT_EXTRA_CHARGES.includes(
     booking.status,
   );
+  const paymentManagementLocked = extraChargesUnavailable;
   const rewardDiscount = Number(booking.rewardDiscount || 0);
   const paymentBase = {
     totalRent: Number(
@@ -135,7 +136,7 @@ export default function RentalDetailsModal({
   };
 
   const handleSave = async () => {
-    if (!onSave) return;
+    if (!onSave || paymentManagementLocked) return;
 
     const payload = {
       totalAmount: payment.totalRent,
@@ -202,7 +203,14 @@ export default function RentalDetailsModal({
   };
 
   const submitPaymentRecord = async () => {
-    if (!onRecordPayment || paymentSubmitting || paymentSubmitLock.current) return;
+    if (
+      !onRecordPayment ||
+      paymentManagementLocked ||
+      paymentSubmitting ||
+      paymentSubmitLock.current
+    ) {
+      return;
+    }
     const amount = Number(paymentForm.amount);
     if (!Number.isFinite(amount) || amount <= 0) {
       toast.error("Enter the advance amount actually received.");
@@ -631,6 +639,11 @@ export default function RentalDetailsModal({
               <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-[#F5A623]">
                 Payment Management
               </h3>
+              {paymentManagementLocked && (
+                <p className="mb-4 rounded-xl border border-amber-500/20 bg-amber-500/5 px-3 py-2 text-xs text-amber-300">
+                  Payment management is unavailable for this rental status.
+                </p>
+              )}
 
               {/* Inputs for rental amount / other discount */}
               <div className="grid grid-cols-2 gap-2">
@@ -643,10 +656,11 @@ export default function RentalDetailsModal({
                     value={payment.totalRent}
                     min="0"
                     step="0.01"
+                    disabled={paymentManagementLocked}
                     onChange={(e) =>
                       updatePayment("totalRent", Number(e.target.value))
                     }
-                    className={inputCls}
+                    className={`${inputCls} disabled:cursor-not-allowed disabled:opacity-50`}
                   />
                 </div>
                 <div>
@@ -656,10 +670,11 @@ export default function RentalDetailsModal({
                     min="0"
                     step="0.01"
                     value={payment.otherDiscount}
+                    disabled={paymentManagementLocked}
                     onChange={(e) =>
                       updatePayment("otherDiscount", Number(e.target.value))
                     }
-                    className={inputCls}
+                    className={`${inputCls} disabled:cursor-not-allowed disabled:opacity-50`}
                   />
                 </div>
               </div>
@@ -803,8 +818,8 @@ export default function RentalDetailsModal({
               <div className="mt-4 flex flex-wrap items-center gap-3">
                 <button
                   onClick={handleSave}
-                  disabled={actionLoading}
-                  className="flex items-center gap-2 rounded-xl bg-[#F5A623] px-5 py-2.5 text-sm font-semibold text-black transition hover:bg-amber-400 cursor-pointer disabled:opacity-60"
+                  disabled={actionLoading || paymentManagementLocked}
+                  className="flex items-center gap-2 rounded-xl bg-[#F5A623] px-5 py-2.5 text-sm font-semibold text-black transition hover:bg-amber-400 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   <Save size={16} />
                   Save Amount Details
@@ -827,13 +842,14 @@ export default function RentalDetailsModal({
                     <label className={labelCls}>Payment type</label>
                     <select
                       value={paymentForm.paymentType}
+                      disabled={paymentManagementLocked}
                       onChange={(e) =>
                         setPaymentForm((prev) => ({
                           ...prev,
                           paymentType: e.target.value,
                         }))
                       }
-                      className={inputCls}
+                      className={`${inputCls} disabled:cursor-not-allowed disabled:opacity-50`}
                     >
                       {RENTAL_PAYMENT_TYPES.map((type) => (
                         <option key={type} value={type}>
@@ -850,26 +866,28 @@ export default function RentalDetailsModal({
                       max={remainingAmount}
                       step="0.01"
                       value={paymentForm.amount}
+                      disabled={paymentManagementLocked}
                       onChange={(e) =>
                         setPaymentForm((prev) => ({
                           ...prev,
                           amount: e.target.value,
                         }))
                       }
-                      className={inputCls}
+                      className={`${inputCls} disabled:cursor-not-allowed disabled:opacity-50`}
                     />
                   </div>
                   <div>
                     <label className={labelCls}>Method</label>
                     <select
                       value={paymentForm.method}
+                      disabled={paymentManagementLocked}
                       onChange={(e) =>
                         setPaymentForm((prev) => ({
                           ...prev,
                           method: e.target.value,
                         }))
                       }
-                      className={inputCls}
+                      className={`${inputCls} disabled:cursor-not-allowed disabled:opacity-50`}
                     >
                       {RENTAL_PAYMENT_METHODS.map((m) => (
                         <option key={m} value={m}>
@@ -884,6 +902,7 @@ export default function RentalDetailsModal({
                       disabled={
                         paymentSubmitting ||
                         actionLoading ||
+                        paymentManagementLocked ||
                         remainingAmount <= 0
                       }
                       className="flex w-full items-center justify-center gap-2 rounded-xl bg-green-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-green-700 cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
