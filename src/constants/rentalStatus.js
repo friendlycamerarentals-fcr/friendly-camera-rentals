@@ -16,6 +16,12 @@ export const RENTAL_STATUS_TRANSITIONS = {
   Cancelled: [],
 };
 
+export const RENTAL_STATUSES_WITHOUT_EXTRA_CHARGES = [
+  "Completed",
+  "Cancelled",
+  "Rejected",
+];
+
 export const isRentalStatus = (status) =>
   Object.prototype.hasOwnProperty.call(RENTAL_STATUS_TRANSITIONS, status);
 

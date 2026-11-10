@@ -6,6 +6,7 @@ import {
   getFinalRentalAmount,
   withRentalPaymentSummary,
 } from "@/lib/rentalPayments";
+import { RENTAL_STATUSES_WITHOUT_EXTRA_CHARGES } from "@/constants/rentalStatus";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -98,6 +99,13 @@ export async function POST(request, { params }) {
       if (!rental) {
         const error = new Error("Rental request not found.");
         error.status = 404;
+        throw error;
+      }
+      if (RENTAL_STATUSES_WITHOUT_EXTRA_CHARGES.includes(rental.status)) {
+        const error = new Error(
+          "Extra charges are not available for this rental status.",
+        );
+        error.status = 409;
         throw error;
       }
 

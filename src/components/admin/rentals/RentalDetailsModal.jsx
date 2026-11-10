@@ -5,7 +5,10 @@ import { X, Phone, Save, Trash2, BadgeCheck, Loader2 } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
 import { toast } from "sonner";
 import RentalStatusBadge from "./RentalStatusBadge";
-import { RENTAL_STATUS_TRANSITIONS } from "@/constants/rentalStatus";
+import {
+  RENTAL_STATUSES_WITHOUT_EXTRA_CHARGES,
+  RENTAL_STATUS_TRANSITIONS,
+} from "@/constants/rentalStatus";
 import { openRentalWhatsApp } from "@/lib/whatsappBookingMessage";
 import {
   RENTAL_PAYMENT_METHODS,
@@ -39,6 +42,7 @@ export default function RentalDetailsModal({
     extraAmount: "",
     note: "",
   });
+  const [extraChargeFormOpen, setExtraChargeFormOpen] = useState(false);
   const [paymentSubmitting, setPaymentSubmitting] = useState(false);
   const [extraChargeSubmitting, setExtraChargeSubmitting] = useState(false);
   const paymentSubmitLock = useRef(false);
@@ -49,6 +53,9 @@ export default function RentalDetailsModal({
 
   if (!open || !booking) return null;
 
+  const extraChargesUnavailable = RENTAL_STATUSES_WITHOUT_EXTRA_CHARGES.includes(
+    booking.status,
+  );
   const rewardDiscount = Number(booking.rewardDiscount || 0);
   const paymentBase = {
     totalRent: Number(
@@ -96,6 +103,11 @@ export default function RentalDetailsModal({
     }
   };
   const handleCall = () => window.open(`tel:${booking.phone}`);
+  const closeModal = () => {
+    setExtraChargeForm({ extraHours: "", extraAmount: "", note: "" });
+    setExtraChargeFormOpen(false);
+    onClose();
+  };
 
   const handleStatusAction = async (status) => {
     if (!onStatusChange || actionLoading) return;
@@ -119,7 +131,7 @@ export default function RentalDetailsModal({
   const handleDelete = async () => {
     if (!onDelete) return;
     await onDelete(booking.id);
-    onClose();
+    closeModal();
   };
 
   const handleSave = async () => {
@@ -137,7 +149,13 @@ export default function RentalDetailsModal({
   };
 
   const handleAddExtraCharge = async () => {
-    if (!onAddExtraCharge) return;
+    if (
+      !onAddExtraCharge ||
+      extraChargesUnavailable ||
+      extraChargeSubmitting
+    ) {
+      return;
+    }
 
     const extraHours = Number(extraChargeForm.extraHours);
     const extraAmount = Number(extraChargeForm.extraAmount);
@@ -161,10 +179,16 @@ export default function RentalDetailsModal({
       });
       if (success) {
         setExtraChargeForm({ extraHours: "", extraAmount: "", note: "" });
+        setExtraChargeFormOpen(false);
       }
     } finally {
       setExtraChargeSubmitting(false);
     }
+  };
+
+  const cancelExtraCharge = () => {
+    setExtraChargeForm({ extraHours: "", extraAmount: "", note: "" });
+    setExtraChargeFormOpen(false);
   };
 
   const updatePayment = (field, value) => {
@@ -251,7 +275,7 @@ export default function RentalDetailsModal({
   return (
     <div
       className="admin-modal-backdrop fixed inset-0 z-9999 flex items-center justify-center bg-black/70 p-3 backdrop-blur-sm sm:p-4"
-      onClick={onClose}
+      onClick={closeModal}
     >
       {/* Modal card */}
       <div
@@ -275,7 +299,7 @@ export default function RentalDetailsModal({
               </span>
             )}
             <button
-              onClick={onClose}
+              onClick={closeModal}
               aria-label="Close modal"
               className="rounded-full p-1.5 text-zinc-400 transition hover:bg-white/10 hover:text-white cursor-pointer"
             >
@@ -455,76 +479,102 @@ export default function RentalDetailsModal({
                 Rental Extension / Extra Charges
               </h3>
 
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <div>
-                  <label className={labelCls}>Extra Hours</label>
-                  <input
-                    type="number"
-                    min="0.1"
-                    step="0.1"
-                    value={extraChargeForm.extraHours}
-                    onChange={(event) =>
-                      setExtraChargeForm((previous) => ({
-                        ...previous,
-                        extraHours: event.target.value,
-                      }))
-                    }
-                    className={inputCls}
-                    placeholder="3"
-                  />
-                </div>
-                <div>
-                  <label className={labelCls}>Extra Amount</label>
-                  <input
-                    type="number"
-                    min="0.01"
-                    step="0.01"
-                    value={extraChargeForm.extraAmount}
-                    onChange={(event) =>
-                      setExtraChargeForm((previous) => ({
-                        ...previous,
-                        extraAmount: event.target.value,
-                      }))
-                    }
-                    className={inputCls}
-                    placeholder="300"
-                  />
-                </div>
-              </div>
-
-              <div className="mt-3">
-                <label className={labelCls}>Note (optional)</label>
-                <textarea
-                  rows={2}
-                  value={extraChargeForm.note}
-                  onChange={(event) =>
-                    setExtraChargeForm((previous) => ({
-                      ...previous,
-                      note: event.target.value,
-                    }))
-                  }
-                  className={`${inputCls} resize-none`}
-                  placeholder="Customer returned equipment late"
-                />
-              </div>
-
-              {onAddExtraCharge && (
+              {extraChargeFormOpen && !extraChargesUnavailable ? (
                 <div className="mt-3">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div>
+                      <label className={labelCls}>Extra Hours</label>
+                      <input
+                        type="number"
+                        min="0.1"
+                        step="0.1"
+                        value={extraChargeForm.extraHours}
+                        onChange={(event) =>
+                          setExtraChargeForm((previous) => ({
+                            ...previous,
+                            extraHours: event.target.value,
+                          }))
+                        }
+                        className={inputCls}
+                        placeholder="3"
+                      />
+                    </div>
+                    <div>
+                      <label className={labelCls}>Extra Amount</label>
+                      <input
+                        type="number"
+                        min="0.01"
+                        step="0.01"
+                        value={extraChargeForm.extraAmount}
+                        onChange={(event) =>
+                          setExtraChargeForm((previous) => ({
+                            ...previous,
+                            extraAmount: event.target.value,
+                          }))
+                        }
+                        className={inputCls}
+                        placeholder="300"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="mt-3">
+                    <label className={labelCls}>Note (optional)</label>
+                    <textarea
+                      rows={2}
+                      value={extraChargeForm.note}
+                      onChange={(event) =>
+                        setExtraChargeForm((previous) => ({
+                          ...previous,
+                          note: event.target.value,
+                        }))
+                      }
+                      className={`${inputCls} resize-none`}
+                      placeholder="Customer returned equipment late"
+                    />
+                  </div>
+
+                  <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                    <button
+                      type="button"
+                      onClick={handleAddExtraCharge}
+                      disabled={extraChargeSubmitting || actionLoading}
+                      className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#F5A623] to-[#f0b64a] px-4 py-2.5 text-sm font-bold text-black transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-70 cursor-pointer"
+                    >
+                      {extraChargeSubmitting ? (
+                        <>
+                          <Loader2 size={15} className="animate-spin" />
+                          Saving...
+                        </>
+                      ) : (
+                        "Save Extra Charge"
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={cancelExtraCharge}
+                      disabled={extraChargeSubmitting || actionLoading}
+                      className="flex-1 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-semibold text-zinc-300 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div>
                   <button
                     type="button"
-                    onClick={handleAddExtraCharge}
-                    disabled={extraChargeSubmitting}
-                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#F5A623] to-[#f0b64a] px-4 py-2.5 text-sm font-bold text-black transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-70 cursor-pointer"
+                    onClick={() => setExtraChargeFormOpen(true)}
+                    disabled={!onAddExtraCharge || extraChargesUnavailable}
+                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#F5A623] to-[#f0b64a] px-4 py-2.5 text-sm font-bold text-black transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
                   >
-                    {extraChargeSubmitting ? (
-                      <>
-                        <Loader2 size={15} className="animate-spin" />
-                        Adding...
-                      </>
-                    ) : (
-                      "Add Extra Charge"
-                    )}
+                    Add Extra Charge
                   </button>
+                  {extraChargesUnavailable && (
+                    <p className="mt-2 text-xs text-zinc-500">
+                      Extra charges are not available for this rental status.
+                    </p>
+                  )}
                 </div>
               )}
 
