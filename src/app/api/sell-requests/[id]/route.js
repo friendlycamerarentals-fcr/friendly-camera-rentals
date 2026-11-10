@@ -57,10 +57,28 @@ export async function PUT(request, { params }) {
 export async function DELETE(request, { params }) {
   try {
     const { id } = await params;
-    await query('DELETE FROM "SellRequest" WHERE "id" = $1', [id]);
+    if (typeof id !== "string" || !id.trim()) {
+      return NextResponse.json(
+        { success: false, message: "A valid sell request ID is required." },
+        { status: 400 },
+      );
+    }
+
+    const deletedRows = await query(
+      'DELETE FROM "SellRequest" WHERE "id" = $1 RETURNING "id"',
+      [id],
+    );
+    if (!deletedRows.length) {
+      return NextResponse.json(
+        { success: false, message: "Sell request not found." },
+        { status: 404 },
+      );
+    }
+
     return NextResponse.json({
       success: true,
       message: "Request deleted successfully",
+      data: deletedRows[0],
     });
   } catch (error) {
     console.error("[SELL_REQUEST_DELETE]", error);

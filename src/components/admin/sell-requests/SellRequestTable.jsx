@@ -123,7 +123,7 @@ export default function SellRequestTable({ requests = [], onView, onDelete }) {
                     </button>
 
                     <button
-                      onClick={() => onDelete(request)}
+                      onClick={() => onDelete(request.id)}
                       className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-2 text-sm text-red-400"
                     >
                       Delete

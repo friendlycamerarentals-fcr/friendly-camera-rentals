@@ -61,17 +61,20 @@ export default function RentalDetailsModal({
     ...paymentBase,
     ...(paymentEdit?.bookingId === booking.id ? paymentEdit.values : {}),
   };
+  const extraCharges = booking.extraCharges || [];
+  const totalExtraCharges = Number(
+    booking.paymentSummary?.totalExtraCharges ??
+      extraCharges.reduce(
+        (total, entry) => total + Number(entry.extraAmount || 0),
+        0,
+      ),
+  );
   const finalRent = Math.max(
     payment.totalRent + totalExtraCharges - rewardDiscount - payment.otherDiscount,
     0,
   );
   const advanceExpected = Number(booking.advanceExpected || 0);
   const paymentHistory = booking.paymentHistory || [];
-  const extraCharges = booking.extraCharges || [];
-  const totalExtraCharges = Number(
-    booking.paymentSummary?.totalExtraCharges ??
-      extraCharges.reduce((total, entry) => total + Number(entry.extraAmount || 0), 0),
-  );
   const totalVerifiedPayments = Number(
     booking.paymentSummary?.totalVerifiedPayments ??
       paymentHistory

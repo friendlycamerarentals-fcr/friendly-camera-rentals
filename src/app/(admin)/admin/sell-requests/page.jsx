@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { useFetchData } from "@/hooks/useFetchData";
+import { invalidateCachePrefix } from "@/lib/dataCache";
 import SellRequestStats from "@/components/admin/sell-requests/SellRequestStats";
 import SellRequestFilters from "@/components/admin/sell-requests/SellRequestFilters";
 import SellRequestTable from "@/components/admin/sell-requests/SellRequestTable";
@@ -100,6 +101,7 @@ export default function SellRequestsPage() {
       }
 
       setData((prev) => prev.filter((item) => item.id !== id));
+      invalidateCachePrefix("/api/sell-requests");
       toast.success("Sell request deleted successfully.");
       await refetch(false);
     } catch (error) {
