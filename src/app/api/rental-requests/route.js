@@ -39,6 +39,18 @@ export async function GET() {
         }
       });
 
+      const extraChargeRows = await query(
+        `SELECT * FROM "RentalExtraCharge"
+         WHERE "rentalRequestId" = ANY($1)
+         ORDER BY "createdAt" ASC, "id" ASC`,
+        [requestIds],
+      );
+      const extraChargesByRequestId = extraChargeRows.reduce((acc, entry) => {
+        if (!acc[entry.rentalRequestId]) acc[entry.rentalRequestId] = [];
+        acc[entry.rentalRequestId].push(entry);
+        return acc;
+      }, {});
+
       const paymentRows = await query(
         `SELECT * FROM "RentalPayment"
          WHERE "rentalRequestId" = ANY($1)
@@ -54,6 +66,7 @@ export async function GET() {
         requests[index] = withRentalPaymentSummary(
           requests[index],
           paymentsByRequestId[requests[index].requestId] || [],
+          extraChargesByRequestId[requests[index].requestId] || [],
         );
       }
     }
@@ -61,6 +74,19 @@ export async function GET() {
     return NextResponse.json({ success: true, data: requests });
   } catch (error) {
     console.error("[RENTAL_REQUESTS_GET]", error);
+    if (
+      error.code === "42P01" &&
+      error.message?.includes('"RentalExtraCharge"')
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            'The rental extension database migration is missing. Run "npm run db:migrate" against the configured database, then retry.',
+        },
+        { status: 503 },
+      );
+    }
     return NextResponse.json(
       { success: false, message: "Failed to fetch rental requests" },
       { status: 500 },

@@ -25,6 +25,7 @@ export default function RentalDetailsModal({
   onSave,
   onRecordPayment,
   onWhatsApp,
+  onAddExtraCharge,
   actionLoading,
 }) {
   const [paymentEdit, setPaymentEdit] = useState(null);
@@ -33,7 +34,13 @@ export default function RentalDetailsModal({
     paymentType: "Advance",
     method: "UPI",
   }));
+  const [extraChargeForm, setExtraChargeForm] = useState({
+    extraHours: "",
+    extraAmount: "",
+    note: "",
+  });
   const [paymentSubmitting, setPaymentSubmitting] = useState(false);
+  const [extraChargeSubmitting, setExtraChargeSubmitting] = useState(false);
   const paymentSubmitLock = useRef(false);
   const paymentSubmissionKey = useRef(null);
   const [confirmSubmitting, setConfirmSubmitting] = useState(false);
@@ -55,11 +62,16 @@ export default function RentalDetailsModal({
     ...(paymentEdit?.bookingId === booking.id ? paymentEdit.values : {}),
   };
   const finalRent = Math.max(
-    payment.totalRent - rewardDiscount - payment.otherDiscount,
+    payment.totalRent + totalExtraCharges - rewardDiscount - payment.otherDiscount,
     0,
   );
   const advanceExpected = Number(booking.advanceExpected || 0);
   const paymentHistory = booking.paymentHistory || [];
+  const extraCharges = booking.extraCharges || [];
+  const totalExtraCharges = Number(
+    booking.paymentSummary?.totalExtraCharges ??
+      extraCharges.reduce((total, entry) => total + Number(entry.extraAmount || 0), 0),
+  );
   const totalVerifiedPayments = Number(
     booking.paymentSummary?.totalVerifiedPayments ??
       paymentHistory
@@ -118,6 +130,37 @@ export default function RentalDetailsModal({
     const success = await onSave(booking.id, payload);
     if (success) {
       toast.success("Payment details updated successfully");
+    }
+  };
+
+  const handleAddExtraCharge = async () => {
+    if (!onAddExtraCharge) return;
+
+    const extraHours = Number(extraChargeForm.extraHours);
+    const extraAmount = Number(extraChargeForm.extraAmount);
+
+    if (!Number.isFinite(extraHours) || extraHours <= 0) {
+      toast.error("Extra hours must be a positive number.");
+      return;
+    }
+
+    if (!Number.isFinite(extraAmount) || extraAmount <= 0) {
+      toast.error("Extra amount must be a positive number.");
+      return;
+    }
+
+    setExtraChargeSubmitting(true);
+    try {
+      const success = await onAddExtraCharge(booking.id, {
+        extraHours,
+        extraAmount,
+        note: extraChargeForm.note.trim(),
+      });
+      if (success) {
+        setExtraChargeForm({ extraHours: "", extraAmount: "", note: "" });
+      }
+    } finally {
+      setExtraChargeSubmitting(false);
     }
   };
 
@@ -399,6 +442,133 @@ export default function RentalDetailsModal({
                       <span className="text-[11px] text-zinc-500">Final payable</span>
                     </div>
                   </div>
+                </div>
+              )}
+            </div>
+
+            {/* Rental Extension / Extra Charges */}
+            <div className="rounded-2xl border border-white/10 bg-black p-4 sm:p-5">
+              <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-[#F5A623]">
+                Rental Extension / Extra Charges
+              </h3>
+
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div>
+                  <label className={labelCls}>Extra Hours</label>
+                  <input
+                    type="number"
+                    min="0.1"
+                    step="0.1"
+                    value={extraChargeForm.extraHours}
+                    onChange={(event) =>
+                      setExtraChargeForm((previous) => ({
+                        ...previous,
+                        extraHours: event.target.value,
+                      }))
+                    }
+                    className={inputCls}
+                    placeholder="3"
+                  />
+                </div>
+                <div>
+                  <label className={labelCls}>Extra Amount</label>
+                  <input
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    value={extraChargeForm.extraAmount}
+                    onChange={(event) =>
+                      setExtraChargeForm((previous) => ({
+                        ...previous,
+                        extraAmount: event.target.value,
+                      }))
+                    }
+                    className={inputCls}
+                    placeholder="300"
+                  />
+                </div>
+              </div>
+
+              <div className="mt-3">
+                <label className={labelCls}>Note (optional)</label>
+                <textarea
+                  rows={2}
+                  value={extraChargeForm.note}
+                  onChange={(event) =>
+                    setExtraChargeForm((previous) => ({
+                      ...previous,
+                      note: event.target.value,
+                    }))
+                  }
+                  className={`${inputCls} resize-none`}
+                  placeholder="Customer returned equipment late"
+                />
+              </div>
+
+              {onAddExtraCharge && (
+                <div className="mt-3">
+                  <button
+                    type="button"
+                    onClick={handleAddExtraCharge}
+                    disabled={extraChargeSubmitting}
+                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#F5A623] to-[#f0b64a] px-4 py-2.5 text-sm font-bold text-black transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-70 cursor-pointer"
+                  >
+                    {extraChargeSubmitting ? (
+                      <>
+                        <Loader2 size={15} className="animate-spin" />
+                        Adding...
+                      </>
+                    ) : (
+                      "Add Extra Charge"
+                    )}
+                  </button>
+                </div>
+              )}
+
+              {extraCharges.length ? (
+                <div className="mt-4 overflow-hidden rounded-xl border border-white/10">
+                  <div className="border-b border-white/10 px-3 py-2.5">
+                    <h4 className="text-xs font-semibold uppercase tracking-wider text-zinc-300">
+                      Extra Charge History
+                    </h4>
+                  </div>
+                  <div className="divide-y divide-white/5">
+                    {extraCharges.map((entry) => (
+                      <div
+                        key={entry.id}
+                        className="flex items-start justify-between gap-3 px-3 py-2.5 text-sm"
+                      >
+                        <div>
+                          <div className="font-medium text-white">
+                            {Number(entry.extraHours || 0).toLocaleString("en-IN")} hrs
+                          </div>
+                          {entry.note && (
+                            <div className="mt-0.5 text-xs text-zinc-400">
+                              {entry.note}
+                            </div>
+                          )}
+                        </div>
+                        <div className="text-right">
+                          <div className="font-semibold text-[#F5A623]">
+                            ₹{Number(entry.extraAmount || 0).toLocaleString("en-IN")}
+                          </div>
+                          <div className="text-[10px] text-zinc-500">
+                            {new Date(entry.createdAt).toLocaleDateString("en-IN")}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="border-t border-white/10 bg-zinc-900/80 px-3 py-2.5 text-sm text-zinc-200">
+                    <span className="text-zinc-400">Total Extra Charges:</span>{" "}
+                    <span className="font-bold text-[#F5A623]">
+                      ₹{totalExtraCharges.toLocaleString("en-IN")}
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <div className="mt-3 rounded-xl border border-dashed border-white/10 bg-zinc-900/60 p-3 text-sm text-zinc-400">
+                  No extra charges recorded yet.
                 </div>
               )}
             </div>

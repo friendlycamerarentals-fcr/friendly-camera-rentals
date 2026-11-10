@@ -1,15 +1,51 @@
 import { fromPaise, sumPaise, toPaise } from "./rentalDuration.js";
 
-export function summarizeRentalPayments(rental, paymentHistory = []) {
+export function getExtraChargeTotal(extraCharges = []) {
+  return fromPaise(
+    sumPaise(
+      (Array.isArray(extraCharges) ? extraCharges : []).map((entry) =>
+        Number(entry?.extraAmount || 0),
+      ),
+    ),
+  );
+}
+
+export function getFinalRentalAmount(rental, extraCharges = []) {
   const originalAmount = Number(
     rental.originalAmount ??
       Number(rental.totalAmount || 0) + Number(rental.rewardDiscount || 0),
   );
+  const extraChargeTotal = getExtraChargeTotal(extraCharges);
+  const rewardDiscount = Number(rental.rewardDiscount || 0);
+  const otherDiscount = Number(rental.discount || 0);
+
+  return Math.max(
+    fromPaise(
+      toPaise(originalAmount) +
+        toPaise(extraChargeTotal) -
+        toPaise(rewardDiscount) -
+        toPaise(otherDiscount),
+    ),
+    0,
+  );
+}
+
+export function summarizeRentalPayments(
+  rental,
+  paymentHistory = [],
+  extraCharges = [],
+) {
+  const originalAmount = Number(
+    rental.originalAmount ??
+      Number(rental.totalAmount || 0) + Number(rental.rewardDiscount || 0),
+  );
+  const extraChargeTotal = getExtraChargeTotal(extraCharges);
   const rewardDiscount = Number(rental.rewardDiscount || 0);
   const otherDiscount = Number(rental.discount || 0);
   const finalRent = Math.max(
     fromPaise(
-      toPaise(originalAmount) -
+      toPaise(originalAmount) +
+        toPaise(extraChargeTotal) -
         toPaise(rewardDiscount) -
         toPaise(otherDiscount),
     ),
@@ -31,6 +67,7 @@ export function summarizeRentalPayments(rental, paymentHistory = []) {
 
   return {
     originalAmount,
+    totalExtraCharges: extraChargeTotal,
     otherDiscount,
     rewardDiscount,
     finalRent,
@@ -43,10 +80,15 @@ export function summarizeRentalPayments(rental, paymentHistory = []) {
   };
 }
 
-export function withRentalPaymentSummary(rental, paymentHistory = []) {
-  const paymentSummary = summarizeRentalPayments(rental, paymentHistory);
+export function withRentalPaymentSummary(rental, paymentHistory = [], extraCharges = []) {
+  const paymentSummary = summarizeRentalPayments(
+    rental,
+    paymentHistory,
+    extraCharges,
+  );
   return {
     ...rental,
+    extraCharges,
     paymentHistory,
     paymentSummary,
     advanceAmount: paymentSummary.advanceReceived,

@@ -772,6 +772,31 @@ CREATE INDEX IF NOT EXISTS "idx_rentalpayment_request_created"
 CREATE INDEX IF NOT EXISTS "idx_rentalpayment_verified"
   ON "RentalPayment" ("rentalRequestId", "verified");
 
+-- 2026-11-08: manual extension charges for rentals that run beyond the
+-- original booked duration. Each record preserves the original rental amount,
+-- supports multiple extension entries per booking, and keeps the charge note.
+CREATE TABLE IF NOT EXISTS "RentalExtraCharge" (
+    "id"               TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    "rentalRequestId"  TEXT NOT NULL,
+    "extraHours"       DOUBLE PRECISION NOT NULL CHECK ("extraHours" > 0),
+    "extraAmount"      DOUBLE PRECISION NOT NULL CHECK ("extraAmount" > 0),
+    "note"             TEXT,
+    "createdAt"        TIMESTAMP(3) NOT NULL DEFAULT now()
+);
+
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'RentalExtraCharge_rentalRequestId_fkey') THEN
+        ALTER TABLE "RentalExtraCharge"
+            ADD CONSTRAINT "RentalExtraCharge_rentalRequestId_fkey"
+            FOREIGN KEY ("rentalRequestId") REFERENCES "RentalRequest"("requestId")
+            ON DELETE CASCADE ON UPDATE CASCADE;
+    END IF;
+END $$;
+
+CREATE INDEX IF NOT EXISTS "idx_rentalextracharge_request_created"
+  ON "RentalExtraCharge" ("rentalRequestId", "createdAt", "id");
+
 -- Import only explicitly verified legacy advances. Amounts without verification
 -- are omitted; conflict protection makes this safe to re-run.
 INSERT INTO "RentalPayment" (

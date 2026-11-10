@@ -124,9 +124,18 @@ export async function PATCH(request, { params }) {
           [existing.requestId],
         )
       ).rows;
+      const extraCharges = (
+        await client.query(
+          `SELECT * FROM "RentalExtraCharge"
+           WHERE "rentalRequestId" = $1
+           ORDER BY "createdAt" ASC, "id" ASC`,
+          [existing.requestId],
+        )
+      ).rows;
       const currentPaymentSummary = withRentalPaymentSummary(
         existing,
         persistedPayments,
+        extraCharges,
       ).paymentSummary;
 
       let originalAmount = Number(
@@ -138,6 +147,9 @@ export async function PATCH(request, { params }) {
       const advanceAmount = currentPaymentSummary.advanceReceived;
       const totalVerifiedPayments = currentPaymentSummary.totalVerifiedPayments;
       const rewardDiscount = Number(existing.rewardDiscount || 0);
+      const totalExtraCharges = Number(currentPaymentSummary.totalExtraCharges || 0);
+      let finalAmount =
+        originalAmount + totalExtraCharges - rewardDiscount - otherDiscount;
 
       if (hasPaymentUpdate) {
         if (hasField("totalAmount")) originalAmount = body.totalAmount;
@@ -155,7 +167,8 @@ export async function PATCH(request, { params }) {
           throw error;
         }
 
-        const finalAmount = originalAmount - rewardDiscount - otherDiscount;
+        finalAmount =
+          originalAmount + totalExtraCharges - rewardDiscount - otherDiscount;
         if (finalAmount < 0) {
           const error = new Error(
             "Other discount cannot exceed the amount remaining after the reward discount.",
@@ -195,7 +208,8 @@ export async function PATCH(request, { params }) {
         const duplicatePayment = persistedPayments.find(
           (payment) => payment.idempotencyKey === idempotencyKey,
         );
-        const finalAmount = originalAmount - rewardDiscount - otherDiscount;
+        finalAmount =
+          originalAmount + totalExtraCharges - rewardDiscount - otherDiscount;
         const remainingBalance = Math.max(
           Math.round((finalAmount - totalVerifiedPayments) * 100) / 100,
           0,
@@ -306,7 +320,19 @@ export async function PATCH(request, { params }) {
           [updated.requestId],
         )
       ).rows;
-      updated = withRentalPaymentSummary(updated, updatedPayments);
+      const updatedExtraCharges = (
+        await client.query(
+          `SELECT * FROM "RentalExtraCharge"
+           WHERE "rentalRequestId" = $1
+           ORDER BY "createdAt" ASC, "id" ASC`,
+          [updated.requestId],
+        )
+      ).rows;
+      updated = withRentalPaymentSummary(
+        updated,
+        updatedPayments,
+        updatedExtraCharges,
+      );
       let rewardResult = null;
 
       if (payload.status === "Completed" && existing.status !== "Completed") {

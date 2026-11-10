@@ -230,6 +230,39 @@ export default function RentalsPage() {
     }
   };
 
+  const handleAddExtraCharge = async (id, payload) => {
+    try {
+      setActionLoadingId(id);
+      const response = await fetch(`/api/rental-requests/${id}/extra-charges`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const result = await response.json();
+      if (!response.ok || !result.success)
+        throw new Error(result.message || "Failed to add extra charge");
+
+      const updatedRental = result.data?.rental || result.data;
+      setBookings((prev) =>
+        prev.map((booking) =>
+          booking.id === id ? { ...booking, ...updatedRental } : booking,
+        ),
+      );
+
+      if (selectedBooking?.id === id) {
+        setSelectedBooking((prev) => ({ ...prev, ...updatedRental }));
+      }
+
+      toast.success("Extra charge added successfully.");
+      return true;
+    } catch (error) {
+      toast.error(error.message || "Failed to add extra charge");
+      return false;
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
   return (
     <div className="space-y-8">
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -282,6 +315,7 @@ export default function RentalsPage() {
         onSave={handleSavePayment}
         onRecordPayment={handleRecordPayment}
         onWhatsApp={handleWhatsAppAction}
+        onAddExtraCharge={handleAddExtraCharge}
         actionLoading={Boolean(actionLoadingId)}
       />
 

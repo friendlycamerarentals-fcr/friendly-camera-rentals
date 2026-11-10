@@ -201,7 +201,23 @@ export async function generateReward(rentalRequestId) {
         };
       }
 
-      const rewardAmount = calculateReward(rental.totalAmount);
+      const extraChargeRows = await client.query(
+        'SELECT COALESCE(SUM("extraAmount"), 0)::FLOAT AS "totalExtraCharges" FROM "RentalExtraCharge" WHERE "rentalRequestId" = $1',
+        [rental.requestId],
+      );
+      const originalAmount = Number(
+        rental.originalAmount ??
+          Number(rental.totalAmount || 0) + Number(rental.rewardDiscount || 0),
+      );
+      const totalExtraCharges = Number(
+        extraChargeRows.rows[0]?.totalExtraCharges || 0,
+      );
+      const rewardAmount = calculateReward(
+        Math.max(
+          originalAmount + totalExtraCharges - Number(rental.rewardDiscount || 0) - Number(rental.discount || 0),
+          0,
+        ),
+      );
       const rewardId = await generateRewardId(client);
       const expireDate = calculateExpiryDate(rental.updatedAt || new Date());
       const id = createId();

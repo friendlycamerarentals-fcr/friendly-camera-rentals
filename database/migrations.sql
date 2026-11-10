@@ -307,3 +307,26 @@ CREATE TABLE IF NOT EXISTS "BuyProductSoldEvent" (
 
 CREATE INDEX IF NOT EXISTS "idx_buyproductsold_event_occurred_at"
   ON "BuyProductSoldEvent" ("occurredAt" DESC, "id" DESC);
+
+-- 2026-11-08: Manual rental extensions with extra hours and extra charges.
+CREATE TABLE IF NOT EXISTS "RentalExtraCharge" (
+    "id"               TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    "rentalRequestId"  TEXT NOT NULL,
+    "extraHours"       DOUBLE PRECISION NOT NULL CHECK ("extraHours" > 0),
+    "extraAmount"      DOUBLE PRECISION NOT NULL CHECK ("extraAmount" > 0),
+    "note"             TEXT,
+    "createdAt"        TIMESTAMP(3) NOT NULL DEFAULT now()
+);
+
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'RentalExtraCharge_rentalRequestId_fkey') THEN
+        ALTER TABLE "RentalExtraCharge"
+            ADD CONSTRAINT "RentalExtraCharge_rentalRequestId_fkey"
+            FOREIGN KEY ("rentalRequestId") REFERENCES "RentalRequest"("requestId")
+            ON DELETE CASCADE ON UPDATE CASCADE;
+    END IF;
+END $$;
+
+CREATE INDEX IF NOT EXISTS "idx_rentalextracharge_request_created"
+  ON "RentalExtraCharge" ("rentalRequestId", "createdAt", "id");
