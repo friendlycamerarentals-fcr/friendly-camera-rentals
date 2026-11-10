@@ -762,13 +762,12 @@ export default function RentalDetailsModal({
                 </div>
                 {paymentHistory.length ? (
                   <div className="overflow-x-auto">
-                    <table className="w-full min-w-[700px] text-sm">
+                    <table className="w-full min-w-[620px] text-sm">
                       <thead className="bg-zinc-900 text-left text-[11px] uppercase tracking-wide text-zinc-500">
                         <tr>
                           <th className="px-3 py-2">Type</th>
                           <th className="px-3 py-2">Amount</th>
                           <th className="px-3 py-2">Method</th>
-                          <th className="px-3 py-2">Reference</th>
                           <th className="px-3 py-2">Verification</th>
                           <th className="px-3 py-2">Recorded</th>
                         </tr>
@@ -784,7 +783,6 @@ export default function RentalDetailsModal({
                               ₹{Number(entry.amount || 0).toLocaleString("en-IN")}
                             </td>
                             <td className="px-3 py-2">{entry.method || "—"}</td>
-                            <td className="px-3 py-2">{entry.reference || "—"}</td>
                             <td
                               className={`px-3 py-2 ${
                                 entry.verified
