@@ -1,15 +1,31 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+import {
+  addRentalProductToCart,
+  normalizeRentalCart,
+} from "@/lib/rentalCart";
 
 const CartContext = createContext();
 
 export function CartProvider({ children }) {
   const [cart, setCart] = useState([]);
+  const cartRef = useRef([]);
 
   useEffect(() => {
-    const savedCart = JSON.parse(localStorage.getItem("cart")) || [];
-
+    const savedCart = normalizeRentalCart(
+      JSON.parse(localStorage.getItem("cart")) || [],
+    );
+    cartRef.current = savedCart;
+    // Load the browser-persisted cart after hydration to avoid server/client markup mismatches.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setCart(savedCart);
   }, []);
 
@@ -17,42 +33,38 @@ export function CartProvider({ children }) {
     localStorage.setItem("cart", JSON.stringify(cart));
   }, [cart]);
 
+  const updateCart = useCallback((nextCartOrUpdater) => {
+    const nextCart =
+      typeof nextCartOrUpdater === "function"
+        ? nextCartOrUpdater(cartRef.current)
+        : nextCartOrUpdater;
+    cartRef.current = nextCart;
+    setCart(nextCart);
+  }, []);
+
   const addToCart = (product) => {
-    setCart((prev) => {
-      const existing = prev.find(
-        (item) => item.id === product.id && item.duration === product.duration,
-      );
-
-      if (existing) {
-        return prev.map((item) =>
-          item.id === product.id && item.duration === product.duration
-            ? {
-                ...item,
-                quantity: (item.quantity || 1) + 1,
-              }
-            : item,
-        );
-      }
-
-      return [...prev, { ...product, quantity: 1 }];
-    });
+    const result = addRentalProductToCart(cartRef.current, product);
+    if (result.added) {
+      updateCart(result.cart);
+    }
+    return result.added;
   };
 
   const removeFromCart = (id, duration) => {
-    setCart((prev) =>
+    updateCart((prev) =>
       prev.filter((item) => !(item.id === id && item.duration === duration)),
     );
   };
 
   const clearCart = () => {
-    setCart([]);
+    updateCart([]);
   };
 
   return (
     <CartContext.Provider
       value={{
         cart,
-        setCart,
+        setCart: updateCart,
         addToCart,
         removeFromCart,
         clearCart,

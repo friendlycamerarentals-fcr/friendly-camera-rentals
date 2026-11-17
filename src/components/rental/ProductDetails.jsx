@@ -74,7 +74,7 @@ export default function ProductDetails({ product }) {
     }
 
     try {
-      addToCart({
+      const added = addToCart({
         id: product.id,
         name: product.name,
         category: product.category,
@@ -83,6 +83,17 @@ export default function ProductDetails({ product }) {
         price: selectedPrice,
         quantity: 1,
       });
+
+      if (!added) {
+        toast.warning("This product is already added to cart.", {
+          style: {
+            background: "#1c1917",
+            border: "1px solid #f59e0b",
+            color: "#fbbf24",
+          },
+        });
+        return;
+      }
 
       toast.success(`${product.name} added to cart successfully.`);
     } catch (error) {

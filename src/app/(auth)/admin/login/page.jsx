@@ -64,7 +64,7 @@ export default function AdminLoginPage() {
       {/* Background Glow */}
       <div className="absolute left-1/2 top-1/2 h-[400px] w-[400px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#F5A623]/10 blur-[150px]" />
 
-      <div className="relative z-10 w-full max-w-md rounded-[32px] border border-white/10 bg-white/[0.03] p-8 backdrop-blur-xl">
+      <div className="relative z-10 w-full max-w-md rounded-2xl border border-white/10 bg-white/[0.03] p-8 backdrop-blur-xl">
         {/* Logo */}
         <div className="mb-8 text-center">
           <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-[#F5A623]/10">

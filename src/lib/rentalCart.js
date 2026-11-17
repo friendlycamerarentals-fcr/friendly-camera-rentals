@@ -1,0 +1,24 @@
+export function normalizeRentalCart(cart) {
+  const seenProductIds = new Set();
+
+  return cart.reduce((items, item) => {
+    if (seenProductIds.has(item.id)) {
+      return items;
+    }
+
+    seenProductIds.add(item.id);
+    items.push({ ...item, quantity: 1 });
+    return items;
+  }, []);
+}
+
+export function addRentalProductToCart(cart, product) {
+  if (cart.some((item) => item.id === product.id)) {
+    return { cart, added: false };
+  }
+
+  return {
+    cart: [...cart, { ...product, quantity: 1 }],
+    added: true,
+  };
+}
