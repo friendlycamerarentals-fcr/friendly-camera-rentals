@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   getDurationListingPrice,
+  getStandardDurationOptions,
   updatePricesForSharedDuration,
   validateSharedRentalDuration,
 } from "./rentalDuration.js";
@@ -78,5 +79,58 @@ test("shared duration changes refresh catalog prices and preserve negotiated pri
       customUnit: "Days",
     }),
     "",
+  );
+});
+
+test("standard duration options include only valid configured product prices", () => {
+  assert.deepEqual(
+    getStandardDurationOptions({
+      pricing: {
+        "1hr": 150,
+        "5hrs": 500,
+        "11hrs": 850,
+        "24hrs": 1200,
+        overnight: 300,
+        "2days": 0,
+        "1week": 900.257,
+      },
+    }),
+    [
+      {
+        key: "1hr",
+        value: 1,
+        unit: "Hours",
+        display: "1 Hour",
+        price: 150,
+      },
+      {
+        key: "5hrs",
+        value: 5,
+        unit: "Hours",
+        display: "5 Hours",
+        price: 500,
+      },
+      {
+        key: "11hrs",
+        value: 11,
+        unit: "Hours",
+        display: "11 Hours",
+        price: 850,
+      },
+      {
+        key: "24hrs",
+        value: 24,
+        unit: "Hours",
+        display: "24 Hours",
+        price: 1200,
+      },
+      {
+        key: "1week",
+        value: 7,
+        unit: "Days",
+        display: "7 Days",
+        price: 900.26,
+      },
+    ],
   );
 });

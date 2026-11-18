@@ -66,7 +66,7 @@ The application is a single Next.js project with route handlers as its backend, 
 | --- | --- | --- |
 | Dashboard | `/admin` | Seven live count cards (Bookings, Rentals, Buy Products, Sell Requests, Customers, Rewards, Testimonials) and the Recent Activity feed |
 | Bookings calendar | `/admin/bookings` | Month calendar with status-tinted days, legend, today shortcut, and per-day booking drill-down |
-| Rentals | `/admin/rentals` | Stats, search, status/time filters, sorting, rental table, details modal, WhatsApp reply, delete with guards, and manual multi-item bookings |
+| Rentals | `/admin/rentals` | Stats, search, status/time filters, sorting, rental table, details modal, catalog-priced duration edits, WhatsApp reply, delete with guards, and manual multi-item bookings |
 | Rental products | `/admin/rental-products` | Stats, filters, table, view modal, availability toggle, delete dialog, drag-and-drop reorder, add/edit forms with image upload and duration pricing |
 | Buy products | `/admin/buy-products` (also `/admin/buy`) | Stats, filters, table, view modal, status changes (`In Stock` / `Out of Stock` / `Sold`), delete, reorder, add/edit/detail pages |
 | Sell requests | `/admin/sell-requests` (also `/admin/sell` → redirect) | Stats, search, status filter, detail modal, status updates, delete |
@@ -83,6 +83,7 @@ The application is a single Next.js project with route handlers as its backend, 
 - The public details page reads duration options from that map and adds the selected duration + price to the cart.
 - Admins can create manual bookings (phone/WhatsApp enquiries) for one or more items sharing a single duration, with per-item agreed prices and an optional expected advance.
 - Rental requests support a persisted item list (`RentalRequestItem`) so multi-item manual bookings appear with every item in the admin list and details modal.
+- Admins can edit an existing rental item's duration in the details modal; the price is reset to that product's configured catalog price, an applied reward discount is reduced if needed, and verified payments are preserved (a reduction below payments already received is rejected).
 - Every rental carries a booking source (`Website` or `Manual`) plus audit fields for who created and confirmed it.
 
 ### Product Management

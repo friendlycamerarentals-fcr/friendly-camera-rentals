@@ -37,7 +37,8 @@ export function parsePricingKey(key) {
 export function formatDuration({ value, unit }) {
   const num = Number(value);
   if (!Number.isFinite(num) || !unit) return "";
-  return `${num} ${unit}`;
+  const singularUnit = unit.replace(/s$/, "");
+  return `${num} ${num === 1 ? singularUnit : unit}`;
 }
 
 /**
@@ -125,6 +126,26 @@ export function getDurationListingPrice(product, duration) {
   return Number.isFinite(price) && price > 0
     ? String(fromPaise(toPaise(price)))
     : "";
+}
+
+export function getStandardDurationOptions(product) {
+  return Object.entries(product?.pricing || {})
+    .flatMap(([key, rawPrice]) => {
+      const duration = parsePricingKey(key);
+      const price = Number(rawPrice);
+      if (!duration || !Number.isFinite(price) || price <= 0) return [];
+      return [{
+        key,
+        ...duration,
+        display: formatDuration(duration),
+        price: fromPaise(toPaise(price)),
+      }];
+    })
+    .sort((a, b) => {
+      const aHours = a.value * (a.unit === DURATION_UNITS.DAYS ? 24 : 1);
+      const bHours = b.value * (b.unit === DURATION_UNITS.DAYS ? 24 : 1);
+      return aHours - bHours || a.key.localeCompare(b.key);
+    });
 }
 
 export function updatePricesForSharedDuration(items, productsById, duration) {

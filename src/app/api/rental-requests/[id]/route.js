@@ -17,6 +17,14 @@ import {
   validateAdvancePayment,
 } from "@/lib/rentalPayment";
 import { withRentalPaymentSummary } from "@/lib/rentalPayments";
+import {
+  formatDuration,
+  fromPaise,
+  getDurationListingPrice,
+  parsePricingKey,
+  sumPaise,
+  toPaise,
+} from "@/lib/rentalDuration";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -44,8 +52,38 @@ export async function PATCH(request, { params }) {
     const hasPaymentUpdate = ["totalAmount", "discount"].some(hasField);
     const hasPaymentRecord = Boolean(body.payment);
     const hasPaymentStatusUpdate = typeof body.paymentStatus === "string";
+    const hasDurationUpdate = hasField("durationUpdate");
     const hasPaymentOperation =
       hasPaymentUpdate || hasPaymentRecord || hasPaymentStatusUpdate;
+
+    if (
+      hasDurationUpdate &&
+      (!body.durationUpdate ||
+        typeof body.durationUpdate !== "object" ||
+        Array.isArray(body.durationUpdate) ||
+        typeof body.durationUpdate.key !== "string" ||
+        !body.durationUpdate.key.trim() ||
+        (body.durationUpdate.itemId != null &&
+          typeof body.durationUpdate.itemId !== "string"))
+    ) {
+      return NextResponse.json(
+        { success: false, message: "A valid rental duration is required." },
+        { status: 400 },
+      );
+    }
+
+    if (
+      hasDurationUpdate &&
+      (hasPaymentOperation || hasPaymentStatusUpdate)
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Update the rental duration separately from payment details.",
+        },
+        { status: 400 },
+      );
+    }
 
     if (hasPaymentOperation) {
       const currentRentalRows = await query(
@@ -63,6 +101,28 @@ export async function PATCH(request, { params }) {
             success: false,
             message:
               "Payment management is unavailable for this rental status.",
+          },
+          { status: 409 },
+        );
+      }
+    }
+
+    if (hasDurationUpdate) {
+      const currentRentalRows = await query(
+        'SELECT "status" FROM "RentalRequest" WHERE "id" = $1 LIMIT 1',
+        [id],
+      );
+      if (
+        RENTAL_STATUSES_WITHOUT_EXTRA_CHARGES.includes(
+          currentRentalRows[0]?.status,
+        ) ||
+        RENTAL_STATUSES_WITHOUT_EXTRA_CHARGES.includes(body.status)
+      ) {
+        return NextResponse.json(
+          {
+            success: false,
+            message:
+              "Rental duration cannot be changed for this rental status.",
           },
           { status: 409 },
         );
@@ -106,7 +166,12 @@ export async function PATCH(request, { params }) {
       );
     }
 
-    if (!Object.keys(payload).length && !hasPaymentUpdate && !hasPaymentRecord) {
+    if (
+      !Object.keys(payload).length &&
+      !hasPaymentUpdate &&
+      !hasPaymentRecord &&
+      !hasDurationUpdate
+    ) {
       return NextResponse.json(
         { success: false, message: "No valid fields to update" },
         { status: 400 },
@@ -155,6 +220,18 @@ export async function PATCH(request, { params }) {
         throw error;
       }
 
+      if (
+        hasDurationUpdate &&
+        (RENTAL_STATUSES_WITHOUT_EXTRA_CHARGES.includes(existing.status) ||
+          RENTAL_STATUSES_WITHOUT_EXTRA_CHARGES.includes(payload.status))
+      ) {
+        const error = new Error(
+          "Rental duration cannot be changed for this rental status.",
+        );
+        error.status = 409;
+        throw error;
+      }
+
       const persistedPayments = (
         await client.query(
           `SELECT * FROM "RentalPayment"
@@ -185,8 +262,118 @@ export async function PATCH(request, { params }) {
       let otherDiscount = Number(existing.discount || 0);
       const advanceAmount = currentPaymentSummary.advanceReceived;
       const totalVerifiedPayments = currentPaymentSummary.totalVerifiedPayments;
-      const rewardDiscount = Number(existing.rewardDiscount || 0);
+      let rewardDiscount = Number(existing.rewardDiscount || 0);
       const totalExtraCharges = Number(currentPaymentSummary.totalExtraCharges || 0);
+
+      if (hasDurationUpdate) {
+        const durationKey = body.durationUpdate.key.trim();
+        const parsedDuration = parsePricingKey(durationKey);
+        if (!parsedDuration) {
+          const error = new Error("Select a valid configured rental duration.");
+          error.status = 400;
+          throw error;
+        }
+
+        const rentalItems = (
+          await client.query(
+            `SELECT * FROM "RentalRequestItem"
+             WHERE "rentalRequestId" = $1
+             ORDER BY "itemOrder" ASC, "id" ASC`,
+            [existing.requestId],
+          )
+        ).rows;
+        const itemId = body.durationUpdate.itemId || null;
+        let targetItem = null;
+        if (itemId) {
+          targetItem = rentalItems.find((item) => item.id === itemId);
+          if (!targetItem) {
+            const error = new Error("Rental item not found on this booking.");
+            error.status = 404;
+            throw error;
+          }
+        } else if (rentalItems.length) {
+          const error = new Error(
+            "Select a rental item before changing its duration.",
+          );
+          error.status = 400;
+          throw error;
+        }
+
+        const productId = targetItem?.productId || existing.productId;
+        const productRows = await client.query(
+          'SELECT "id", "pricing" FROM "RentalProduct" WHERE "id" = $1 LIMIT 1 FOR SHARE',
+          [productId],
+        );
+        const product = productRows.rows[0];
+        const rentalPrice = Number(
+          getDurationListingPrice(product, {
+            type: "standard",
+            key: durationKey,
+          }),
+        );
+        if (!product || !Number.isFinite(rentalPrice) || rentalPrice <= 0) {
+          const error = new Error(
+            "That duration does not have a configured price for this product.",
+          );
+          error.status = 400;
+          throw error;
+        }
+
+        if (targetItem) {
+          await client.query(
+            `UPDATE "RentalRequestItem"
+             SET "durationValue" = $1, "durationUnit" = $2,
+                 "durationDisplay" = $3, "rentalPrice" = $4,
+                 "isCustomDuration" = FALSE, "isCustomPrice" = FALSE,
+                 "updatedAt" = NOW()
+             WHERE "id" = $5`,
+            [
+              parsedDuration.value,
+              parsedDuration.unit,
+              formatDuration(parsedDuration),
+              rentalPrice,
+              targetItem.id,
+            ],
+          );
+          originalAmount = fromPaise(
+            sumPaise(
+              rentalItems.map((item) =>
+                item.id === targetItem.id ? rentalPrice : item.rentalPrice,
+              ),
+            ),
+          );
+          if (rentalItems[0]?.id === targetItem.id) {
+            pushUpdate("rentalDuration", formatDuration(parsedDuration));
+            pushUpdate("rentalPrice", rentalPrice);
+          }
+        } else {
+          originalAmount = fromPaise(
+            toPaise(rentalPrice) * Number(existing.quantity || 1),
+          );
+          pushUpdate("rentalDuration", formatDuration(parsedDuration));
+          pushUpdate("rentalPrice", rentalPrice);
+        }
+
+        if (existing.rewardId) {
+          const rewardDiscountLimit = Math.max(
+            fromPaise(
+              toPaise(originalAmount) -
+                toPaise(otherDiscount) -
+                toPaise(advanceAmount),
+            ),
+            0,
+          );
+          const adjustedRewardDiscount = Math.min(
+            rewardDiscount,
+            rewardDiscountLimit,
+          );
+          if (adjustedRewardDiscount !== rewardDiscount) {
+            rewardDiscount = adjustedRewardDiscount;
+            pushUpdate("rewardDiscount", rewardDiscount);
+          }
+        }
+      }
+
       let finalAmount =
         originalAmount + totalExtraCharges - rewardDiscount - otherDiscount;
 
@@ -226,6 +413,35 @@ export async function PATCH(request, { params }) {
         pushUpdate("originalAmount", originalAmount);
         pushUpdate("discount", otherDiscount);
         pushUpdate("totalAmount", finalAmount);
+      }
+
+      if (hasDurationUpdate) {
+        finalAmount =
+          originalAmount + totalExtraCharges - rewardDiscount - otherDiscount;
+        if (finalAmount < 0) {
+          const error = new Error(
+            "The configured reward and discount exceed the new rental amount.",
+          );
+          error.status = 400;
+          throw error;
+        }
+        if (totalVerifiedPayments > finalAmount) {
+          const error = new Error(
+            "Verified payments exceed the new rental amount. Record an appropriate refund before reducing the duration.",
+          );
+          error.status = 400;
+          throw error;
+        }
+        pushUpdate("originalAmount", originalAmount);
+        pushUpdate("totalAmount", finalAmount);
+        pushUpdate(
+          "paymentStatus",
+          totalVerifiedPayments >= finalAmount
+            ? "Paid"
+            : totalVerifiedPayments > 0
+              ? "Advance Paid"
+              : "Pending",
+        );
       }
 
       Object.entries(payload).forEach(([key, value]) => {
@@ -367,6 +583,15 @@ export async function PATCH(request, { params }) {
           [updated.requestId],
         )
       ).rows;
+      const updatedItems = (
+        await client.query(
+          `SELECT * FROM "RentalRequestItem"
+           WHERE "rentalRequestId" = $1
+           ORDER BY "itemOrder" ASC, "id" ASC`,
+          [updated.requestId],
+        )
+      ).rows;
+      if (updatedItems.length) updated.items = updatedItems;
       updated = withRentalPaymentSummary(
         updated,
         updatedPayments,

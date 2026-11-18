@@ -1,7 +1,15 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { X, Phone, Save, Trash2, BadgeCheck, Loader2 } from "lucide-react";
+import { Fragment, useEffect, useRef, useState } from "react";
+import {
+  X,
+  Phone,
+  Save,
+  Trash2,
+  BadgeCheck,
+  Loader2,
+  Pencil,
+} from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
 import { toast } from "sonner";
 import RentalStatusBadge from "./RentalStatusBadge";
@@ -14,6 +22,10 @@ import {
   RENTAL_PAYMENT_METHODS,
   RENTAL_PAYMENT_TYPES,
 } from "@/lib/rentalPayment";
+import {
+  getStandardDurationOptions,
+  parsePricingKey,
+} from "@/lib/rentalDuration";
 
 const inputCls =
   "w-full rounded-xl border border-white/10 bg-zinc-900 px-3 py-2.5 text-sm text-white outline-none focus:border-[#F5A623] transition";
@@ -29,6 +41,7 @@ export default function RentalDetailsModal({
   onRecordPayment,
   onWhatsApp,
   onAddExtraCharge,
+  onEditDuration,
   actionLoading,
 }) {
   const [paymentEdit, setPaymentEdit] = useState(null);
@@ -45,11 +58,47 @@ export default function RentalDetailsModal({
   const [extraChargeFormOpen, setExtraChargeFormOpen] = useState(false);
   const [paymentSubmitting, setPaymentSubmitting] = useState(false);
   const [extraChargeSubmitting, setExtraChargeSubmitting] = useState(false);
+  const [rentalProducts, setRentalProducts] = useState([]);
+  const [productPricingLoadedForBookingId, setProductPricingLoadedForBookingId] =
+    useState(null);
+  const [durationEditItemId, setDurationEditItemId] = useState(null);
+  const [durationKey, setDurationKey] = useState("");
+  const [durationSubmitting, setDurationSubmitting] = useState(false);
   const paymentSubmitLock = useRef(false);
   const paymentSubmissionKey = useRef(null);
   const [confirmSubmitting, setConfirmSubmitting] = useState(false);
   const availableStatusTransitions =
     RENTAL_STATUS_TRANSITIONS[booking?.status] || [];
+  const productPricingLoading =
+    open && booking?.id !== productPricingLoadedForBookingId;
+
+  useEffect(() => {
+    if (!open || !booking?.id) return;
+    let active = true;
+
+    fetch("/api/rental-products")
+      .then(async (response) => {
+        const result = await response.json();
+        if (!response.ok || !result.success) {
+          throw new Error(result.message || "Failed to load rental products.");
+        }
+        if (active) setRentalProducts(result.data || []);
+      })
+      .catch((error) => {
+        console.error("[RENTAL_DURATION_PRODUCT_PRICING]", error);
+        if (active) {
+          setRentalProducts([]);
+          toast.error("Failed to load configured rental duration prices.");
+        }
+      })
+      .finally(() => {
+        if (active) setProductPricingLoadedForBookingId(booking.id);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [open, booking?.id]);
 
   if (!open || !booking) return null;
 
@@ -107,6 +156,8 @@ export default function RentalDetailsModal({
   const closeModal = () => {
     setExtraChargeForm({ extraHours: "", extraAmount: "", note: "" });
     setExtraChargeFormOpen(false);
+    setDurationEditItemId(null);
+    setDurationKey("");
     onClose();
   };
 
@@ -190,6 +241,158 @@ export default function RentalDetailsModal({
   const cancelExtraCharge = () => {
     setExtraChargeForm({ extraHours: "", extraAmount: "", note: "" });
     setExtraChargeFormOpen(false);
+  };
+
+  const rentalProductsById = Object.fromEntries(
+    rentalProducts.map((product) => [product.id, product]),
+  );
+  const beginDurationEdit = (item) => {
+    const options = getStandardDurationOptions(
+      rentalProductsById[item.productId],
+    );
+    const currentDuration = parsePricingKey(item.durationDisplay);
+    const currentOption = options.find(
+      (option) =>
+        option.value === currentDuration?.value &&
+        option.unit === currentDuration?.unit,
+    );
+    setDurationEditItemId(item.id || "primary");
+    setDurationKey(currentOption?.key || options[0]?.key || "");
+  };
+  const saveDurationEdit = async (item) => {
+    if (
+      !onEditDuration ||
+      !durationKey ||
+      durationSubmitting ||
+      actionLoading
+    ) {
+      return;
+    }
+
+    setDurationSubmitting(true);
+    try {
+      const success = await onEditDuration(booking.id, {
+        itemId: item.id || null,
+        key: durationKey,
+      });
+      if (success) {
+        setDurationEditItemId(null);
+        setDurationKey("");
+      }
+    } finally {
+      setDurationSubmitting(false);
+    }
+  };
+  const renderDurationControls = (item) => {
+    const editId = item.id || "primary";
+    const options = getStandardDurationOptions(
+      rentalProductsById[item.productId],
+    );
+    const isEditing = durationEditItemId === editId;
+
+    if (!isEditing) {
+      return (
+        <button
+          type="button"
+          onClick={() => beginDurationEdit(item)}
+          disabled={
+            !onEditDuration ||
+            actionLoading ||
+            extraChargesUnavailable ||
+            productPricingLoading ||
+            options.length === 0
+          }
+          className="inline-flex items-center gap-1.5 rounded-lg border border-[#F5A623]/30 px-2.5 py-1.5 text-xs font-semibold text-[#F5A623] transition hover:bg-[#F5A623]/10 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <Pencil size={13} />
+          Edit Duration
+        </button>
+      );
+    }
+
+    const selectedOption = options.find((option) => option.key === durationKey);
+    return (
+      <div className="rounded-xl border border-[#F5A623]/20 bg-zinc-900/80 p-3">
+        <div className="mb-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-zinc-400">
+          <span>
+            Current: <strong className="text-zinc-200">{item.durationDisplay}</strong>
+          </span>
+          <span>
+            Current price:{" "}
+            <strong className="text-zinc-200">
+              ₹{Number(item.rentalPrice || 0).toLocaleString("en-IN")}
+            </strong>
+          </span>
+        </div>
+        {productPricingLoading ? (
+          <p className="text-xs text-zinc-400">Loading configured durations...</p>
+        ) : options.length ? (
+          <>
+            <label className="mb-1 block text-[11px] text-zinc-400">
+              New duration
+            </label>
+            <select
+              value={durationKey}
+              onChange={(event) => setDurationKey(event.target.value)}
+              className={inputCls}
+            >
+              {options.map((option) => (
+                <option key={option.key} value={option.key}>
+                  {option.display} — ₹
+                  {option.price.toLocaleString("en-IN")}
+                </option>
+              ))}
+            </select>
+            {selectedOption && (
+              <p className="mt-2 text-xs text-zinc-300">
+                New price:{" "}
+                <strong className="text-[#F5A623]">
+                  ₹{selectedOption.price.toLocaleString("en-IN")}
+                </strong>
+              </p>
+            )}
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => saveDurationEdit(item)}
+                disabled={
+                  !durationKey ||
+                  durationSubmitting ||
+                  actionLoading ||
+                  extraChargesUnavailable ||
+                  !onEditDuration
+                }
+                className="inline-flex items-center gap-2 rounded-lg bg-[#F5A623] px-3 py-2 text-xs font-bold text-black transition hover:bg-amber-400 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {durationSubmitting ? (
+                  <>
+                    <Loader2 size={13} className="animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  "Save Duration"
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setDurationEditItemId(null);
+                  setDurationKey("");
+                }}
+                disabled={durationSubmitting || actionLoading}
+                className="rounded-lg border border-white/10 px-3 py-2 text-xs font-semibold text-zinc-300 hover:bg-white/5 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+            </div>
+          </>
+        ) : (
+          <p className="text-xs text-zinc-400">
+            No configured catalog durations are available for this product.
+          </p>
+        )}
+      </div>
+    );
   };
 
   const updatePayment = (field, value) => {
@@ -425,27 +628,46 @@ export default function RentalDetailsModal({
                         <th className="px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide">Rental item</th>
                         <th className="px-2 py-2 text-left text-[11px] font-medium uppercase tracking-wide">Duration</th>
                         <th className="px-3 py-2 text-right text-[11px] font-medium uppercase tracking-wide">Agreed price</th>
+                        <th className="px-3 py-2 text-right text-[11px] font-medium uppercase tracking-wide">Duration actions</th>
                       </tr>
                     </thead>
                     <tbody>
                       {booking.items.map((item) => (
-                        <tr key={item.id} className="border-t border-white/5">
-                          <td className="px-3 py-2.5 text-white">
-                            {item.productName}
-                            {item.category && (
-                              <span className="ml-2 text-[11px] text-zinc-500">({item.category})</span>
-                            )}
-                          </td>
-                          <td className="px-2 py-2.5 text-zinc-400">
-                            {item.durationDisplay || "—"}
-                            {(item.isCustomDuration || item.isCustomPrice) && (
-                              <span className="ml-1.5 rounded bg-[#F5A623]/15 px-1 py-0.5 text-[10px] text-[#F5A623]">Custom</span>
-                            )}
-                          </td>
-                          <td className="px-3 py-2.5 text-right font-semibold text-[#F5A623]">
-                            ₹{Number(item.rentalPrice || 0).toLocaleString("en-IN")}
-                          </td>
-                        </tr>
+                        <Fragment key={item.id}>
+                          <tr key={item.id} className="border-t border-white/5">
+                            <td className="px-3 py-2.5 text-white">
+                              {item.productName}
+                              {item.category && (
+                                <span className="ml-2 text-[11px] text-zinc-500">({item.category})</span>
+                              )}
+                            </td>
+                            <td className="px-2 py-2.5 text-zinc-400">
+                              {item.durationDisplay || "—"}
+                              {(item.isCustomDuration || item.isCustomPrice) && (
+                                <span className="ml-1.5 rounded bg-[#F5A623]/15 px-1 py-0.5 text-[10px] text-[#F5A623]">Custom</span>
+                              )}
+                            </td>
+                            <td className="px-3 py-2.5 text-right font-semibold text-[#F5A623]">
+                              ₹{Number(item.rentalPrice || 0).toLocaleString("en-IN")}
+                            </td>
+                            <td className="px-3 py-2.5 text-right">
+                              {durationEditItemId === item.id ? (
+                                <span className="text-xs text-zinc-500">
+                                  Editing below
+                                </span>
+                              ) : (
+                                renderDurationControls(item)
+                              )}
+                            </td>
+                          </tr>
+                          {durationEditItemId === item.id && (
+                            <tr key={`${item.id}-duration-edit`} className="border-t border-white/5">
+                              <td colSpan={4} className="px-3 py-3">
+                                {renderDurationControls(item)}
+                              </td>
+                            </tr>
+                          )}
+                        </Fragment>
                       ))}
                     </tbody>
                     <tfoot>
@@ -468,6 +690,10 @@ export default function RentalDetailsModal({
                       <p className="text-xs text-zinc-400">
                         Duration: {booking.rentalDuration}
                       </p>
+                      <p className="mt-1 text-xs text-zinc-400">
+                        Rental price: ₹
+                        {Number(booking.rentalPrice || 0).toLocaleString("en-IN")}
+                      </p>
                     </div>
                     <div className="shrink-0 text-right">
                       <span className="block text-sm font-bold text-[#F5A623]">
@@ -476,6 +702,13 @@ export default function RentalDetailsModal({
                       </span>
                       <span className="text-[11px] text-zinc-500">Final payable</span>
                     </div>
+                  </div>
+                  <div className="px-1">
+                    {renderDurationControls({
+                      productId: booking.productId,
+                      durationDisplay: booking.rentalDuration,
+                      rentalPrice: booking.rentalPrice,
+                    })}
                   </div>
                 </div>
               )}

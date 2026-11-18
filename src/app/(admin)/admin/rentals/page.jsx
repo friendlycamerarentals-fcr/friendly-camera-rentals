@@ -230,6 +230,37 @@ export default function RentalsPage() {
     }
   };
 
+  const handleEditDuration = async (id, durationUpdate) => {
+    try {
+      setActionLoadingId(id);
+      const response = await fetch(`/api/rental-requests/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ durationUpdate }),
+      });
+      const result = await response.json();
+      if (!response.ok || !result.success)
+        throw new Error(result.message || "Failed to update rental duration");
+
+      setBookings((prev) =>
+        prev.map((booking) =>
+          booking.id === id ? { ...booking, ...result.data } : booking,
+        ),
+      );
+      if (selectedBooking?.id === id) {
+        setSelectedBooking((prev) => ({ ...prev, ...result.data }));
+      }
+
+      toast.success("Rental duration and price updated.");
+      return true;
+    } catch (error) {
+      toast.error(error.message || "Failed to update rental duration");
+      return false;
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
   const handleAddExtraCharge = async (id, payload) => {
     try {
       setActionLoadingId(id);
@@ -316,6 +347,7 @@ export default function RentalsPage() {
         onRecordPayment={handleRecordPayment}
         onWhatsApp={handleWhatsAppAction}
         onAddExtraCharge={handleAddExtraCharge}
+        onEditDuration={handleEditDuration}
         actionLoading={Boolean(actionLoadingId)}
       />
 
