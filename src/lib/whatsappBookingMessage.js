@@ -61,8 +61,12 @@ export function buildRentalWhatsAppMessage(booking = {}) {
       const duration = item.durationDisplay || item.durationValue
         ? `${item.durationDisplay || ""}`
         : item.duration || "";
+      const quantity = Number(item.quantity || 1);
+      const price = Number(item.rentalPrice || 0);
       lines.push(
-        `${index + 1}. ${item.productName} · ${duration} — ${inr(item.rentalPrice)}`,
+        `${index + 1}. ${item.productName} · ${duration} — ${inr(price)}${
+          quantity > 1 ? ` × ${quantity} = ${inr(price * quantity)}` : ""
+        }`,
       );
     });
   } else {

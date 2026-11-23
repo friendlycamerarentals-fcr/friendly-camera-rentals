@@ -230,17 +230,17 @@ export default function RentalsPage() {
     }
   };
 
-  const handleEditDuration = async (id, durationUpdate) => {
+  const handleRentalItemMutation = async (id, operation, payload) => {
     try {
       setActionLoadingId(id);
       const response = await fetch(`/api/rental-requests/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ durationUpdate }),
+        body: JSON.stringify({ [operation]: payload }),
       });
       const result = await response.json();
       if (!response.ok || !result.success)
-        throw new Error(result.message || "Failed to update rental duration");
+        throw new Error(result.message || "Failed to update rental products");
 
       setBookings((prev) =>
         prev.map((booking) =>
@@ -251,15 +251,24 @@ export default function RentalsPage() {
         setSelectedBooking((prev) => ({ ...prev, ...result.data }));
       }
 
-      toast.success("Rental duration and price updated.");
+      toast.success(
+        operation === "addRentalItem"
+          ? "Rental product added successfully."
+          : "Rental product updated successfully.",
+      );
       return true;
     } catch (error) {
-      toast.error(error.message || "Failed to update rental duration");
+      toast.error(error.message || "Failed to update rental products");
       return false;
     } finally {
       setActionLoadingId(null);
     }
   };
+
+  const handleEditRentalProduct = (id, payload) =>
+    handleRentalItemMutation(id, "rentalItemUpdate", payload);
+  const handleAddRentalProduct = (id, payload) =>
+    handleRentalItemMutation(id, "addRentalItem", payload);
 
   const handleAddExtraCharge = async (id, payload) => {
     try {
@@ -347,7 +356,8 @@ export default function RentalsPage() {
         onRecordPayment={handleRecordPayment}
         onWhatsApp={handleWhatsAppAction}
         onAddExtraCharge={handleAddExtraCharge}
-        onEditDuration={handleEditDuration}
+        onEditRentalProduct={handleEditRentalProduct}
+        onAddRentalProduct={handleAddRentalProduct}
         actionLoading={Boolean(actionLoadingId)}
       />
 

@@ -187,8 +187,10 @@ CREATE TABLE IF NOT EXISTS "RentalRequestItem" (
     "durationUnit"     TEXT,
     "durationDisplay"  TEXT NOT NULL,
     "rentalPrice"      DOUBLE PRECISION NOT NULL,
+    "quantity"         INTEGER NOT NULL DEFAULT 1,
     "isCustomDuration" BOOLEAN NOT NULL DEFAULT FALSE,
     "isCustomPrice"    BOOLEAN NOT NULL DEFAULT FALSE,
+    "submissionKey"    TEXT,
     "createdAt"        TIMESTAMP(3) NOT NULL DEFAULT now(),
     "updatedAt"        TIMESTAMP(3) NOT NULL DEFAULT now()
 );
@@ -208,6 +210,11 @@ CREATE INDEX IF NOT EXISTS "idx_rentalitem_product_id" ON "RentalRequestItem" ("
 
 -- 2026-10-19: stable item ordering for multi-item bookings.
 ALTER TABLE "RentalRequestItem" ADD COLUMN IF NOT EXISTS "itemOrder" INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE "RentalRequestItem" ADD COLUMN IF NOT EXISTS "quantity" INTEGER NOT NULL DEFAULT 1;
+ALTER TABLE "RentalRequestItem" ADD COLUMN IF NOT EXISTS "submissionKey" TEXT;
+CREATE UNIQUE INDEX IF NOT EXISTS "idx_rentalitem_request_submission_key"
+    ON "RentalRequestItem" ("rentalRequestId", "submissionKey")
+    WHERE "submissionKey" IS NOT NULL;
 
 -- ============================================================================
 -- 2026-10-21: Persist rental payments as individually auditable transactions.

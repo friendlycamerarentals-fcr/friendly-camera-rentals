@@ -5,6 +5,7 @@ import {
   completeAppliedRewardInTransaction,
   releaseAppliedRewardInTransaction,
 } from "@/lib/rewards/applyReward";
+import { isRewardEligible } from "@/lib/rewards/rewardValidation";
 import {
   canTransitionRentalStatus,
   isRentalStatus,
@@ -16,13 +17,23 @@ import {
   matchesRentalPaymentSubmission,
   validateAdvancePayment,
 } from "@/lib/rentalPayment";
-import { withRentalPaymentSummary } from "@/lib/rentalPayments";
+import {
+  getAdjustedRewardDiscount,
+  getFinalRentalAmount,
+  withRentalPaymentSummary,
+} from "@/lib/rentalPayments";
+import {
+  MAX_RENTAL_ITEMS,
+  getRentalItemsTotal,
+  resolveConfiguredRentalPrice,
+  validateRentalQuantity,
+} from "@/lib/rentalItems";
 import {
   formatDuration,
   fromPaise,
   getDurationListingPrice,
+  getStandardDurationOptions,
   parsePricingKey,
-  sumPaise,
   toPaise,
 } from "@/lib/rentalDuration";
 
@@ -46,6 +57,12 @@ export async function PATCH(request, { params }) {
     }
 
     const body = await request.json();
+    if (!body || typeof body !== "object" || Array.isArray(body)) {
+      return NextResponse.json(
+        { success: false, message: "A valid rental update is required." },
+        { status: 400 },
+      );
+    }
 
     const hasField = (field) =>
       Object.prototype.hasOwnProperty.call(body, field);
@@ -53,8 +70,105 @@ export async function PATCH(request, { params }) {
     const hasPaymentRecord = Boolean(body.payment);
     const hasPaymentStatusUpdate = typeof body.paymentStatus === "string";
     const hasDurationUpdate = hasField("durationUpdate");
+    const hasRentalItemUpdate = hasField("rentalItemUpdate");
+    const hasRentalItemAddition = hasField("addRentalItem");
+    const hasRentalItemMutation =
+      hasRentalItemUpdate || hasRentalItemAddition;
     const hasPaymentOperation =
       hasPaymentUpdate || hasPaymentRecord || hasPaymentStatusUpdate;
+    const rentalItemPayload = hasRentalItemUpdate
+      ? body.rentalItemUpdate
+      : body.addRentalItem;
+
+    if (hasRentalItemUpdate && hasRentalItemAddition) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Add or edit one rental product per request.",
+        },
+        { status: 400 },
+      );
+    }
+
+    if (
+      hasRentalItemMutation &&
+      (!rentalItemPayload ||
+        typeof rentalItemPayload !== "object" ||
+        Array.isArray(rentalItemPayload) ||
+        typeof rentalItemPayload.productId !== "string" ||
+        !rentalItemPayload.productId.trim() ||
+        typeof rentalItemPayload.durationKey !== "string" ||
+        !rentalItemPayload.durationKey.trim() ||
+        (hasRentalItemUpdate &&
+          rentalItemPayload.itemId != null &&
+          typeof rentalItemPayload.itemId !== "string") ||
+        (hasRentalItemAddition &&
+          (typeof rentalItemPayload.submissionKey !== "string" ||
+            !rentalItemPayload.submissionKey.trim() ||
+            rentalItemPayload.submissionKey.length > 128)) ||
+        (rentalItemPayload.agreedPrice != null &&
+          !["number", "string"].includes(typeof rentalItemPayload.agreedPrice)))
+    ) {
+      return NextResponse.json(
+        { success: false, message: "A valid rental product update is required." },
+        { status: 400 },
+      );
+    }
+
+    if (
+      hasRentalItemMutation &&
+      (hasPaymentOperation || hasDurationUpdate || hasField("status"))
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "Update rental products separately from status or payment details.",
+        },
+        { status: 400 },
+      );
+    }
+
+    if (hasRentalItemMutation && hasField("quantity")) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Set quantity inside the rental product update.",
+        },
+        { status: 400 },
+      );
+    }
+
+    if (
+      hasRentalItemMutation &&
+      hasRentalItemAddition &&
+      !validateRentalQuantity(rentalItemPayload.quantity ?? 1).ok
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: validateRentalQuantity(
+            rentalItemPayload.quantity ?? 1,
+          ).message,
+        },
+        { status: 400 },
+      );
+    }
+
+    if (
+      hasRentalItemMutation &&
+      hasRentalItemUpdate &&
+      rentalItemPayload.quantity != null &&
+      !validateRentalQuantity(rentalItemPayload.quantity).ok
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: validateRentalQuantity(rentalItemPayload.quantity).message,
+        },
+        { status: 400 },
+      );
+    }
 
     if (
       hasDurationUpdate &&
@@ -170,7 +284,8 @@ export async function PATCH(request, { params }) {
       !Object.keys(payload).length &&
       !hasPaymentUpdate &&
       !hasPaymentRecord &&
-      !hasDurationUpdate
+      !hasDurationUpdate &&
+      !hasRentalItemMutation
     ) {
       return NextResponse.json(
         { success: false, message: "No valid fields to update" },
@@ -232,6 +347,17 @@ export async function PATCH(request, { params }) {
         throw error;
       }
 
+      if (
+        hasRentalItemMutation &&
+        RENTAL_STATUSES_WITHOUT_EXTRA_CHARGES.includes(existing.status)
+      ) {
+        const error = new Error(
+          "Rental products cannot be changed for this rental status.",
+        );
+        error.status = 409;
+        throw error;
+      }
+
       const persistedPayments = (
         await client.query(
           `SELECT * FROM "RentalPayment"
@@ -264,6 +390,335 @@ export async function PATCH(request, { params }) {
       const totalVerifiedPayments = currentPaymentSummary.totalVerifiedPayments;
       let rewardDiscount = Number(existing.rewardDiscount || 0);
       const totalExtraCharges = Number(currentPaymentSummary.totalExtraCharges || 0);
+      let rentalItems = [];
+      let itemMutationApplied = false;
+      let idempotentRentalItemAddition = false;
+      let finalAmount =
+        originalAmount + totalExtraCharges - rewardDiscount - otherDiscount;
+
+      if (hasRentalItemMutation) {
+        const itemRows = await client.query(
+          `SELECT * FROM "RentalRequestItem"
+           WHERE "rentalRequestId" = $1
+           ORDER BY "itemOrder" ASC, "id" ASC
+           FOR UPDATE`,
+          [existing.requestId],
+        );
+        rentalItems = itemRows.rows;
+
+        const insertPrimaryRentalItem = async () => {
+          const primaryQuantity = validateRentalQuantity(
+            existing.quantity ?? 1,
+          );
+          if (!primaryQuantity.ok) {
+            const error = new Error(
+              "The existing rental quantity is invalid and must be corrected before editing products.",
+            );
+            error.status = 409;
+            throw error;
+          }
+          const primaryProductRows = await client.query(
+            'SELECT "category", "pricing" FROM "RentalProduct" WHERE "id" = $1 LIMIT 1',
+            [existing.productId],
+          );
+          const primaryProduct = primaryProductRows.rows[0];
+          const parsedDuration = parsePricingKey(existing.rentalDuration);
+          const configuredOption = getStandardDurationOptions(
+            primaryProduct,
+          ).find(
+            (option) =>
+              option.value === parsedDuration?.value &&
+              option.unit === parsedDuration?.unit,
+          );
+          const rentalPrice = Number(existing.rentalPrice || 0);
+          const insertedRows = await client.query(
+            `INSERT INTO "RentalRequestItem" (
+               "id", "rentalRequestId", "productId", "productName", "productImage",
+               "category", "durationValue", "durationUnit", "durationDisplay",
+               "rentalPrice", "quantity", "isCustomDuration", "isCustomPrice",
+               "itemOrder", "submissionKey", "createdAt", "updatedAt"
+             ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, 0, NULL, NOW(), NOW())
+             RETURNING *`,
+            [
+              createId(),
+              existing.requestId,
+              existing.productId,
+              existing.productName,
+              existing.productImage || null,
+              primaryProduct?.category || null,
+              parsedDuration?.value ?? null,
+              parsedDuration?.unit ?? null,
+              existing.rentalDuration || "—",
+              rentalPrice,
+              primaryQuantity.value,
+              !parsedDuration,
+              !configuredOption ||
+                toPaise(configuredOption.price) !== toPaise(rentalPrice),
+            ],
+          );
+          return insertedRows.rows[0];
+        };
+
+        if (hasRentalItemAddition) {
+          const quantity = Number(rentalItemPayload.quantity ?? 1);
+          const matchingSubmission = rentalItems.find(
+            (item) => item.submissionKey === rentalItemPayload.submissionKey,
+          );
+          if (matchingSubmission) {
+            const requestedDuration = parsePricingKey(
+              rentalItemPayload.durationKey.trim(),
+            );
+            const requestedPrice =
+              rentalItemPayload.agreedPrice == null ||
+              rentalItemPayload.agreedPrice === ""
+                ? null
+                : Number(rentalItemPayload.agreedPrice);
+            if (
+              matchingSubmission.productId !== rentalItemPayload.productId.trim() ||
+              matchingSubmission.durationDisplay !==
+                (requestedDuration ? formatDuration(requestedDuration) : "") ||
+              Number(matchingSubmission.quantity || 1) !== quantity ||
+              (requestedPrice != null &&
+                (!Number.isFinite(requestedPrice) ||
+                  toPaise(requestedPrice) !==
+                    toPaise(matchingSubmission.rentalPrice)))
+            ) {
+              const error = new Error(
+                "This submission key was already used for a different rental product.",
+              );
+              error.status = 409;
+              throw error;
+            }
+            idempotentRentalItemAddition = true;
+          } else {
+            const currentItemCount = rentalItems.length || 1;
+            if (currentItemCount >= MAX_RENTAL_ITEMS) {
+              const error = new Error(
+                `A booking can contain at most ${MAX_RENTAL_ITEMS} rental items.`,
+              );
+              error.status = 400;
+              throw error;
+            }
+
+            const productRows = await client.query(
+              `SELECT "id", "name", "image", "available", "category", "pricing"
+               FROM "RentalProduct" WHERE "id" = $1 LIMIT 1 FOR SHARE`,
+              [rentalItemPayload.productId.trim()],
+            );
+            const product = productRows.rows[0];
+            if (!product || product.available === false) {
+              const error = new Error(
+                product
+                  ? `${product.name} is currently unavailable for rent.`
+                  : "The selected rental product was not found.",
+              );
+              error.status = product ? 409 : 404;
+              throw error;
+            }
+
+            const resolvedPrice = resolveConfiguredRentalPrice(
+              product,
+              rentalItemPayload.durationKey.trim(),
+              rentalItemPayload.agreedPrice,
+            );
+            if (!resolvedPrice.ok) {
+              const error = new Error(resolvedPrice.message);
+              error.status = 400;
+              throw error;
+            }
+
+            if (!rentalItems.length) {
+              rentalItems.push(await insertPrimaryRentalItem());
+            }
+            const nextOrder =
+              Math.max(...rentalItems.map((item) => Number(item.itemOrder || 0))) +
+              1;
+            const insertedRows = await client.query(
+              `INSERT INTO "RentalRequestItem" (
+                 "id", "rentalRequestId", "productId", "productName", "productImage",
+                 "category", "durationValue", "durationUnit", "durationDisplay",
+                 "rentalPrice", "quantity", "isCustomDuration", "isCustomPrice",
+                 "itemOrder", "submissionKey", "createdAt", "updatedAt"
+               ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, FALSE, $12, $13, $14, NOW(), NOW())
+               RETURNING *`,
+              [
+                createId(),
+                existing.requestId,
+                product.id,
+                product.name,
+                product.image || null,
+                product.category || null,
+                resolvedPrice.duration.value,
+                resolvedPrice.duration.unit,
+                formatDuration(resolvedPrice.duration),
+                resolvedPrice.rentalPrice,
+                quantity,
+                resolvedPrice.isCustomPrice,
+                nextOrder,
+                rentalItemPayload.submissionKey.trim(),
+              ],
+            );
+            rentalItems.push(insertedRows.rows[0]);
+            itemMutationApplied = true;
+          }
+        } else {
+          let targetItemId = rentalItemPayload.itemId;
+          if (!rentalItems.length) {
+            if (rentalItemPayload.itemId != null) {
+              const error = new Error("Rental item not found on this booking.");
+              error.status = 404;
+              throw error;
+            }
+            const primaryItem = await insertPrimaryRentalItem();
+            rentalItems.push(primaryItem);
+            targetItemId = primaryItem.id;
+          } else if (rentalItemPayload.itemId == null) {
+            const error = new Error(
+              "Select a rental item before editing its product.",
+            );
+            error.status = 400;
+            throw error;
+          }
+
+          const targetItem = rentalItems.find(
+            (item) => item.id === targetItemId,
+          );
+          if (!targetItem) {
+            const error = new Error("Rental item not found on this booking.");
+            error.status = 404;
+            throw error;
+          }
+          const productRows = await client.query(
+            `SELECT "id", "name", "image", "available", "category", "pricing"
+             FROM "RentalProduct" WHERE "id" = $1 LIMIT 1 FOR SHARE`,
+            [rentalItemPayload.productId.trim()],
+          );
+          const product = productRows.rows[0];
+          if (!product) {
+            const error = new Error("The selected rental product was not found.");
+            error.status = 404;
+            throw error;
+          }
+          if (product.available === false) {
+            const error = new Error(
+              `${product.name} is currently unavailable for rent.`,
+            );
+            error.status = 409;
+            throw error;
+          }
+          const isPrimaryItem = rentalItems[0]?.id === targetItem.id;
+          if (
+            existing.rewardId &&
+            isPrimaryItem &&
+            product.id !== targetItem.productId &&
+            !isRewardEligible(product.category)
+          ) {
+            const error = new Error(
+              "The primary product on a reward-linked rental must remain a camera.",
+            );
+            error.status = 409;
+            throw error;
+          }
+
+          const resolvedPrice = resolveConfiguredRentalPrice(
+            product,
+            rentalItemPayload.durationKey.trim(),
+            rentalItemPayload.agreedPrice,
+          );
+          if (!resolvedPrice.ok) {
+            const error = new Error(resolvedPrice.message);
+            error.status = 400;
+            throw error;
+          }
+          const quantity =
+            rentalItemPayload.quantity == null
+              ? Number(targetItem.quantity || 1)
+              : Number(rentalItemPayload.quantity);
+          await client.query(
+            `UPDATE "RentalRequestItem"
+             SET "productId" = $1, "productName" = $2, "productImage" = $3,
+                 "category" = $4, "durationValue" = $5, "durationUnit" = $6,
+                 "durationDisplay" = $7, "rentalPrice" = $8, "quantity" = $9,
+                 "isCustomDuration" = FALSE, "isCustomPrice" = $10,
+                 "updatedAt" = NOW()
+             WHERE "id" = $11`,
+            [
+              product.id,
+              product.name,
+              product.image || null,
+              product.category || null,
+              resolvedPrice.duration.value,
+              resolvedPrice.duration.unit,
+              formatDuration(resolvedPrice.duration),
+              resolvedPrice.rentalPrice,
+              quantity,
+              resolvedPrice.isCustomPrice,
+              targetItem.id,
+            ],
+          );
+          if (rentalItems[0]?.id === targetItem.id) {
+            pushUpdate("productId", product.id);
+            pushUpdate("productName", product.name);
+            pushUpdate("productImage", product.image || null);
+            pushUpdate("rentalDuration", formatDuration(resolvedPrice.duration));
+            pushUpdate("rentalPrice", resolvedPrice.rentalPrice);
+            pushUpdate("quantity", quantity);
+          }
+          itemMutationApplied = true;
+        }
+
+        if (itemMutationApplied) {
+          rentalItems = (
+            await client.query(
+              `SELECT * FROM "RentalRequestItem"
+               WHERE "rentalRequestId" = $1
+               ORDER BY "itemOrder" ASC, "id" ASC`,
+              [existing.requestId],
+            )
+          ).rows;
+          originalAmount = getRentalItemsTotal(rentalItems);
+          if (existing.rewardId) {
+            const adjustedRewardDiscount = getAdjustedRewardDiscount({
+              originalAmount,
+              rewardDiscount,
+              otherDiscount,
+              advanceAmount,
+            });
+            if (adjustedRewardDiscount !== rewardDiscount) {
+              rewardDiscount = adjustedRewardDiscount;
+              pushUpdate("rewardDiscount", rewardDiscount);
+            }
+          }
+          const rawFinalAmount =
+            originalAmount + totalExtraCharges - rewardDiscount - otherDiscount;
+          if (rawFinalAmount < 0) {
+            const error = new Error(
+              "The configured reward and discount exceed the new rental amount.",
+            );
+            error.status = 400;
+            throw error;
+          }
+          finalAmount = getFinalRentalAmount(
+            {
+              ...existing,
+              originalAmount,
+              rewardDiscount,
+              discount: otherDiscount,
+            },
+            extraCharges,
+          );
+          pushUpdate("originalAmount", originalAmount);
+          pushUpdate("totalAmount", finalAmount);
+          pushUpdate(
+            "paymentStatus",
+            totalVerifiedPayments >= finalAmount
+              ? "Paid"
+              : totalVerifiedPayments > 0
+                ? "Advance Paid"
+                : "Pending",
+          );
+        }
+      }
 
       if (hasDurationUpdate) {
         const durationKey = body.durationUpdate.key.trim();
@@ -335,12 +790,12 @@ export async function PATCH(request, { params }) {
               targetItem.id,
             ],
           );
-          originalAmount = fromPaise(
-            sumPaise(
-              rentalItems.map((item) =>
+          originalAmount = getRentalItemsTotal(
+            rentalItems.map((item) => ({
+              ...item,
+              rentalPrice:
                 item.id === targetItem.id ? rentalPrice : item.rentalPrice,
-              ),
-            ),
+            })),
           );
           if (rentalItems[0]?.id === targetItem.id) {
             pushUpdate("rentalDuration", formatDuration(parsedDuration));
@@ -355,27 +810,18 @@ export async function PATCH(request, { params }) {
         }
 
         if (existing.rewardId) {
-          const rewardDiscountLimit = Math.max(
-            fromPaise(
-              toPaise(originalAmount) -
-                toPaise(otherDiscount) -
-                toPaise(advanceAmount),
-            ),
-            0,
-          );
-          const adjustedRewardDiscount = Math.min(
+          const adjustedRewardDiscount = getAdjustedRewardDiscount({
+            originalAmount,
             rewardDiscount,
-            rewardDiscountLimit,
-          );
+            otherDiscount,
+            advanceAmount,
+          });
           if (adjustedRewardDiscount !== rewardDiscount) {
             rewardDiscount = adjustedRewardDiscount;
             pushUpdate("rewardDiscount", rewardDiscount);
           }
         }
       }
-
-      let finalAmount =
-        originalAmount + totalExtraCharges - rewardDiscount - otherDiscount;
 
       if (hasPaymentUpdate) {
         if (hasField("totalAmount")) originalAmount = body.totalAmount;
@@ -416,15 +862,24 @@ export async function PATCH(request, { params }) {
       }
 
       if (hasDurationUpdate) {
-        finalAmount =
+        const rawFinalAmount =
           originalAmount + totalExtraCharges - rewardDiscount - otherDiscount;
-        if (finalAmount < 0) {
+        if (rawFinalAmount < 0) {
           const error = new Error(
             "The configured reward and discount exceed the new rental amount.",
           );
           error.status = 400;
           throw error;
         }
+        finalAmount = getFinalRentalAmount(
+          {
+            ...existing,
+            originalAmount,
+            rewardDiscount,
+            discount: otherDiscount,
+          },
+          extraCharges,
+        );
         pushUpdate("originalAmount", originalAmount);
         pushUpdate("totalAmount", finalAmount);
         pushUpdate(
@@ -545,7 +1000,11 @@ export async function PATCH(request, { params }) {
         pushUpdate("confirmedByAdmin", adminEmail);
       }
 
-      if (!updateParts.length && !paymentRecord) {
+      if (
+        !updateParts.length &&
+        !paymentRecord &&
+        !idempotentRentalItemAddition
+      ) {
         const error = new Error("No valid fields to update");
         error.status = 400;
         throw error;

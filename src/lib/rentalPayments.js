@@ -30,6 +30,23 @@ export function getFinalRentalAmount(rental, extraCharges = []) {
   );
 }
 
+export function getAdjustedRewardDiscount({
+  originalAmount,
+  rewardDiscount,
+  otherDiscount,
+  advanceAmount,
+}) {
+  const rewardDiscountLimit = Math.max(
+    fromPaise(
+      toPaise(originalAmount) -
+        toPaise(otherDiscount) -
+        toPaise(advanceAmount),
+    ),
+    0,
+  );
+  return Math.min(Number(rewardDiscount || 0), rewardDiscountLimit);
+}
+
 export function summarizeRentalPayments(
   rental,
   paymentHistory = [],

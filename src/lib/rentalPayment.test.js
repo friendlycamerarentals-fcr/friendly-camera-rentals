@@ -8,7 +8,10 @@ import {
   validateManualRentalAdvance,
   validateOptionalAdvancePayment,
 } from "./rentalPayment.js";
-import { summarizeRentalPayments } from "./rentalPayments.js";
+import {
+  getAdjustedRewardDiscount,
+  summarizeRentalPayments,
+} from "./rentalPayments.js";
 
 test("allows verified cash and UPI advances with optional references", () => {
   assert.deepEqual(RENTAL_PAYMENT_METHODS, ["Cash", "UPI"]);
@@ -280,6 +283,27 @@ test("reports verified payments above the revised rental total", () => {
   assert.equal(summary.totalVerifiedPayments, 500);
   assert.equal(summary.remainingAmount, 0);
   assert.equal(summary.overpaidAmount, 400);
+});
+
+test("keeps reward discount within the amount remaining after other discounts and advances", () => {
+  assert.equal(
+    getAdjustedRewardDiscount({
+      originalAmount: 500,
+      rewardDiscount: 200,
+      otherDiscount: 50,
+      advanceAmount: 100,
+    }),
+    200,
+  );
+  assert.equal(
+    getAdjustedRewardDiscount({
+      originalAmount: 300,
+      rewardDiscount: 200,
+      otherDiscount: 50,
+      advanceAmount: 100,
+    }),
+    150,
+  );
 });
 
 test("recognizes retry of the same payment but rejects changed duplicate payload", () => {

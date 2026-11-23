@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   X,
   Phone,
@@ -9,6 +9,7 @@ import {
   BadgeCheck,
   Loader2,
   Pencil,
+  Plus,
 } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
 import { toast } from "sonner";
@@ -26,6 +27,12 @@ import {
   getStandardDurationOptions,
   parsePricingKey,
 } from "@/lib/rentalDuration";
+import {
+  MAX_RENTAL_ITEMS,
+  MAX_RENTAL_ITEM_PRICE,
+  validateAgreedRentalPrice,
+  validateRentalQuantity,
+} from "@/lib/rentalItems";
 
 const inputCls =
   "w-full rounded-xl border border-white/10 bg-zinc-900 px-3 py-2.5 text-sm text-white outline-none focus:border-[#F5A623] transition";
@@ -41,7 +48,8 @@ export default function RentalDetailsModal({
   onRecordPayment,
   onWhatsApp,
   onAddExtraCharge,
-  onEditDuration,
+  onEditRentalProduct,
+  onAddRentalProduct,
   actionLoading,
 }) {
   const [paymentEdit, setPaymentEdit] = useState(null);
@@ -61,11 +69,12 @@ export default function RentalDetailsModal({
   const [rentalProducts, setRentalProducts] = useState([]);
   const [productPricingLoadedForBookingId, setProductPricingLoadedForBookingId] =
     useState(null);
-  const [durationEditItemId, setDurationEditItemId] = useState(null);
-  const [durationKey, setDurationKey] = useState("");
-  const [durationSubmitting, setDurationSubmitting] = useState(false);
+  const [rentalItemForm, setRentalItemForm] = useState(null);
+  const [rentalItemSubmitting, setRentalItemSubmitting] = useState(false);
   const paymentSubmitLock = useRef(false);
   const paymentSubmissionKey = useRef(null);
+  const rentalItemSubmitLock = useRef(false);
+  const rentalItemSubmissionKey = useRef(null);
   const [confirmSubmitting, setConfirmSubmitting] = useState(false);
   const availableStatusTransitions =
     RENTAL_STATUS_TRANSITIONS[booking?.status] || [];
@@ -85,7 +94,7 @@ export default function RentalDetailsModal({
         if (active) setRentalProducts(result.data || []);
       })
       .catch((error) => {
-        console.error("[RENTAL_DURATION_PRODUCT_PRICING]", error);
+        console.error("[RENTAL_ITEM_PRODUCT_PRICING]", error);
         if (active) {
           setRentalProducts([]);
           toast.error("Failed to load configured rental duration prices.");
@@ -160,8 +169,8 @@ export default function RentalDetailsModal({
   const closeModal = () => {
     setExtraChargeForm({ extraHours: "", extraAmount: "", note: "" });
     setExtraChargeFormOpen(false);
-    setDurationEditItemId(null);
-    setDurationKey("");
+    setRentalItemForm(null);
+    rentalItemSubmissionKey.current = null;
     onClose();
   };
 
@@ -250,153 +259,148 @@ export default function RentalDetailsModal({
   const rentalProductsById = Object.fromEntries(
     rentalProducts.map((product) => [product.id, product]),
   );
-  const beginDurationEdit = (item) => {
+  const getItemOptions = (productId) =>
+    getStandardDurationOptions(rentalProductsById[productId]);
+  const beginRentalItemEdit = (item) => {
     const options = getStandardDurationOptions(
       rentalProductsById[item.productId],
     );
-    const currentDuration = parsePricingKey(item.durationDisplay);
+    const currentDuration = parsePricingKey(
+      item.durationDisplay || booking.rentalDuration,
+    );
     const currentOption = options.find(
       (option) =>
         option.value === currentDuration?.value &&
         option.unit === currentDuration?.unit,
     );
-    setDurationEditItemId(item.id || "primary");
-    setDurationKey(currentOption?.key || options[0]?.key || "");
+    setRentalItemForm({
+      mode: "edit",
+      itemId: item.id || null,
+      productId: item.productId,
+      durationKey: currentOption?.key || "",
+      agreedPrice: String(item.rentalPrice || ""),
+      quantity: String(item.quantity || booking.quantity || 1),
+    });
   };
-  const saveDurationEdit = async (item) => {
+  const beginRentalItemAdd = () => {
+    const product = rentalProducts.find((entry) => entry.available !== false);
+    const option = getStandardDurationOptions(product)[0];
+    setRentalItemForm({
+      mode: "add",
+      itemId: null,
+      productId: product?.id || "",
+      durationKey: option?.key || "",
+      agreedPrice: option ? String(option.price) : "",
+      quantity: "1",
+    });
+    rentalItemSubmissionKey.current = null;
+  };
+  const updateRentalItemProduct = (productId) => {
+    const options = getItemOptions(productId);
+    const option = options[0];
+    setRentalItemForm((previous) => ({
+      ...previous,
+      productId,
+      durationKey: option?.key || "",
+      agreedPrice: option ? String(option.price) : "",
+    }));
+  };
+  const updateRentalItemDuration = (durationKey) => {
+    const option = getItemOptions(rentalItemForm.productId).find(
+      (entry) => entry.key === durationKey,
+    );
+    setRentalItemForm((previous) => ({
+      ...previous,
+      durationKey,
+      agreedPrice: option ? String(option.price) : "",
+    }));
+  };
+  const rentalItems = booking.items?.length
+    ? booking.items
+    : [
+        {
+          id: null,
+          productId: booking.productId,
+          productName: booking.productName,
+          productImage: booking.productImage,
+          durationDisplay: booking.rentalDuration,
+          rentalPrice: booking.rentalPrice,
+          quantity: booking.quantity || 1,
+        },
+      ];
+  const availableRentalProducts = rentalProducts.filter(
+    (product) =>
+      product.available !== false ||
+      product.id === rentalItemForm?.productId,
+  );
+  const formOptions = rentalItemForm
+    ? getItemOptions(rentalItemForm.productId)
+    : [];
+  const configuredPrice = formOptions.find(
+    (option) => option.key === rentalItemForm?.durationKey,
+  )?.price;
+  const submitRentalItem = async () => {
     if (
-      !onEditDuration ||
-      !durationKey ||
-      durationSubmitting ||
-      actionLoading
+      !rentalItemForm ||
+      rentalItemSubmitting ||
+      rentalItemSubmitLock.current ||
+      actionLoading ||
+      extraChargesUnavailable
     ) {
       return;
     }
 
-    setDurationSubmitting(true);
+    const quantity = validateRentalQuantity(rentalItemForm.quantity);
+    if (!quantity.ok) {
+      toast.error(quantity.message);
+      return;
+    }
+    const agreedPrice = validateAgreedRentalPrice(
+      rentalItemForm.agreedPrice,
+    );
+    if (!agreedPrice.ok) {
+      toast.error(agreedPrice.message);
+      return;
+    }
+    if (!rentalItemForm.productId || !rentalItemForm.durationKey) {
+      toast.error("Select a rental product and configured duration.");
+      return;
+    }
+
+    rentalItemSubmitLock.current = true;
+    setRentalItemSubmitting(true);
     try {
-      const success = await onEditDuration(booking.id, {
-        itemId: item.id || null,
-        key: durationKey,
-      });
+      const payload = {
+        itemId: rentalItemForm.itemId,
+        productId: rentalItemForm.productId,
+        durationKey: rentalItemForm.durationKey,
+        agreedPrice: agreedPrice.value,
+        quantity: quantity.value,
+      };
+      let success = false;
+      if (rentalItemForm.mode === "add") {
+        const submission = JSON.stringify(payload);
+        if (rentalItemSubmissionKey.current?.submission !== submission) {
+          rentalItemSubmissionKey.current = {
+            submission,
+            key: globalThis.crypto.randomUUID(),
+          };
+        }
+        success = await onAddRentalProduct?.(booking.id, {
+          ...payload,
+          submissionKey: rentalItemSubmissionKey.current.key,
+        });
+      } else {
+        success = await onEditRentalProduct?.(booking.id, payload);
+      }
       if (success) {
-        setDurationEditItemId(null);
-        setDurationKey("");
+        setRentalItemForm(null);
+        rentalItemSubmissionKey.current = null;
       }
     } finally {
-      setDurationSubmitting(false);
+      rentalItemSubmitLock.current = false;
+      setRentalItemSubmitting(false);
     }
-  };
-  const renderDurationControls = (item) => {
-    const editId = item.id || "primary";
-    const options = getStandardDurationOptions(
-      rentalProductsById[item.productId],
-    );
-    const isEditing = durationEditItemId === editId;
-
-    if (!isEditing) {
-      return (
-        <button
-          type="button"
-          onClick={() => beginDurationEdit(item)}
-          disabled={
-            !onEditDuration ||
-            actionLoading ||
-            extraChargesUnavailable ||
-            productPricingLoading ||
-            options.length === 0
-          }
-          className="inline-flex items-center gap-1.5 rounded-lg border border-[#F5A623]/30 px-2.5 py-1.5 text-xs font-semibold text-[#F5A623] transition hover:bg-[#F5A623]/10 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          <Pencil size={13} />
-          Edit Duration
-        </button>
-      );
-    }
-
-    const selectedOption = options.find((option) => option.key === durationKey);
-    return (
-      <div className="rounded-xl border border-[#F5A623]/20 bg-zinc-900/80 p-3">
-        <div className="mb-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-zinc-400">
-          <span>
-            Current: <strong className="text-zinc-200">{item.durationDisplay}</strong>
-          </span>
-          <span>
-            Current price:{" "}
-            <strong className="text-zinc-200">
-              ₹{Number(item.rentalPrice || 0).toLocaleString("en-IN")}
-            </strong>
-          </span>
-        </div>
-        {productPricingLoading ? (
-          <p className="text-xs text-zinc-400">Loading configured durations...</p>
-        ) : options.length ? (
-          <>
-            <label className="mb-1 block text-[11px] text-zinc-400">
-              New duration
-            </label>
-            <select
-              value={durationKey}
-              onChange={(event) => setDurationKey(event.target.value)}
-              className={inputCls}
-            >
-              {options.map((option) => (
-                <option key={option.key} value={option.key}>
-                  {option.display} — ₹
-                  {option.price.toLocaleString("en-IN")}
-                </option>
-              ))}
-            </select>
-            {selectedOption && (
-              <p className="mt-2 text-xs text-zinc-300">
-                New price:{" "}
-                <strong className="text-[#F5A623]">
-                  ₹{selectedOption.price.toLocaleString("en-IN")}
-                </strong>
-              </p>
-            )}
-            <div className="mt-3 flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => saveDurationEdit(item)}
-                disabled={
-                  !durationKey ||
-                  durationSubmitting ||
-                  actionLoading ||
-                  extraChargesUnavailable ||
-                  !onEditDuration
-                }
-                className="inline-flex items-center gap-2 rounded-lg bg-[#F5A623] px-3 py-2 text-xs font-bold text-black transition hover:bg-amber-400 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {durationSubmitting ? (
-                  <>
-                    <Loader2 size={13} className="animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  "Save Duration"
-                )}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setDurationEditItemId(null);
-                  setDurationKey("");
-                }}
-                disabled={durationSubmitting || actionLoading}
-                className="rounded-lg border border-white/10 px-3 py-2 text-xs font-semibold text-zinc-300 hover:bg-white/5 disabled:opacity-50"
-              >
-                Cancel
-              </button>
-            </div>
-          </>
-        ) : (
-          <p className="text-xs text-zinc-400">
-            No configured catalog durations are available for this product.
-          </p>
-        )}
-      </div>
-    );
   };
 
   const updatePayment = (field, value) => {
@@ -624,96 +628,267 @@ export default function RentalDetailsModal({
               <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-[#F5A623]">
                 Rental Products
               </h3>
-              {booking.items?.length ? (
-                <div className="overflow-hidden rounded-xl border border-white/10">
-                  <table className="w-full text-sm">
-                    <thead className="bg-black/40 text-zinc-400">
-                      <tr>
-                        <th className="px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide">Rental item</th>
-                        <th className="px-2 py-2 text-left text-[11px] font-medium uppercase tracking-wide">Duration</th>
-                        <th className="px-3 py-2 text-right text-[11px] font-medium uppercase tracking-wide">Agreed price</th>
-                        <th className="px-3 py-2 text-right text-[11px] font-medium uppercase tracking-wide">Duration actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {booking.items.map((item) => (
-                        <Fragment key={item.id}>
-                          <tr key={item.id} className="border-t border-white/5">
-                            <td className="px-3 py-2.5 text-white">
-                              {item.productName}
-                              {item.category && (
-                                <span className="ml-2 text-[11px] text-zinc-500">({item.category})</span>
-                              )}
-                            </td>
-                            <td className="px-2 py-2.5 text-zinc-400">
-                              {item.durationDisplay || "—"}
-                              {(item.isCustomDuration || item.isCustomPrice) && (
-                                <span className="ml-1.5 rounded bg-[#F5A623]/15 px-1 py-0.5 text-[10px] text-[#F5A623]">Custom</span>
-                              )}
-                            </td>
-                            <td className="px-3 py-2.5 text-right font-semibold text-[#F5A623]">
-                              ₹{Number(item.rentalPrice || 0).toLocaleString("en-IN")}
-                            </td>
-                            <td className="px-3 py-2.5 text-right">
-                              {durationEditItemId === item.id ? (
-                                <span className="text-xs text-zinc-500">
-                                  Editing below
-                                </span>
-                              ) : (
-                                renderDurationControls(item)
-                              )}
-                            </td>
-                          </tr>
-                          {durationEditItemId === item.id && (
-                            <tr key={`${item.id}-duration-edit`} className="border-t border-white/5">
-                              <td colSpan={4} className="px-3 py-3">
-                                {renderDurationControls(item)}
-                              </td>
-                            </tr>
+              <div className="overflow-x-auto rounded-xl border border-white/10">
+                <table className="w-full min-w-[650px] text-sm">
+                  <thead className="bg-black/40 text-zinc-400">
+                    <tr>
+                      <th className="px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide">
+                        Rental item
+                      </th>
+                      <th className="px-2 py-2 text-left text-[11px] font-medium uppercase tracking-wide">
+                        Duration
+                      </th>
+                      <th className="px-3 py-2 text-right text-[11px] font-medium uppercase tracking-wide">
+                        Agreed price
+                      </th>
+                      <th className="px-3 py-2 text-center text-[11px] font-medium uppercase tracking-wide">
+                        Quantity
+                      </th>
+                      <th className="px-3 py-2 text-right text-[11px] font-medium uppercase tracking-wide">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rentalItems.map((item) => (
+                      <tr
+                        key={item.id || `primary-${item.productId}`}
+                        className="border-t border-white/5"
+                      >
+                        <td className="px-3 py-2.5 text-white">
+                          {item.productName}
+                          {item.category && (
+                            <span className="ml-2 text-[11px] text-zinc-500">
+                              ({item.category})
+                            </span>
                           )}
-                        </Fragment>
-                      ))}
-                    </tbody>
-                    <tfoot>
-                      <tr className="border-t border-white/10 bg-black/40">
-                        <td className="px-3 py-2 text-zinc-300" colSpan={2}>Total before reward</td>
-                        <td className="px-3 py-2 text-right font-bold text-white">
-                          ₹{Number(booking.originalAmount ?? finalRent + rewardDiscount).toLocaleString("en-IN")}
+                        </td>
+                        <td className="px-2 py-2.5 text-zinc-400">
+                          {item.durationDisplay || "—"}
+                          {item.isCustomDuration && (
+                            <span className="ml-1.5 rounded bg-white/10 px-1 py-0.5 text-[10px] text-zinc-300">
+                              Custom duration
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-3 py-2.5 text-right font-semibold text-[#F5A623]">
+                          ₹{Number(item.rentalPrice || 0).toLocaleString("en-IN")}
+                          {item.isCustomPrice && (
+                            <span className="ml-1.5 text-[10px] font-normal text-zinc-400">
+                              negotiated
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-3 py-2.5 text-center text-zinc-300">
+                          {Number(item.quantity || 1).toLocaleString("en-IN")}
+                        </td>
+                        <td className="px-3 py-2.5 text-right">
+                          <button
+                            type="button"
+                            onClick={() => beginRentalItemEdit(item)}
+                            disabled={
+                              !onEditRentalProduct ||
+                              actionLoading ||
+                              extraChargesUnavailable ||
+                              productPricingLoading
+                            }
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-[#F5A623]/30 px-2.5 py-1.5 text-xs font-semibold text-[#F5A623] transition hover:bg-[#F5A623]/10 disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            <Pencil size={13} />
+                            Edit Product
+                          </button>
                         </td>
                       </tr>
-                    </tfoot>
-                  </table>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between rounded-xl border border-white/10 px-4 py-3">
-                    <div>
-                      <p className="text-sm font-semibold text-white">
-                        {booking.productName}
-                      </p>
-                      <p className="text-xs text-zinc-400">
-                        Duration: {booking.rentalDuration}
-                      </p>
-                      <p className="mt-1 text-xs text-zinc-400">
-                        Rental price: ₹
-                        {Number(booking.rentalPrice || 0).toLocaleString("en-IN")}
-                      </p>
-                    </div>
-                    <div className="shrink-0 text-right">
-                      <span className="block text-sm font-bold text-[#F5A623]">
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr className="border-t border-white/10 bg-black/40">
+                      <td className="px-3 py-2 text-zinc-300" colSpan={4}>
+                        Total before reward
+                      </td>
+                      <td className="px-3 py-2 text-right font-bold text-white">
                         ₹
-                        {Number(finalRent).toLocaleString("en-IN")}
-                      </span>
-                      <span className="text-[11px] text-zinc-500">Final payable</span>
-                    </div>
-                  </div>
-                  <div className="px-1">
-                    {renderDurationControls({
-                      productId: booking.productId,
-                      durationDisplay: booking.rentalDuration,
-                      rentalPrice: booking.rentalPrice,
-                    })}
-                  </div>
+                        {Number(
+                          booking.originalAmount ?? finalRent + rewardDiscount,
+                        ).toLocaleString("en-IN")}
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+
+              <button
+                type="button"
+                onClick={beginRentalItemAdd}
+                disabled={
+                  !onAddRentalProduct ||
+                  actionLoading ||
+                  extraChargesUnavailable ||
+                  productPricingLoading ||
+                  rentalItems.length >= MAX_RENTAL_ITEMS ||
+                  !rentalProducts.some((product) => product.available !== false)
+                }
+                className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-[#F5A623]/30 bg-[#F5A623]/10 px-4 py-2.5 text-sm font-semibold text-[#F5A623] transition hover:bg-[#F5A623]/20 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <Plus size={16} />
+                Add Rental Product
+              </button>
+              {extraChargesUnavailable && (
+                <p className="mt-2 text-xs text-zinc-500">
+                  Rental products cannot be changed for this rental status.
+                </p>
+              )}
+
+              {rentalItemForm && (
+                <div className="mt-4 rounded-xl border border-[#F5A623]/20 bg-zinc-900/80 p-4">
+                  <h4 className="mb-3 text-sm font-semibold uppercase tracking-wide text-[#F5A623]">
+                    {rentalItemForm.mode === "add"
+                      ? "Add Rental Product"
+                      : "Edit Rental Product"}
+                  </h4>
+                  {productPricingLoading ? (
+                    <p className="text-sm text-zinc-400">
+                      Loading rental products and prices...
+                    </p>
+                  ) : (
+                    <>
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        <div className="sm:col-span-2">
+                          <label className={labelCls}>Product</label>
+                          <select
+                            value={rentalItemForm.productId}
+                            onChange={(event) =>
+                              updateRentalItemProduct(event.target.value)
+                            }
+                            disabled={rentalItemSubmitting || actionLoading}
+                            className={inputCls}
+                          >
+                            <option value="">Select a rental product</option>
+                            {availableRentalProducts.map((product) => (
+                              <option key={product.id} value={product.id}>
+                                {product.name}
+                                {product.available === false
+                                  ? " (currently unavailable)"
+                                  : ""}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className={labelCls}>Configured duration</label>
+                          <select
+                            value={rentalItemForm.durationKey}
+                            onChange={(event) =>
+                              updateRentalItemDuration(event.target.value)
+                            }
+                            disabled={
+                              rentalItemSubmitting ||
+                              actionLoading ||
+                              formOptions.length === 0
+                            }
+                            className={inputCls}
+                          >
+                            <option value="">Select a configured duration</option>
+                            {formOptions.map((option) => (
+                              <option key={option.key} value={option.key}>
+                                {option.display} — ₹
+                                {option.price.toLocaleString("en-IN")}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className={labelCls}>Agreed price per item</label>
+                          <input
+                            type="number"
+                            min="0.01"
+                            max={MAX_RENTAL_ITEM_PRICE}
+                            step="0.01"
+                            value={rentalItemForm.agreedPrice}
+                            onChange={(event) =>
+                              setRentalItemForm((previous) => ({
+                                ...previous,
+                                agreedPrice: event.target.value,
+                              }))
+                            }
+                            disabled={rentalItemSubmitting || actionLoading}
+                            className={inputCls}
+                            placeholder="Enter agreed price"
+                          />
+                          {configuredPrice != null && (
+                            <p className="mt-1 text-[11px] text-zinc-500">
+                              Configured price: ₹
+                              {configuredPrice.toLocaleString("en-IN")}
+                            </p>
+                          )}
+                        </div>
+                        <div>
+                          <label className={labelCls}>Quantity</label>
+                          <input
+                            type="number"
+                            min="1"
+                            step="1"
+                            value={rentalItemForm.quantity}
+                            onChange={(event) =>
+                              setRentalItemForm((previous) => ({
+                                ...previous,
+                                quantity: event.target.value,
+                              }))
+                            }
+                            disabled={rentalItemSubmitting || actionLoading}
+                            className={inputCls}
+                          />
+                        </div>
+                      </div>
+                      {rentalItemForm.agreedPrice &&
+                        configuredPrice != null &&
+                        Number(rentalItemForm.agreedPrice) !== configuredPrice && (
+                          <p className="mt-2 text-xs text-amber-300">
+                            This agreed price differs from the configured product price.
+                          </p>
+                        )}
+                      <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+                        <button
+                          type="button"
+                          onClick={submitRentalItem}
+                          disabled={
+                            rentalItemSubmitting ||
+                            actionLoading ||
+                            extraChargesUnavailable ||
+                            !rentalItemForm.durationKey ||
+                            !rentalItemForm.productId ||
+                            (rentalItemForm.mode === "add" &&
+                              !onAddRentalProduct) ||
+                            (rentalItemForm.mode === "edit" &&
+                              !onEditRentalProduct)
+                          }
+                          className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#F5A623] px-4 py-2.5 text-sm font-bold text-black transition hover:bg-amber-400 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {rentalItemSubmitting ? (
+                            <>
+                              <Loader2 size={15} className="animate-spin" />
+                              Saving...
+                            </>
+                          ) : rentalItemForm.mode === "add" ? (
+                            "Add Product"
+                          ) : (
+                            "Save Product"
+                          )}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setRentalItemForm(null);
+                            rentalItemSubmissionKey.current = null;
+                          }}
+                          disabled={rentalItemSubmitting || actionLoading}
+                          className="rounded-xl border border-white/10 px-4 py-2.5 text-sm font-semibold text-zinc-300 transition hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
             </div>

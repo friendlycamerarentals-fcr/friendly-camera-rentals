@@ -19,15 +19,15 @@ import {
   sumPaise,
   validateSharedRentalDuration,
 } from "@/lib/rentalDuration";
+import {
+  MAX_RENTAL_ITEMS,
+  validateAgreedRentalPrice,
+} from "@/lib/rentalItems";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 const normalizePhone = (value) => String(value || "").replace(/\D/g, "");
-
-const MAX_ITEMS = 20;
-const MAX_ITEM_PRICE = 10_000_000; // sanity cap per agreed item price
-
 
 /**
  * POST /api/admin/rentals
@@ -86,9 +86,9 @@ export async function POST(request) {
         { status: 400 },
       );
     }
-    if (rawItems.length > MAX_ITEMS) {
+    if (rawItems.length > MAX_RENTAL_ITEMS) {
       return NextResponse.json(
-        { success: false, message: `A booking can contain at most ${MAX_ITEMS} rental items.` },
+        { success: false, message: `A booking can contain at most ${MAX_RENTAL_ITEMS} rental items.` },
         { status: 400 },
       );
     }
@@ -225,28 +225,21 @@ export async function POST(request) {
           );
         }
 
-        price =
+        const agreedPrice = validateAgreedRentalPrice(
           rawItem.price == null || rawItem.price === ""
             ? listingPrice
-            : Number(rawItem.price);
-        if (!Number.isFinite(price) || price <= 0) {
+            : rawItem.price,
+        );
+        if (!agreedPrice.ok) {
           return NextResponse.json(
             {
               success: false,
-              message: `Item ${index + 1}: rental price must be a positive amount.`,
+              message: `Item ${index + 1}: ${agreedPrice.message}`,
             },
             { status: 400 },
           );
         }
-        if (price > MAX_ITEM_PRICE) {
-          return NextResponse.json(
-            {
-              success: false,
-              message: `Item ${index + 1}: rental price exceeds the allowed limit.`,
-            },
-            { status: 400 },
-          );
-        }
+        price = agreedPrice.value;
         isCustomPrice =
           !hasListingPrice || toPaise(price) !== toPaise(listingPrice);
       } else {
@@ -259,25 +252,17 @@ export async function POST(request) {
             { status: 400 },
           );
         }
-        price = Number(rawItem.price);
-        if (!Number.isFinite(price) || price <= 0) {
+        const agreedPrice = validateAgreedRentalPrice(rawItem.price);
+        if (!agreedPrice.ok) {
           return NextResponse.json(
             {
               success: false,
-              message: `Item ${index + 1}: rental price must be a positive amount.`,
+              message: `Item ${index + 1}: ${agreedPrice.message}`,
             },
             { status: 400 },
           );
         }
-        if (price > MAX_ITEM_PRICE) {
-          return NextResponse.json(
-            {
-              success: false,
-              message: `Item ${index + 1}: rental price exceeds the allowed limit.`,
-            },
-            { status: 400 },
-          );
-        }
+        price = agreedPrice.value;
         isCustomPrice = true;
       }
 
