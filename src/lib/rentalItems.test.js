@@ -32,7 +32,10 @@ test("resolves configured duration pricing and permits a validated agreed price"
     resolveConfiguredRentalPrice(camera, "5hrs", "450").isCustomPrice,
     true,
   );
-  assert.equal(resolveConfiguredRentalPrice(camera, "6hrs").ok, false);
+  assert.deepEqual(resolveConfiguredRentalPrice(camera, "6hrs"), {
+    ok: false,
+    message: "The selected duration is not configured for this product.",
+  });
   assert.equal(resolveConfiguredRentalPrice(camera, "5hrs", -1).ok, false);
 });
 

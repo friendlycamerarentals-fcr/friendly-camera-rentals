@@ -796,6 +796,12 @@ export default function RentalDetailsModal({
                               </option>
                             ))}
                           </select>
+                          {rentalItemForm.productId &&
+                            formOptions.length === 0 && (
+                              <p className="mt-1 text-[11px] text-amber-300">
+                                The selected duration is not configured for this product.
+                              </p>
+                            )}
                         </div>
                         <div>
                           <label className={labelCls}>Agreed price per item</label>

@@ -52,7 +52,7 @@ export function resolveConfiguredRentalPrice(product, durationKey, rawAgreedPric
   if (!Number.isFinite(configuredPrice) || configuredPrice <= 0) {
     return {
       ok: false,
-      message: "That duration does not have a configured price for this product.",
+      message: "The selected duration is not configured for this product.",
     };
   }
 
