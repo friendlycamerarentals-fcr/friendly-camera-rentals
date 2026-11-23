@@ -57,6 +57,10 @@ export function summarizeRentalPayments(
   const totalVerifiedPayments = fromPaise(
     sumPaise(verifiedPayments.map((payment) => payment.amount)),
   );
+  const overpaidAmount = Math.max(
+    fromPaise(toPaise(totalVerifiedPayments) - toPaise(finalRent)),
+    0,
+  );
   const advanceReceived = fromPaise(
     sumPaise(
       verifiedPayments
@@ -73,6 +77,7 @@ export function summarizeRentalPayments(
     finalRent,
     advanceReceived,
     totalVerifiedPayments,
+    overpaidAmount,
     remainingAmount: Math.max(
       fromPaise(toPaise(finalRent) - toPaise(totalVerifiedPayments)),
       0,

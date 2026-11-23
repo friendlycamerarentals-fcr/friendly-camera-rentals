@@ -425,13 +425,6 @@ export async function PATCH(request, { params }) {
           error.status = 400;
           throw error;
         }
-        if (totalVerifiedPayments > finalAmount) {
-          const error = new Error(
-            "Verified payments exceed the new rental amount. Record an appropriate refund before reducing the duration.",
-          );
-          error.status = 400;
-          throw error;
-        }
         pushUpdate("originalAmount", originalAmount);
         pushUpdate("totalAmount", finalAmount);
         pushUpdate(

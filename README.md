@@ -66,7 +66,7 @@ The application is a single Next.js project with route handlers as its backend, 
 | --- | --- | --- |
 | Dashboard | `/admin` | Seven live count cards (Bookings, Rentals, Buy Products, Sell Requests, Customers, Rewards, Testimonials) and the Recent Activity feed |
 | Bookings calendar | `/admin/bookings` | Month calendar with status-tinted days, legend, today shortcut, and per-day booking drill-down |
-| Rentals | `/admin/rentals` | Stats, search, status/time filters, sorting, rental table, details modal, catalog-priced duration edits, WhatsApp reply, delete with guards, and manual multi-item bookings |
+| Rentals | `/admin/rentals` | Stats, search, status/time filters, sorting, rental table, details modal, catalog-priced duration edits (verified payments remain in history and any excess over the revised total is surfaced), WhatsApp reply, delete with guards, and manual multi-item bookings |
 | Rental products | `/admin/rental-products` | Stats, filters, table, view modal, availability toggle, delete dialog, drag-and-drop reorder, add/edit forms with image upload and duration pricing |
 | Buy products | `/admin/buy-products` (also `/admin/buy`) | Stats, filters, table, view modal, status changes (`In Stock` / `Out of Stock` / `Sold`), delete, reorder, add/edit/detail pages |
 | Sell requests | `/admin/sell-requests` (also `/admin/sell` → redirect) | Stats, search, status filter, detail modal, status updates, delete |

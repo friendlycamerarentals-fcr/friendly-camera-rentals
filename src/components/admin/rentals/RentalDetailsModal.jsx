@@ -143,6 +143,10 @@ export default function RentalDetailsModal({
   );
   const advanceVerified = booking.advanceVerified === true;
   const remainingAmount = Math.max(finalRent - totalVerifiedPayments, 0);
+  const overpaidAmount = Number(
+    booking.paymentSummary?.overpaidAmount ??
+      Math.max(totalVerifiedPayments - finalRent, 0),
+  );
   const canConfirm = booking.status === "Pending";
 
   const handleWhatsApp = () => {
@@ -964,6 +968,14 @@ export default function RentalDetailsModal({
                   </p>
                 </div>
               </div>
+
+              {overpaidAmount > 0 && (
+                <p className="mt-3 rounded-xl border border-amber-500/20 bg-amber-500/5 px-3 py-2 text-xs text-amber-300">
+                  Verified payments exceed the current rental total by ₹
+                  {overpaidAmount.toLocaleString("en-IN")}. Payment history is
+                  unchanged; review this amount for any refund or credit.
+                </p>
+              )}
 
               {advanceVerified && (
                 <p className="mt-2 text-[11px] text-green-400/80">

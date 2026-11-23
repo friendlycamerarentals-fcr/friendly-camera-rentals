@@ -271,6 +271,17 @@ test("calculates advance and outstanding from verified transactions exactly once
   assert.equal(paidSummary.remainingAmount, 0);
 });
 
+test("reports verified payments above the revised rental total", () => {
+  const summary = summarizeRentalPayments(
+    { originalAmount: 100 },
+    [{ paymentType: "Advance", amount: 500, verified: true }],
+  );
+
+  assert.equal(summary.totalVerifiedPayments, 500);
+  assert.equal(summary.remainingAmount, 0);
+  assert.equal(summary.overpaidAmount, 400);
+});
+
 test("recognizes retry of the same payment but rejects changed duplicate payload", () => {
   const saved = {
     amount: 500,
