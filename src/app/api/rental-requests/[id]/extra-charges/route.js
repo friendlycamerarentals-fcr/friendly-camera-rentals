@@ -6,6 +6,7 @@ import {
   getFinalRentalAmount,
   withRentalPaymentSummary,
 } from "@/lib/rentalPayments";
+import { RENTAL_REQUEST_COLUMNS } from "@/lib/rentalDbColumns";
 import { RENTAL_STATUSES_WITHOUT_EXTRA_CHARGES } from "@/constants/rentalStatus";
 
 export const dynamic = "force-dynamic";
@@ -24,7 +25,7 @@ export async function GET(_request, { params }) {
     }
 
     const rentalRows = await query(
-      'SELECT * FROM "RentalRequest" WHERE "id" = $1 LIMIT 1',
+      'SELECT "requestId" FROM "RentalRequest" WHERE "id" = $1 LIMIT 1',
       [id],
     );
     const rental = rentalRows[0];
@@ -92,7 +93,7 @@ export async function POST(request, { params }) {
 
     const result = await transaction(async (client) => {
       const rentalRows = await client.query(
-        'SELECT * FROM "RentalRequest" WHERE "id" = $1 LIMIT 1 FOR UPDATE',
+        `SELECT ${RENTAL_REQUEST_COLUMNS} FROM "RentalRequest" WHERE "id" = $1 LIMIT 1 FOR UPDATE`,
         [id],
       );
       const rental = rentalRows.rows[0];
@@ -148,7 +149,7 @@ export async function POST(request, { params }) {
         `UPDATE "RentalRequest"
          SET "totalAmount" = $1, "updatedAt" = NOW()
          WHERE "id" = $2
-         RETURNING *`,
+         RETURNING ${RENTAL_REQUEST_COLUMNS}`,
         [getFinalRentalAmount(rental, updatedExtraCharges), rental.id],
       );
       const paymentRows = await client.query(

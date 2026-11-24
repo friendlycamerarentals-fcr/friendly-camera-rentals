@@ -12,17 +12,6 @@ export const MAX_RENTAL_ITEMS = 20;
 export const MAX_RENTAL_ITEM_PRICE = 10_000_000;
 export const CUSTOM_DURATION_KEY = "__custom__";
 
-export function validateRentalQuantity(rawQuantity = 1) {
-  const quantity = Number(rawQuantity);
-  if (!Number.isSafeInteger(quantity) || quantity < 1) {
-    return {
-      ok: false,
-      message: "Quantity must be a positive whole number.",
-    };
-  }
-  return { ok: true, value: quantity };
-}
-
 export function validateAgreedRentalPrice(rawPrice) {
   const price = Number(rawPrice);
   if (!Number.isFinite(price) || price <= 0) {
@@ -113,12 +102,18 @@ export function resolveCustomRentalItemPrice(rawDuration, rawAgreedPrice) {
   };
 }
 
+export function getRentalBookingOriginalAmount(booking = {}) {
+  return Number(
+    booking.originalAmount ??
+      Number(booking.totalAmount || 0) + Number(booking.rewardDiscount || 0),
+  );
+}
+
 export function getRentalItemsTotal(items = []) {
   return fromPaise(
     sumPaise(
       (Array.isArray(items) ? items : []).map(
-        (item) =>
-          Number(item.rentalPrice) * Number(item.quantity ?? 1),
+        (item) => Number(item.rentalPrice),
       ),
     ),
   );

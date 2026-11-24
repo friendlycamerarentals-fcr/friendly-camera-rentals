@@ -39,7 +39,7 @@ export default function Navbar() {
   const [showLogin, setShowLogin] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
 
-  // Each item is qty 1
+  // Each cart entry represents one rental product.
   const cartCount = useMemo(() => cart.length, [cart.length]);
 
   // ── Auth loading state ──────────────────────────────────────────────────

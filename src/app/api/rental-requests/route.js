@@ -7,6 +7,14 @@ import { createAdminNotification } from "@/lib/adminNotificationService";
 import { isRewardEligible } from "@/lib/rewards/rewardValidation";
 import { generateNextRequestId } from "@/lib/rentalRequestId";
 import { withRentalPaymentSummary } from "@/lib/rentalPayments";
+import {
+  getStandardDurationOptions,
+  parsePricingKey,
+} from "@/lib/rentalDuration";
+import {
+  RENTAL_REQUEST_COLUMNS,
+  RENTAL_REQUEST_ITEM_COLUMNS,
+} from "@/lib/rentalDbColumns";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -14,7 +22,7 @@ export const runtime = "nodejs";
 export async function GET() {
   try {
     const requests = await query(
-      'SELECT * FROM "RentalRequest" ORDER BY "createdAt" DESC',
+      `SELECT ${RENTAL_REQUEST_COLUMNS} FROM "RentalRequest" ORDER BY "createdAt" DESC`,
     );
 
     // Attach the persisted rental items (multi-item manual bookings) so the
@@ -22,7 +30,7 @@ export async function GET() {
     if (requests.length) {
       const requestIds = requests.map((row) => row.requestId);
       const itemRows = await query(
-        `SELECT * FROM "RentalRequestItem"
+        `SELECT ${RENTAL_REQUEST_ITEM_COLUMNS} FROM "RentalRequestItem"
          WHERE "rentalRequestId" = ANY($1)
          ORDER BY "itemOrder" ASC, "id" ASC`,
         [requestIds],
@@ -106,10 +114,7 @@ export async function POST(request) {
       !body.fullName ||
       !body.bookingDate ||
       !body.customerId ||
-      !body.rentalDuration ||
-      body.quantity == null ||
-      body.rentalPrice == null ||
-      body.totalAmount == null
+      !body.rentalDuration
     ) {
       return NextResponse.json(
         { success: false, message: "Missing required booking fields" },
@@ -117,23 +122,17 @@ export async function POST(request) {
       );
     }
 
-    const quantity = Number(body.quantity);
-    const rentalPrice = Number(body.rentalPrice);
-    const totalAmount = Number(body.totalAmount);
-
-    if (
-      Number.isNaN(quantity) ||
-      Number.isNaN(rentalPrice) ||
-      Number.isNaN(totalAmount)
-    ) {
+    const rentalDuration = String(body.rentalDuration).trim();
+    const requestedDuration = parsePricingKey(rentalDuration);
+    if (!requestedDuration) {
       return NextResponse.json(
-        { success: false, message: "Invalid numeric booking fields" },
+        { success: false, message: "Select a valid rental duration." },
         { status: 400 },
       );
     }
 
     const productRows = await query(
-      'SELECT "id", "name", "available", "category" FROM "RentalProduct" WHERE "id" = $1 LIMIT 1',
+      'SELECT "id", "name", "available", "category", "pricing" FROM "RentalProduct" WHERE "id" = $1 LIMIT 1',
       [body.productId],
     );
     const product = productRows[0];
@@ -150,6 +149,23 @@ export async function POST(request) {
       );
     }
 
+    const configuredDuration = getStandardDurationOptions(product).find(
+      (option) =>
+        option.value === requestedDuration.value &&
+        option.unit === requestedDuration.unit,
+    );
+    if (!configuredDuration) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "The selected duration is not configured for this product.",
+        },
+        { status: 400 },
+      );
+    }
+    const rentalPrice = configuredDuration.price;
+    const totalAmount = rentalPrice;
+
     if (body.rewardId && !isRewardEligible(product.category)) {
       return NextResponse.json(
         {
@@ -161,7 +177,7 @@ export async function POST(request) {
     }
 
     const existingRows = await query(
-      `SELECT * FROM "RentalRequest"
+      `SELECT "id" FROM "RentalRequest"
        WHERE "productId" = $1
          AND "phone" = $2
          AND "bookingDate" = $3
@@ -206,10 +222,10 @@ export async function POST(request) {
       const insertSql = `INSERT INTO "RentalRequest" (
         "id", "requestId", "customerId", "userId", "fullName", "email", "phone",
         "address", "productId", "productName", "productImage", "rentalDuration",
-        "quantity", "rentalPrice", "totalAmount", "originalAmount", "rewardId", "rewardDiscount",
+        "rentalPrice", "totalAmount", "originalAmount", "rewardId", "rewardDiscount",
         "bookingDate", "pickupTime", "notes", "status", "paymentStatus", "createdAt", "updatedAt"
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25)
-      RETURNING *`;
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24)
+      RETURNING ${RENTAL_REQUEST_COLUMNS}`;
       const insertParams = [
         id,
         requestId,
@@ -222,8 +238,7 @@ export async function POST(request) {
         body.productId,
         body.productName,
         body.productImage || null,
-        body.rentalDuration,
-        quantity,
+        rentalDuration,
         rentalPrice,
         totalAmount,
         totalAmount,
@@ -254,7 +269,7 @@ export async function POST(request) {
         }
 
         const updatedRentalRows = await client.query(
-          'UPDATE "RentalRequest" SET "rewardId" = $1, "rewardDiscount" = $2, "totalAmount" = $3, "updatedAt" = NOW() WHERE "id" = $4 RETURNING *',
+          `UPDATE "RentalRequest" SET "rewardId" = $1, "rewardDiscount" = $2, "totalAmount" = $3, "updatedAt" = NOW() WHERE "id" = $4 RETURNING ${RENTAL_REQUEST_COLUMNS}`,
           [
             reservation.reward.rewardId,
             reservation.rewardDiscount,

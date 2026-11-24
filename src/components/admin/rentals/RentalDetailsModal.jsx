@@ -29,11 +29,11 @@ import {
   parsePricingKey,
 } from "@/lib/rentalDuration";
 import {
+  getRentalBookingOriginalAmount,
   CUSTOM_DURATION_KEY,
   MAX_RENTAL_ITEMS,
   MAX_RENTAL_ITEM_PRICE,
   validateAgreedRentalPrice,
-  validateRentalQuantity,
 } from "@/lib/rentalItems";
 
 const inputCls =
@@ -293,7 +293,6 @@ export default function RentalDetailsModal({
         : "",
       customDurationUnit: hasCustomDuration ? item.durationUnit : "",
       agreedPrice: String(item.rentalPrice || ""),
-      quantity: String(item.quantity || booking.quantity || 1),
     });
     setRentalItemErrors({});
   };
@@ -308,7 +307,6 @@ export default function RentalDetailsModal({
       customDurationValue: "",
       customDurationUnit: "",
       agreedPrice: option ? String(option.price) : "",
-      quantity: "1",
     });
     setRentalItemErrors({});
     rentalItemSubmissionKey.current = null;
@@ -364,8 +362,7 @@ export default function RentalDetailsModal({
           productName: booking.productName,
           productImage: booking.productImage,
           durationDisplay: booking.rentalDuration,
-          rentalPrice: booking.rentalPrice,
-          quantity: booking.quantity || 1,
+          rentalPrice: getRentalBookingOriginalAmount(booking),
         },
       ];
   const availableRentalProducts = rentalProducts.filter(
@@ -422,11 +419,6 @@ export default function RentalDetailsModal({
       return;
     }
 
-    const quantity = validateRentalQuantity(rentalItemForm.quantity);
-    if (!quantity.ok) {
-      toast.error(quantity.message);
-      return;
-    }
     if (
       !rentalItemForm.productId ||
       (!isCustomDuration && !rentalItemForm.durationKey)
@@ -452,7 +444,6 @@ export default function RentalDetailsModal({
           },
         }),
         agreedPrice: agreedPrice.value,
-        quantity: quantity.value,
       };
       let success = false;
       if (rentalItemForm.mode === "add") {
@@ -678,10 +669,6 @@ export default function RentalDetailsModal({
                     <dd className="text-zinc-200">{booking.rentalDuration}</dd>
                   </div>
                   <div className="flex flex-wrap gap-x-2">
-                    <dt className="text-zinc-500">Quantity:</dt>
-                    <dd className="text-zinc-200">{booking.quantity || 1}</dd>
-                  </div>
-                  <div className="flex flex-wrap gap-x-2">
                     <dt className="text-zinc-500">Source:</dt>
                     <dd className="text-zinc-200">
                       {booking.bookingSource || "Website"}
@@ -706,7 +693,7 @@ export default function RentalDetailsModal({
                 Rental Products
               </h3>
               <div className="overflow-x-auto rounded-xl border border-white/10">
-                <table className="w-full min-w-[650px] text-sm">
+                <table className="w-full min-w-[560px] text-sm">
                   <thead className="bg-black/40 text-zinc-400">
                     <tr>
                       <th className="px-3 py-2 text-left text-[11px] font-medium uppercase tracking-wide">
@@ -717,9 +704,6 @@ export default function RentalDetailsModal({
                       </th>
                       <th className="px-3 py-2 text-right text-[11px] font-medium uppercase tracking-wide">
                         Agreed price
-                      </th>
-                      <th className="px-3 py-2 text-center text-[11px] font-medium uppercase tracking-wide">
-                        Quantity
                       </th>
                       <th className="px-3 py-2 text-right text-[11px] font-medium uppercase tracking-wide">
                         Actions
@@ -756,9 +740,6 @@ export default function RentalDetailsModal({
                             </span>
                           )}
                         </td>
-                        <td className="px-3 py-2.5 text-center text-zinc-300">
-                          {Number(item.quantity || 1).toLocaleString("en-IN")}
-                        </td>
                         <td className="px-3 py-2.5 text-right">
                           <button
                             type="button"
@@ -780,13 +761,13 @@ export default function RentalDetailsModal({
                   </tbody>
                   <tfoot>
                     <tr className="border-t border-white/10 bg-black/40">
-                      <td className="px-3 py-2 text-zinc-300" colSpan={4}>
+                      <td className="px-3 py-2 text-zinc-300" colSpan={3}>
                         Total before reward
                       </td>
                       <td className="px-3 py-2 text-right font-bold text-white">
                         ₹
                         {Number(
-                          booking.originalAmount ?? finalRent + rewardDiscount,
+                          getRentalBookingOriginalAmount(booking),
                         ).toLocaleString("en-IN")}
                       </td>
                     </tr>
@@ -996,23 +977,6 @@ export default function RentalDetailsModal({
                               {configuredPrice.toLocaleString("en-IN")}
                             </p>
                           )}
-                        </div>
-                        <div>
-                          <label className={labelCls}>Quantity</label>
-                          <input
-                            type="number"
-                            min="1"
-                            step="1"
-                            value={rentalItemForm.quantity}
-                            onChange={(event) =>
-                              setRentalItemForm((previous) => ({
-                                ...previous,
-                                quantity: event.target.value,
-                              }))
-                            }
-                            disabled={rentalItemSubmitting || actionLoading}
-                            className={inputCls}
-                          />
                         </div>
                       </div>
                       {rentalItemForm.agreedPrice &&

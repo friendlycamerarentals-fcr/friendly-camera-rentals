@@ -1,6 +1,7 @@
 import { transaction } from "@/db/query";
 import { REWARD_STATUS } from "@/constants/rewardStatus";
 import { isRewardEligible } from "@/lib/rewards/rewardValidation";
+import { RENTAL_REQUEST_COLUMNS } from "@/lib/rentalDbColumns";
 
 export async function reserveRewardForRental(
   client,
@@ -229,7 +230,7 @@ export async function applyReward({
 
   return transaction(async (client) => {
     const rentalRows = await client.query(
-      'SELECT * FROM "RentalRequest" WHERE "requestId" = $1 LIMIT 1 FOR UPDATE',
+      `SELECT ${RENTAL_REQUEST_COLUMNS} FROM "RentalRequest" WHERE "requestId" = $1 LIMIT 1 FOR UPDATE`,
       [rentalRequestId],
     );
     const rental = rentalRows.rows[0];

@@ -80,7 +80,7 @@ export default function RentalTable({
   return (
     <div className="overflow-hidden rounded-2xl border border-white/10 bg-zinc-950">
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[1400px] text-sm">
+        <table className="w-full min-w-[1300px] text-sm">
           <thead className="border-b border-white/10 bg-black/40">
             <tr className="text-left text-sm text-zinc-400">
               <th className="px-6 py-3">Request ID</th>
@@ -89,7 +89,6 @@ export default function RentalTable({
               <th className="px-6 py-3">Product</th>
               <th className="px-6 py-3">Date</th>
               <th className="px-6 py-3">Pickup</th>
-              <th className="px-6 py-3">Qty</th>
               <th className="px-6 py-3">Total</th>
               <th className="px-6 py-3">Status</th>
               <th className="px-6 py-3">Actions</th>
@@ -148,10 +147,6 @@ export default function RentalTable({
 
                 <td className="px-6 py-5 text-zinc-300">
                   {booking.pickupTime || "—"}
-                </td>
-
-                <td className="px-6 py-5 text-zinc-300">
-                  {booking.quantity || 1}
                 </td>
 
                 <td className="px-6 py-5">

@@ -168,7 +168,7 @@ export default function CartDrawer({ open, onClose }) {
     () =>
       cart.reduce(
         (sum, item) =>
-          sum + Number(item.price || 0) * Number(item.quantity || 1),
+          sum + Number(item.price || 0),
         0,
       ),
     [cart],
@@ -181,7 +181,7 @@ export default function CartDrawer({ open, onClose }) {
   );
   const rewardBaseItem = cart[rewardEligibleIndex];
   const rewardBaseAmount = rewardBaseItem
-    ? Number(rewardBaseItem.price || 0) * Number(rewardBaseItem.quantity || 1)
+    ? Number(rewardBaseItem.price || 0)
     : 0;
   const rewardDiscount = Math.min(
     Number(activeReward?.rewardAmount || 0),
@@ -514,9 +514,8 @@ export default function CartDrawer({ open, onClose }) {
         productName: item.name,
         productImage: item.image || null,
         rentalDuration: item.duration,
-        quantity: item.quantity || 1,
         rentalPrice: Number(item.price || 0),
-        totalAmount: Number(item.price || 0) * Number(item.quantity || 1),
+        totalAmount: Number(item.price || 0),
         rewardId:
           index === rewardEligibleIndex ? activeReward?.rewardId : undefined,
         bookingDate,
@@ -549,8 +548,7 @@ export default function CartDrawer({ open, onClose }) {
             `   Equipment      : ${item.name}\n` +
             `   Category       : ${item.category || "N/A"}\n` +
             `   Rental Duration: ${formatDuration(item.duration)}\n` +
-            `   Quantity       : ${item.quantity || 1}\n` +
-            `   Price          : ₹${Number(item.price || 0).toLocaleString("en-IN")} × ${item.quantity || 1} = ₹${(Number(item.price || 0) * Number(item.quantity || 1)).toLocaleString("en-IN")}`,
+            `   Price          : ₹${Number(item.price || 0).toLocaleString("en-IN")}`,
         )
         .join("\n");
       const emailLine = userEmail ? `Email   : ${userEmail}\n` : "";
@@ -864,9 +862,7 @@ export default function CartDrawer({ open, onClose }) {
                       </p>
                       <div className="space-y-2">
                         {cart.map((item, index) => {
-                          const lineTotal =
-                            Number(item.price || 0) *
-                            Number(item.quantity || 1);
+                          const lineTotal = Number(item.price || 0);
                           return (
                             <div
                               key={`review-${item.id || index}-${item.duration}`}

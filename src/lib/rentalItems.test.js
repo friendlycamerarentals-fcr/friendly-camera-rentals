@@ -1,11 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  getRentalBookingOriginalAmount,
   getRentalItemsTotal,
   resolveConfiguredRentalPrice,
   resolveCustomRentalItemPrice,
   validateAgreedRentalPrice,
-  validateRentalQuantity,
 } from "./rentalItems.js";
 
 const camera = {
@@ -40,17 +40,25 @@ test("resolves configured duration pricing and permits a validated agreed price"
   assert.equal(resolveConfiguredRentalPrice(camera, "5hrs", -1).ok, false);
 });
 
-test("validates quantities and sums item amounts with quantity", () => {
-  assert.deepEqual(validateRentalQuantity("2"), { ok: true, value: 2 });
-  assert.equal(validateRentalQuantity(0).ok, false);
-  assert.equal(validateRentalQuantity(1.5).ok, false);
+test("sums rental item prices without multiplication", () => {
   assert.equal(
     getRentalItemsTotal([
-      { rentalPrice: 300, quantity: 1 },
-      { rentalPrice: 500, quantity: 2 },
+      { rentalPrice: 300 },
+      { rentalPrice: 500 },
     ]),
-    1300,
+    800,
   );
+});
+
+test("legacy rentals without item rows keep their stored original total", () => {
+  const booking = {
+    items: [],
+    rentalPrice: 500,
+    totalAmount: 1000,
+    originalAmount: 1000,
+  };
+
+  assert.equal(getRentalBookingOriginalAmount(booking), 1000);
 });
 
 test("resolves custom rental durations and requires a valid duration and agreed price", () => {

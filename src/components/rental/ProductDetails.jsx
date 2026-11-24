@@ -81,7 +81,6 @@ export default function ProductDetails({ product }) {
         image: images[selectedImage], // selected image
         duration: selectedDuration,
         price: selectedPrice,
-        quantity: 1,
       });
 
       if (!added) {

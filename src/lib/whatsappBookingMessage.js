@@ -1,3 +1,5 @@
+import { getRentalBookingOriginalAmount } from "./rentalItems.js";
+
 export const FCR_WHATSAPP_COUNTRY_CODE = "91";
 
 /**
@@ -37,10 +39,7 @@ export function buildRentalWhatsAppMessage(booking = {}) {
   const items = Array.isArray(booking.items)
     ? booking.items.filter(Boolean)
     : [];
-  const originalAmount = Number(
-    booking.originalAmount ??
-      Number(booking.totalAmount || 0) + Number(booking.rewardDiscount || 0),
-  );
+  const originalAmount = getRentalBookingOriginalAmount(booking);
   const rewardDiscount = Number(booking.rewardDiscount || 0);
   const finalAmount = Number(
     booking.totalAmount ??
@@ -61,19 +60,12 @@ export function buildRentalWhatsAppMessage(booking = {}) {
       const duration = item.durationDisplay || item.durationValue
         ? `${item.durationDisplay || ""}`
         : item.duration || "";
-      const quantity = Number(item.quantity || 1);
       const price = Number(item.rentalPrice || 0);
-      lines.push(
-        `${index + 1}. ${item.productName} · ${duration} — ${inr(price)}${
-          quantity > 1 ? ` × ${quantity} = ${inr(price * quantity)}` : ""
-        }`,
-      );
+      lines.push(`${index + 1}. ${item.productName} · ${duration} — ${inr(price)}`);
     });
   } else {
     lines.push(`📸 *Rental Item* : ${booking.productName}`);
-    lines.push(
-      `🔢 *Quantity* : ${booking.quantity || 1} · *Duration* : ${booking.rentalDuration}`,
-    );
+    lines.push(`🔢 *Duration* : ${booking.rentalDuration}`);
   }
   lines.push(`📅 *Booking Date* : ${booking.bookingDate || "—"}`);
   lines.push(`⏰ *Pickup Time* : ${booking.pickupTime || "—"}`);

@@ -24,15 +24,18 @@ import {
 } from "@/lib/rentalPayments";
 import {
   CUSTOM_DURATION_KEY,
+  getRentalBookingOriginalAmount,
   MAX_RENTAL_ITEMS,
   getRentalItemsTotal,
   resolveConfiguredRentalPrice,
   resolveCustomRentalItemPrice,
-  validateRentalQuantity,
 } from "@/lib/rentalItems";
 import {
+  RENTAL_REQUEST_COLUMNS,
+  RENTAL_REQUEST_ITEM_COLUMNS,
+} from "@/lib/rentalDbColumns";
+import {
   formatDuration,
-  fromPaise,
   getDurationListingPrice,
   getStandardDurationOptions,
   parsePricingKey,
@@ -143,47 +146,6 @@ export async function PATCH(request, { params }) {
           success: false,
           message:
             "Update rental products separately from status or payment details.",
-        },
-        { status: 400 },
-      );
-    }
-
-    if (hasRentalItemMutation && hasField("quantity")) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Set quantity inside the rental product update.",
-        },
-        { status: 400 },
-      );
-    }
-
-    if (
-      hasRentalItemMutation &&
-      hasRentalItemAddition &&
-      !validateRentalQuantity(rentalItemPayload.quantity ?? 1).ok
-    ) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: validateRentalQuantity(
-            rentalItemPayload.quantity ?? 1,
-          ).message,
-        },
-        { status: 400 },
-      );
-    }
-
-    if (
-      hasRentalItemMutation &&
-      hasRentalItemUpdate &&
-      rentalItemPayload.quantity != null &&
-      !validateRentalQuantity(rentalItemPayload.quantity).ok
-    ) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: validateRentalQuantity(rentalItemPayload.quantity).message,
         },
         { status: 400 },
       );
@@ -321,7 +283,7 @@ export async function PATCH(request, { params }) {
 
     const result = await transaction(async (client) => {
       const existingRows = await client.query(
-        'SELECT * FROM "RentalRequest" WHERE "id" = $1 LIMIT 1 FOR UPDATE',
+        `SELECT ${RENTAL_REQUEST_COLUMNS} FROM "RentalRequest" WHERE "id" = $1 LIMIT 1 FOR UPDATE`,
         [id],
       );
       const existing = existingRows.rows[0];
@@ -417,7 +379,7 @@ export async function PATCH(request, { params }) {
 
       if (hasRentalItemMutation) {
         const itemRows = await client.query(
-          `SELECT * FROM "RentalRequestItem"
+          `SELECT ${RENTAL_REQUEST_ITEM_COLUMNS} FROM "RentalRequestItem"
            WHERE "rentalRequestId" = $1
            ORDER BY "itemOrder" ASC, "id" ASC
            FOR UPDATE`,
@@ -426,16 +388,6 @@ export async function PATCH(request, { params }) {
         rentalItems = itemRows.rows;
 
         const insertPrimaryRentalItem = async () => {
-          const primaryQuantity = validateRentalQuantity(
-            existing.quantity ?? 1,
-          );
-          if (!primaryQuantity.ok) {
-            const error = new Error(
-              "The existing rental quantity is invalid and must be corrected before editing products.",
-            );
-            error.status = 409;
-            throw error;
-          }
           const primaryProductRows = await client.query(
             'SELECT "category", "pricing" FROM "RentalProduct" WHERE "id" = $1 LIMIT 1',
             [existing.productId],
@@ -449,15 +401,15 @@ export async function PATCH(request, { params }) {
               option.value === parsedDuration?.value &&
               option.unit === parsedDuration?.unit,
           );
-          const rentalPrice = Number(existing.rentalPrice || 0);
+          const rentalPrice = getRentalBookingOriginalAmount(existing);
           const insertedRows = await client.query(
             `INSERT INTO "RentalRequestItem" (
                "id", "rentalRequestId", "productId", "productName", "productImage",
                "category", "durationValue", "durationUnit", "durationDisplay",
-               "rentalPrice", "quantity", "isCustomDuration", "isCustomPrice",
+               "rentalPrice", "isCustomDuration", "isCustomPrice",
                "itemOrder", "submissionKey", "createdAt", "updatedAt"
-             ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, 0, NULL, NOW(), NOW())
-             RETURNING *`,
+             ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 0, NULL, NOW(), NOW())
+             RETURNING ${RENTAL_REQUEST_ITEM_COLUMNS}`,
             [
               createId(),
               existing.requestId,
@@ -469,7 +421,6 @@ export async function PATCH(request, { params }) {
               parsedDuration?.unit ?? null,
               existing.rentalDuration || "—",
               rentalPrice,
-              primaryQuantity.value,
               !parsedDuration,
               !configuredOption ||
                 toPaise(configuredOption.price) !== toPaise(rentalPrice),
@@ -479,7 +430,6 @@ export async function PATCH(request, { params }) {
         };
 
         if (hasRentalItemAddition) {
-          const quantity = Number(rentalItemPayload.quantity ?? 1);
           const matchingSubmission = rentalItems.find(
             (item) => item.submissionKey === rentalItemPayload.submissionKey,
           );
@@ -506,7 +456,6 @@ export async function PATCH(request, { params }) {
                 (requestedDuration ? formatDuration(requestedDuration) : "") ||
               matchingSubmission.isCustomDuration !== customDurationSelected ||
               (customDurationSelected && !customResolution?.ok) ||
-              Number(matchingSubmission.quantity || 1) !== quantity ||
               (requestedPrice != null &&
                 (!Number.isFinite(requestedPrice) ||
                   toPaise(requestedPrice) !==
@@ -565,10 +514,10 @@ export async function PATCH(request, { params }) {
               `INSERT INTO "RentalRequestItem" (
                  "id", "rentalRequestId", "productId", "productName", "productImage",
                  "category", "durationValue", "durationUnit", "durationDisplay",
-                 "rentalPrice", "quantity", "isCustomDuration", "isCustomPrice",
+                 "rentalPrice", "isCustomDuration", "isCustomPrice",
                  "itemOrder", "submissionKey", "createdAt", "updatedAt"
-               ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, NOW(), NOW())
-               RETURNING *`,
+               ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, NOW(), NOW())
+               RETURNING ${RENTAL_REQUEST_ITEM_COLUMNS}`,
               [
                 createId(),
                 existing.requestId,
@@ -580,7 +529,6 @@ export async function PATCH(request, { params }) {
                 resolvedPrice.duration.unit,
                 formatDuration(resolvedPrice.duration),
                 resolvedPrice.rentalPrice,
-                quantity,
                 resolvedPrice.isCustomDuration === true,
                 resolvedPrice.isCustomPrice,
                 nextOrder,
@@ -658,18 +606,14 @@ export async function PATCH(request, { params }) {
             error.status = 400;
             throw error;
           }
-          const quantity =
-            rentalItemPayload.quantity == null
-              ? Number(targetItem.quantity || 1)
-              : Number(rentalItemPayload.quantity);
           await client.query(
             `UPDATE "RentalRequestItem"
              SET "productId" = $1, "productName" = $2, "productImage" = $3,
                  "category" = $4, "durationValue" = $5, "durationUnit" = $6,
-                 "durationDisplay" = $7, "rentalPrice" = $8, "quantity" = $9,
-                 "isCustomDuration" = $10, "isCustomPrice" = $11,
+                 "durationDisplay" = $7, "rentalPrice" = $8,
+                 "isCustomDuration" = $9, "isCustomPrice" = $10,
                  "updatedAt" = NOW()
-             WHERE "id" = $12`,
+             WHERE "id" = $11`,
             [
               product.id,
               product.name,
@@ -679,7 +623,6 @@ export async function PATCH(request, { params }) {
               resolvedPrice.duration.unit,
               formatDuration(resolvedPrice.duration),
               resolvedPrice.rentalPrice,
-              quantity,
               resolvedPrice.isCustomDuration === true,
               resolvedPrice.isCustomPrice,
               targetItem.id,
@@ -691,7 +634,6 @@ export async function PATCH(request, { params }) {
             pushUpdate("productImage", product.image || null);
             pushUpdate("rentalDuration", formatDuration(resolvedPrice.duration));
             pushUpdate("rentalPrice", resolvedPrice.rentalPrice);
-            pushUpdate("quantity", quantity);
           }
           itemMutationApplied = true;
         }
@@ -699,7 +641,7 @@ export async function PATCH(request, { params }) {
         if (itemMutationApplied) {
           rentalItems = (
             await client.query(
-              `SELECT * FROM "RentalRequestItem"
+              `SELECT ${RENTAL_REQUEST_ITEM_COLUMNS} FROM "RentalRequestItem"
                WHERE "rentalRequestId" = $1
                ORDER BY "itemOrder" ASC, "id" ASC`,
               [existing.requestId],
@@ -760,7 +702,7 @@ export async function PATCH(request, { params }) {
 
         const rentalItems = (
           await client.query(
-            `SELECT * FROM "RentalRequestItem"
+            `SELECT ${RENTAL_REQUEST_ITEM_COLUMNS} FROM "RentalRequestItem"
              WHERE "rentalRequestId" = $1
              ORDER BY "itemOrder" ASC, "id" ASC`,
             [existing.requestId],
@@ -831,9 +773,7 @@ export async function PATCH(request, { params }) {
             pushUpdate("rentalPrice", rentalPrice);
           }
         } else {
-          originalAmount = fromPaise(
-            toPaise(rentalPrice) * Number(existing.quantity || 1),
-          );
+          originalAmount = getRentalBookingOriginalAmount(existing);
           pushUpdate("rentalDuration", formatDuration(parsedDuration));
           pushUpdate("rentalPrice", rentalPrice);
         }
@@ -1043,7 +983,7 @@ export async function PATCH(request, { params }) {
       if (updateParts.length) {
         values.push(id);
         const updatedRows = await client.query(
-          `UPDATE "RentalRequest" SET ${updateParts.join(", ")}, "updatedAt" = NOW() WHERE "id" = $${values.length} RETURNING *`,
+          `UPDATE "RentalRequest" SET ${updateParts.join(", ")}, "updatedAt" = NOW() WHERE "id" = $${values.length} RETURNING ${RENTAL_REQUEST_COLUMNS}`,
           values,
         );
         updated = updatedRows.rows[0];
@@ -1066,7 +1006,7 @@ export async function PATCH(request, { params }) {
       ).rows;
       const updatedItems = (
         await client.query(
-          `SELECT * FROM "RentalRequestItem"
+          `SELECT ${RENTAL_REQUEST_ITEM_COLUMNS} FROM "RentalRequestItem"
            WHERE "rentalRequestId" = $1
            ORDER BY "itemOrder" ASC, "id" ASC`,
           [updated.requestId],

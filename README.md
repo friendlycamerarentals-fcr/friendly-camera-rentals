@@ -45,8 +45,8 @@ The application is a single Next.js project with route handlers as its backend, 
 | Customer profile | `/profile` page with read-only Customer ID and email; editable name, 10-digit mobile, and address; draft persistence in `sessionStorage` |
 | Profile-complete gate | A rental booking cannot start until name, phone, and address are filled in; the pending booking resumes automatically after saving |
 | Rental browsing | `/rental` with a search field and explicit submit, category filters derived from live data, skeleton loading, error + retry, and empty states |
-| Rental product details | `/rental/[id]` gallery, specifications, duration options from the product's `pricing` map, quantity handling, add-to-cart |
-| Rental cart | Slide-in cart drawer persisted in `localStorage`, per-product/per-duration line items, quantity increase, removal, running total |
+| Rental product details | `/rental/[id]` gallery, specifications, duration options from the product's `pricing` map, add-to-cart |
+| Rental cart | Slide-in cart drawer persisted in `localStorage`, one line per product, removal, running total |
 | Two-step booking flow | Step 1 collects booking date (no past dates), pickup time, notes, and ID-proof acknowledgement; step 2 reviews customer, booking, and item summary before confirmation |
 | Availability check | Cart is validated against `/api/rental-products/availability` before the booking form opens; unavailable items are removed with a toast |
 | Reward redemption at checkout | Active reward is fetched for the signed-in customer and applied as a discount on the first camera item (camera-only eligibility) |
@@ -346,7 +346,7 @@ The data layer is plain PostgreSQL. Every statement in `database/*.sql` is idemp
 | --- | --- |
 | `RentalProduct` | Rental catalog; unique `slug`, `category`, `brand`, `model`, `available`, `images`/`specifications`/`pricing` JSONB, `display_order` |
 | `RentalRequestItem` | Items of a booking; `rentalRequestId`, `productId`, `durationDisplay`, negotiated `rentalPrice`, `isCustomDuration`, `isCustomPrice`, `itemOrder` |
-| `RentalRequest` | One booking; unique `requestId` (`FCR-R######`), customer and contact details, product snapshot, `rentalDuration`, `quantity`, `originalAmount`, `rewardId`, `rewardDiscount`, `discount`, `advanceAmount`, `status`, `paymentStatus`, `bookingSource`, verified-advance audit fields, `createdByAdmin`, `confirmedByAdmin` |
+| `RentalRequest` | One booking; unique `requestId` (`FCR-R######`), customer and contact details, product snapshot, `rentalDuration`, `originalAmount`, `rewardId`, `rewardDiscount`, `discount`, `advanceAmount`, `status`, `paymentStatus`, `bookingSource`, verified-advance audit fields, `createdByAdmin`, `confirmedByAdmin` |
 | `RentalPayment` | Auditable payment ledger; `paymentType` (`Advance`/`Balance`), `amount`, `method`, `reference`, `verified`, `verifiedAt`, `verifiedBy`, `idempotencyKey` (unique per request) |
 | `Customer` | Unique `customerId` (`FCR-C#####`) and unique `email`, `name`, `profileImage`, `phoneNumber`, `address` |
 | `BuyProduct` | Sale catalog; unique `slug`, `status` (`In Stock`/`Out of Stock`/`Sold`), `price`, `discountPrice`, `condition`, `warranty`, JSONB specs/accessories, `display_order` |
@@ -436,7 +436,7 @@ No payment gateway, email provider, SMS gateway, maps, or shipping integration i
 | --- | --- |
 | Rental pricing | Duration prices come from `RentalProduct.pricing` JSONB keys parsed by `parsePricingKey` (`hr`/`hrs` → Hours, `week` → 7 Days). Custom durations must be whole numbers: 1–720 hours or 1–90 days. |
 | Money precision | All sums, comparisons, and stored amounts are computed through paise (integer cents) helpers to avoid float drift. |
-| Cart totals | Line total = unit price × quantity; the reward discount is capped at the first camera item's line total. |
+| Cart totals | Each line total equals its rental price; the reward discount is capped at the first camera item's price. |
 | Booking creation | Requires an existing `customerId`, complete contact fields, an available product, and at least one item detail. Duplicate active bookings (same product, phone, date, pickup time, duration) return `409`. |
 | Booking IDs | `FCR-R######` derived from the highest existing numeric request ID (minimum `100001`); customer IDs `FCR-C#####` from `10000`; reward IDs `FCR-R100001`-style via the reward service. |
 | Manual rentals | Existing registered customer only (never auto-created), 1–20 items, one shared standard or custom duration, per-item agreed price, future booking date, required pickup time, expected advance ≤ final amount. A pending booking stores only the expectation; confirming with an advance records exactly one verified `Advance` payment matching that expectation. |

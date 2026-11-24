@@ -23,6 +23,10 @@ import {
   MAX_RENTAL_ITEMS,
   validateAgreedRentalPrice,
 } from "@/lib/rentalItems";
+import {
+  RENTAL_REQUEST_COLUMNS,
+  RENTAL_REQUEST_ITEM_COLUMNS,
+} from "@/lib/rentalDbColumns";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -314,7 +318,7 @@ export async function POST(request) {
     // ---- Duplicate submission protection ----------------------------------
     const primaryItem = validatedItems[0];
     const existingRows = await query(
-      `SELECT * FROM "RentalRequest"
+      `SELECT "id" FROM "RentalRequest"
        WHERE "productId" = $1
          AND "phone" = $2
          AND "bookingDate" = $3
@@ -409,11 +413,11 @@ export async function POST(request) {
           `INSERT INTO "RentalRequest" (
             "id", "requestId", "customerId", "userId", "fullName", "email", "phone",
             "address", "productId", "productName", "productImage", "rentalDuration",
-            "quantity", "rentalPrice", "totalAmount", "originalAmount", "rewardId", "rewardDiscount",
+            "rentalPrice", "totalAmount", "originalAmount", "rewardId", "rewardDiscount",
             "discount", "advanceAmount", "advanceExpected", "bookingDate", "pickupTime", "notes",
             "status", "paymentStatus", "bookingSource", "createdByAdmin", "createdAt", "updatedAt"
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30)
-          RETURNING *`,
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29)
+          RETURNING ${RENTAL_REQUEST_COLUMNS}`,
           [
             id,
             requestId,
@@ -427,7 +431,6 @@ export async function POST(request) {
             primaryItem.productName,
             primaryItem.productImage,
             primaryItem.durationDisplay,
-            1,
             primaryItem.rentalPrice,
             originalAmount,
             originalAmount,
@@ -490,7 +493,7 @@ export async function POST(request) {
         }
 
         const updatedRentalRows = await client.query(
-          'UPDATE "RentalRequest" SET "rewardId" = $1, "rewardDiscount" = $2, "totalAmount" = $3, "updatedAt" = NOW() WHERE "id" = $4 RETURNING *',
+          `UPDATE "RentalRequest" SET "rewardId" = $1, "rewardDiscount" = $2, "totalAmount" = $3, "updatedAt" = NOW() WHERE "id" = $4 RETURNING ${RENTAL_REQUEST_COLUMNS}`,
           [
             reservation.reward.rewardId,
             reservation.rewardDiscount,
@@ -551,7 +554,7 @@ export async function POST(request) {
                "confirmedByAdmin" = $4,
                "updatedAt" = $3
            WHERE "id" = $7
-           RETURNING *`,
+           RETURNING ${RENTAL_REQUEST_COLUMNS}`,
           [
             validatedAdvance.payment?.amount || 0,
             Boolean(validatedAdvance.payment),
@@ -572,7 +575,7 @@ export async function POST(request) {
 
       const insertedItems = (
         await client.query(
-          'SELECT * FROM "RentalRequestItem" WHERE "rentalRequestId" = $1 ORDER BY "itemOrder" ASC, "id" ASC',
+          `SELECT ${RENTAL_REQUEST_ITEM_COLUMNS} FROM "RentalRequestItem" WHERE "rentalRequestId" = $1 ORDER BY "itemOrder" ASC, "id" ASC`,
           [requestId],
         )
       ).rows;

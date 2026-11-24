@@ -13,6 +13,7 @@ import {
   validateManualRewardInput,
 } from "./manualReward";
 import { getManualRewardLifecycle } from "./rewardDates";
+import { RENTAL_REQUEST_COLUMNS } from "@/lib/rentalDbColumns";
 
 /**
  * Generate next Reward ID
@@ -144,7 +145,7 @@ export async function generateReward(rentalRequestId) {
   try {
     return await transaction(async (client) => {
       const rentalResult = await client.query(
-        'SELECT * FROM "RentalRequest" WHERE "requestId" = $1 LIMIT 1 FOR UPDATE',
+        `SELECT ${RENTAL_REQUEST_COLUMNS} FROM "RentalRequest" WHERE "requestId" = $1 LIMIT 1 FOR UPDATE`,
         [rentalRequestId],
       );
       const rental = rentalResult.rows[0];

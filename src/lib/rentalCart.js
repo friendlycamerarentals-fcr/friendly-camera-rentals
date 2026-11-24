@@ -1,3 +1,8 @@
+const withoutLegacyQuantity = (item) =>
+  Object.fromEntries(
+    Object.entries(item).filter(([key]) => key !== "quantity"),
+  );
+
 export function normalizeRentalCart(cart) {
   const seenProductIds = new Set();
 
@@ -7,7 +12,7 @@ export function normalizeRentalCart(cart) {
     }
 
     seenProductIds.add(item.id);
-    items.push({ ...item, quantity: 1 });
+    items.push(withoutLegacyQuantity(item));
     return items;
   }, []);
 }
@@ -18,7 +23,7 @@ export function addRentalProductToCart(cart, product) {
   }
 
   return {
-    cart: [...cart, { ...product, quantity: 1 }],
+    cart: [...cart, withoutLegacyQuantity(product)],
     added: true,
   };
 }

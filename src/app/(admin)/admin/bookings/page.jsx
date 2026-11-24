@@ -417,10 +417,6 @@ export default function BookingsPage() {
                         {booking.bookingDate || "-"}
                       </div>
                       <div>
-                        <span className="text-zinc-500">Quantity:</span>{" "}
-                        {booking.quantity || 0}
-                      </div>
-                      <div>
                         <span className="text-zinc-500">Total:</span>{" "}
                         {formatMoney(booking.totalAmount)}
                       </div>
