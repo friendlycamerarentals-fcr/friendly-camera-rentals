@@ -80,15 +80,15 @@ export default function RentalTable({
   return (
     <div className="overflow-hidden rounded-2xl border border-white/10 bg-zinc-950">
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[1354px] table-fixed text-sm">
+        <table className="w-full min-w-[1409px] table-fixed text-sm">
           <colgroup>
             <col className="w-[140px]" />
             <col className="w-[200px]" />
             <col className="w-[120px]" />
             <col className="w-[250px]" />
-            <col className="w-[120px]" />
+            <col className="w-[110px]" />
             <col className="w-[100px]" />
-            <col className="w-[145px]" />
+            <col className="w-[160px]" />
             <col className="w-[145px]" />
             <col className="w-[184px]" />
           </colgroup>
@@ -102,9 +102,7 @@ export default function RentalTable({
               <th className="px-3 py-3">Pickup</th>
               <th className="px-3 py-3">Total</th>
               <th className="px-3 py-3">Status</th>
-              <th className="sticky right-0 z-20 bg-zinc-950 px-3 py-3">
-                Actions
-              </th>
+              <th className="min-w-[184px] px-3 py-3">Actions</th>
             </tr>
           </thead>
 
@@ -240,8 +238,8 @@ export default function RentalTable({
                   )}
                 </td>
 
-                <td className="sticky right-0 z-10 bg-zinc-950 px-3 py-5 shadow-[-8px_0_12px_-10px_rgba(0,0,0,0.8)] group-hover:bg-zinc-900">
-                  <div className="flex items-center gap-2">
+                <td className="min-w-[184px] whitespace-nowrap px-3 py-5">
+                  <div className="flex w-max flex-nowrap items-center gap-2">
                     <button
                       onClick={() => onView(booking)}
                       title="View details"
