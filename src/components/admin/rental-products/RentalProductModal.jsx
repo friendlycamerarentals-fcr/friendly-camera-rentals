@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { X, Camera, Battery, CheckCircle2, XCircle } from "lucide-react";
+import { normalizePackageIncludes } from "@/lib/packageIncludes";
 
 export default function RentalProductModal({ open, onClose, product }) {
   if (!open || !product) return null;
@@ -10,6 +11,7 @@ export default function RentalProductModal({ open, onClose, product }) {
     ...(Array.isArray(product.images) ? product.images.filter(Boolean) : []),
     product.image,
   ].filter(Boolean);
+  const packageIncludes = normalizePackageIncludes(product.packageIncludes);
 
   return (
     <div
@@ -180,6 +182,34 @@ export default function RentalProductModal({ open, onClose, product }) {
                   <p className="leading-7 text-zinc-300">
                     {product.description}
                   </p>
+                </div>
+              )}
+
+              {packageIncludes.length > 0 && (
+                <div className="rounded-2xl border border-white/10 bg-black/20 p-5">
+                  <h3 className="mb-4 text-lg font-semibold text-[#F5A623]">
+                    Package Includes
+                  </h3>
+                  <ul className="grid grid-cols-1 gap-2 text-sm text-zinc-300 sm:grid-cols-2">
+                    {packageIncludes.map((item, index) => (
+                      <li
+                        key={`${item.name.toLowerCase()}-${index}`}
+                        className="flex min-w-0 items-start gap-2"
+                      >
+                        <CheckCircle2
+                          size={16}
+                          className="mt-0.5 shrink-0 text-[#F5A623]"
+                          aria-hidden="true"
+                        />
+                        <span className="break-words">
+                          <span className="font-semibold text-white">
+                            {item.quantity}×
+                          </span>{" "}
+                          {item.name}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               )}
             </div>

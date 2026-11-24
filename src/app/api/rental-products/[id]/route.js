@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { query } from "@/db/query";
 import { invalidateCachePrefix } from "@/lib/dataCache";
+import {
+  mergePackageIncludes,
+  validatePackageIncludes,
+} from "@/lib/packageIncludes";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -88,6 +92,30 @@ export async function PUT(request, { params }) {
 
   try {
     const body = await request.json();
+    if (!body || typeof body !== "object" || Array.isArray(body)) {
+      return NextResponse.json(
+        { success: false, message: "Request body must be an object." },
+        { status: 400 },
+      );
+    }
+
+    const hasPackageIncludes = Object.hasOwn(body, "packageIncludes");
+    if (hasPackageIncludes) {
+      const packageIncludesValidation = validatePackageIncludes(
+        body.packageIncludes,
+      );
+      if (!packageIncludesValidation.valid) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: `Invalid package includes: ${packageIncludesValidation.errors.join(" ")}`,
+            errors: packageIncludesValidation.errors,
+          },
+          { status: 400 },
+        );
+      }
+    }
+
     const existingRows = await query(
       'SELECT * FROM "RentalProduct" WHERE "id" = $1 LIMIT 1',
       [id],
@@ -100,6 +128,11 @@ export async function PUT(request, { params }) {
         { status: 404 },
       );
     }
+
+    const packageIncludesValue = mergePackageIncludes(
+      existingProduct.packageIncludes,
+      body,
+    );
 
     const slug =
       body.slug ||
@@ -167,8 +200,9 @@ export async function PUT(request, { params }) {
            "image" = $10,
            "images" = $11::jsonb,
            "pricing" = $12::jsonb,
-           "specifications" = $13::jsonb
-       WHERE "id" = $14
+           "specifications" = $13::jsonb,
+           "packageIncludes" = $14::jsonb
+       WHERE "id" = $15
        RETURNING *`,
       [
         body.name ?? existingProduct.name,
@@ -184,6 +218,7 @@ export async function PUT(request, { params }) {
         JSON.stringify(imagesValue),
         JSON.stringify(pricingValue),
         JSON.stringify(specificationsValue),
+        JSON.stringify(packageIncludesValue),
         id,
       ],
     );

@@ -8,6 +8,9 @@
 --
 -- Add new schema changes below this line.
 
+ALTER TABLE "RentalProduct"
+    ADD COLUMN IF NOT EXISTS "packageIncludes" JSONB DEFAULT '[]'::jsonb;
+
 CREATE TABLE IF NOT EXISTS "AdminNotification" (
   "id"          TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
   "type"        TEXT NOT NULL,

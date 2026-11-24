@@ -62,6 +62,9 @@ CREATE TABLE IF NOT EXISTS "RentalProduct" (
     "display_order"  INTEGER NOT NULL DEFAULT 0
 );
 
+ALTER TABLE "RentalProduct"
+    ADD COLUMN IF NOT EXISTS "packageIncludes" JSONB DEFAULT '[]'::jsonb;
+
 -- ----------------------------------------------------------------------------
 -- AdminNotification
 -- ----------------------------------------------------------------------------

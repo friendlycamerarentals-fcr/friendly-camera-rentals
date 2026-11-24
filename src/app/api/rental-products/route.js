@@ -6,6 +6,10 @@ import {
   setCachedValue,
   invalidateCachePrefix,
 } from "@/lib/dataCache";
+import {
+  normalizePackageIncludes,
+  validatePackageIncludes,
+} from "@/lib/packageIncludes";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -74,6 +78,7 @@ const selectColumns = [
   '"image"',
   '"images"',
   '"pricing"',
+  '"packageIncludes"',
   '"display_order"',
 ];
 
@@ -126,6 +131,28 @@ export async function GET(request) {
 export async function POST(request) {
   try {
     const body = await request.json();
+    if (!body || typeof body !== "object" || Array.isArray(body)) {
+      return NextResponse.json(
+        { success: false, message: "Request body must be an object." },
+        { status: 400 },
+      );
+    }
+
+    const packageIncludesValidation = validatePackageIncludes(
+      body.packageIncludes,
+    );
+    if (!packageIncludesValidation.valid) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: `Invalid package includes: ${packageIncludesValidation.errors.join(" ")}`,
+          errors: packageIncludesValidation.errors,
+        },
+        { status: 400 },
+      );
+    }
+    const packageIncludes = normalizePackageIncludes(body.packageIncludes);
+
     const slug = body.slug || createSlug(body.name);
 
     let images = body.images ?? [];
@@ -176,9 +203,9 @@ export async function POST(request) {
       INSERT INTO "RentalProduct" (
         "id", "name", "slug", "brand", "model", "category", "description",
         "megapixels", "batteries", "available", "image", "images",
-        "pricing", "specifications", "display_order"
+        "pricing", "specifications", "packageIncludes", "display_order"
       )
-      SELECT $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, "next_display_order"
+      SELECT $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, "next_display_order"
       FROM next_display
       RETURNING ${selectColumns.join(", ")}`,
       [
@@ -196,6 +223,7 @@ export async function POST(request) {
         JSON.stringify(images),
         JSON.stringify(pricing),
         JSON.stringify(specifications),
+        JSON.stringify(packageIncludes),
       ],
     );
 

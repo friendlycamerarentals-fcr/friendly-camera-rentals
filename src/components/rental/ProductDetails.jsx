@@ -4,21 +4,31 @@ import { useState, useRef } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
+import { Check, ImageIcon } from "lucide-react";
 import { buildGalleryArray } from "@/lib/imageUtils";
+import { normalizePackageIncludes } from "@/lib/packageIncludes";
 
 import { useCart } from "@/context/CartContext";
 
 export default function ProductDetails({ product }) {
-  const defaultDuration = Object.keys(product.pricing)[0];
+  const pricing =
+    product?.pricing &&
+    typeof product.pricing === "object" &&
+    !Array.isArray(product.pricing)
+      ? product.pricing
+      : {};
+  const defaultDuration = Object.keys(pricing)[0] || "";
   const { addToCart } = useCart();
 
   const [selectedImage, setSelectedImage] = useState(0);
   const [selectedDuration, setSelectedDuration] = useState(defaultDuration);
   const [priceKey, setPriceKey] = useState(0); // for price animation
 
-  const selectedPrice = product.pricing[selectedDuration];
+  const hasPricing = Object.keys(pricing).length > 0;
+  const selectedPrice = pricing[selectedDuration];
   // Build gallery: thumbnail first, then remaining images (no duplicates)
   const images = buildGalleryArray(product);
+  const packageIncludes = normalizePackageIncludes(product?.packageIncludes);
 
   const MAX_THUMBS = 4;
   const visibleThumbs = images.slice(0, MAX_THUMBS);
@@ -63,8 +73,8 @@ export default function ProductDetails({ product }) {
   };
 
   const handleAddToCart = () => {
-    if (!selectedDuration) {
-      toast.warning("Please select a rental duration.");
+    if (!hasPricing || !selectedDuration) {
+      toast.error("Pricing is currently unavailable for this product.");
       return;
     }
 
@@ -78,7 +88,7 @@ export default function ProductDetails({ product }) {
         id: product.id,
         name: product.name,
         category: product.category,
-        image: images[selectedImage], // selected image
+        image: images[selectedImage] || "",
         duration: selectedDuration,
         price: selectedPrice,
       });
@@ -162,26 +172,33 @@ export default function ProductDetails({ product }) {
                 }}
               >
                 <div className="relative h-[260px] md:h-[380px] w-full">
-                  <AnimatePresence mode="wait">
-                    <motion.div
-                      key={selectedImage}
-                      initial={{ opacity: 0, scale: 1.03 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.97 }}
-                      transition={{ duration: 0.35, ease: "easeInOut" }}
-                      className="absolute inset-0"
-                    >
-                      <Image
-                        src={images[selectedImage]}
-                        alt={product.name}
-                        fill
-                        priority
-                        draggable={false}
-                        sizes="(max-width:768px) 100vw, 50vw"
-                        className="object-cover pointer-events-none"
-                      />
-                    </motion.div>
-                  </AnimatePresence>
+                  {images.length > 0 ? (
+                    <AnimatePresence mode="wait">
+                      <motion.div
+                        key={selectedImage}
+                        initial={{ opacity: 0, scale: 1.03 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.97 }}
+                        transition={{ duration: 0.35, ease: "easeInOut" }}
+                        className="absolute inset-0"
+                      >
+                        <Image
+                          src={images[selectedImage]}
+                          alt={product.name}
+                          fill
+                          priority
+                          draggable={false}
+                          sizes="(max-width:768px) 100vw, 50vw"
+                          className="object-cover pointer-events-none"
+                        />
+                      </motion.div>
+                    </AnimatePresence>
+                  ) : (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-zinc-500">
+                      <ImageIcon size={32} aria-hidden="true" />
+                      <span className="text-sm">Image unavailable</span>
+                    </div>
+                  )}
 
                   {/* Arrows */}
                   {images.length > 1 && (
@@ -247,41 +264,47 @@ export default function ProductDetails({ product }) {
             </div>
 
             {/* Rental Duration */}
-            <section className="rounded-xl border border-white/10 bg-white/5 p-4 backdrop-blur-xl">
-              <div className="flex items-center justify-between mb-3">
-                <h2 className="text-sm font-semibold tracking-wide text-white/80">
-                  Rental Duration
-                </h2>
-                <span className="text-[11px] text-zinc-500">
-                  Select to update price
-                </span>
-              </div>
+            {hasPricing ? (
+              <section className="rounded-xl border border-white/10 bg-white/5 p-4 backdrop-blur-xl">
+                <div className="mb-3 flex items-center justify-between">
+                  <h2 className="text-sm font-semibold tracking-wide text-white/80">
+                    Rental Duration
+                  </h2>
+                  <span className="text-[11px] text-zinc-500">
+                    Select to update price
+                  </span>
+                </div>
 
-              <div className="grid grid-cols-3 gap-2 md:grid-cols-4">
-                {Object.entries(product.pricing).map(
-                  ([duration, price], index) => (
-                    <motion.button
-                      key={`${duration || "duration"}-${index}`}
-                      whileHover={{ y: -2 }}
-                      whileTap={{ scale: 0.97 }}
-                      onClick={() => handleDurationSelect(duration)}
-                      className={`rounded-lg border px-2 py-2.5 text-center transition-all duration-300 cursor-pointer ${
-                        selectedDuration === duration
-                          ? "border-amber-500 bg-amber-500/10 shadow-[0_6px_20px_rgba(245,166,35,0.2)]"
-                          : "border-white/10 bg-black/40 hover:border-amber-500/40"
-                      }`}
-                    >
-                      <p className="text-[11px] font-medium capitalize text-white/70">
-                        {duration}
-                      </p>
-                      <p className="mt-0.5 text-base font-bold text-amber-400">
-                        ₹{price}
-                      </p>
-                    </motion.button>
-                  ),
-                )}
+                <div className="grid grid-cols-3 gap-2 md:grid-cols-4">
+                  {Object.entries(pricing).map(
+                    ([duration, price], index) => (
+                      <motion.button
+                        key={`${duration || "duration"}-${index}`}
+                        whileHover={{ y: -2 }}
+                        whileTap={{ scale: 0.97 }}
+                        onClick={() => handleDurationSelect(duration)}
+                        className={`rounded-lg border px-2 py-2.5 text-center transition-all duration-300 cursor-pointer ${
+                          selectedDuration === duration
+                            ? "border-amber-500 bg-amber-500/10 shadow-[0_6px_20px_rgba(245,166,35,0.2)]"
+                            : "border-white/10 bg-black/40 hover:border-amber-500/40"
+                        }`}
+                      >
+                        <p className="text-[11px] font-medium capitalize text-white/70">
+                          {duration}
+                        </p>
+                        <p className="mt-0.5 text-base font-bold text-amber-400">
+                          ₹{price}
+                        </p>
+                      </motion.button>
+                    ),
+                  )}
+                </div>
+              </section>
+            ) : (
+              <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-sm text-zinc-400 backdrop-blur-xl">
+                Pricing unavailable
               </div>
-            </section>
+            )}
           </div>
 
           {/* ── RIGHT — sticky ── */}
@@ -334,24 +357,30 @@ export default function ProductDetails({ product }) {
 
               {/* Animated Price */}
               <div className="mt-5 rounded-xl border border-amber-500/20 bg-amber-500/10 px-4 py-4">
-                <p className="text-xs text-zinc-400">Selected Rental</p>
-                <div className="mt-1.5 flex items-end gap-2">
-                  <AnimatePresence mode="wait">
-                    <motion.span
-                      key={priceKey}
-                      initial={{ opacity: 0, y: -8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: 8 }}
-                      transition={{ duration: 0.2 }}
-                      className="text-3xl font-bold text-amber-400"
-                    >
-                      ₹{selectedPrice}
-                    </motion.span>
-                  </AnimatePresence>
-                  <span className="mb-1 text-lg leading-none text-zinc-500 capitalize sm:text-xl">
-                    / {selectedDuration}
-                  </span>
-                </div>
+                {hasPricing ? (
+                  <>
+                    <p className="text-xs text-zinc-400">Selected Rental</p>
+                    <div className="mt-1.5 flex items-end gap-2">
+                      <AnimatePresence mode="wait">
+                        <motion.span
+                          key={priceKey}
+                          initial={{ opacity: 0, y: -8 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: 8 }}
+                          transition={{ duration: 0.2 }}
+                          className="text-3xl font-bold text-amber-400"
+                        >
+                          ₹{selectedPrice}
+                        </motion.span>
+                      </AnimatePresence>
+                      <span className="mb-1 text-lg leading-none text-zinc-500 capitalize sm:text-xl">
+                        / {selectedDuration}
+                      </span>
+                    </div>
+                  </>
+                ) : (
+                  <p className="text-sm text-zinc-400">Pricing unavailable</p>
+                )}
               </div>
 
               {/* About */}
@@ -364,6 +393,34 @@ export default function ProductDetails({ product }) {
                     "Professional camera equipment for photography and videography."}
                 </p>
               </div>
+
+              {packageIncludes.length > 0 && (
+                <section className="mt-4 rounded-xl border border-white/10 bg-black/20 p-4">
+                  <h3 className="text-[11px] font-semibold uppercase tracking-widest text-white/40">
+                    Package Includes
+                  </h3>
+                  <ul className="mt-3 grid grid-cols-1 gap-2 text-sm text-zinc-300 sm:grid-cols-2">
+                    {packageIncludes.map((item, index) => (
+                      <li
+                        key={`${item.name.toLowerCase()}-${index}`}
+                        className="flex min-w-0 items-start gap-2"
+                      >
+                        <Check
+                          size={16}
+                          className="mt-0.5 shrink-0 text-amber-400"
+                          aria-hidden="true"
+                        />
+                        <span className="break-words">
+                          <span className="font-semibold text-white">
+                            {item.quantity}×
+                          </span>{" "}
+                          {item.name}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              )}
 
               {/* Availability badge */}
               <div className="mt-4">
@@ -382,17 +439,25 @@ export default function ProductDetails({ product }) {
 
               {/* CTA */}
               <motion.button
-                whileHover={product.available ? { scale: 1.02 } : {}}
-                whileTap={product.available ? { scale: 0.97 } : {}}
-                disabled={!product.available}
+                whileHover={
+                  product.available && hasPricing ? { scale: 1.02 } : {}
+                }
+                whileTap={
+                  product.available && hasPricing ? { scale: 0.97 } : {}
+                }
+                disabled={!product.available || !hasPricing}
                 onClick={handleAddToCart}
                 className={`mt-4 w-full rounded-xl py-3.5 text-sm font-semibold transition-all cursor-pointer ${
-                  product.available
+                  product.available && hasPricing
                     ? "bg-amber-500 text-black hover:bg-amber-400 shadow-[0_8px_24px_rgba(245,166,35,0.25)]"
                     : "cursor-not-allowed bg-zinc-800 text-zinc-500"
                 }`}
               >
-                {product.available ? "Add To Cart" : "Not Available"}
+                {!product.available
+                  ? "Not Available"
+                  : hasPricing
+                    ? "Add To Cart"
+                    : "Pricing Unavailable"}
               </motion.button>
             </motion.div>
           </div>

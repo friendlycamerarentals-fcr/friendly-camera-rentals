@@ -80,6 +80,7 @@ The application is a single Next.js project with route handlers as its backend, 
 ### Rental Management
 
 - Rental catalog is stored in `RentalProduct` with a JSONB `pricing` map of duration keys (`1hr`, `3hrs`, `2days`, `1week`, …) to prices.
+- Rental products may store optional package contents in `packageIncludes` JSONB entries (`name`, `quantity`); empty contents are not shown to customers.
 - The public details page reads duration options from that map and adds the selected duration + price to the cart.
 - Admins can create manual bookings (phone/WhatsApp enquiries) for one or more items sharing a single duration, with per-item agreed prices and an optional expected advance.
 - Rental requests support a persisted item list (`RentalRequestItem`) so multi-item manual bookings appear with every item in the admin list and details modal.
@@ -344,7 +345,7 @@ The data layer is plain PostgreSQL. Every statement in `database/*.sql` is idemp
 
 | Table | Purpose and key fields |
 | --- | --- |
-| `RentalProduct` | Rental catalog; unique `slug`, `category`, `brand`, `model`, `available`, `images`/`specifications`/`pricing` JSONB, `display_order` |
+| `RentalProduct` | Rental catalog; unique `slug`, `category`, `brand`, `model`, `available`, `images`/`specifications`/`pricing`/`packageIncludes` JSONB, `display_order` |
 | `RentalRequestItem` | Items of a booking; `rentalRequestId`, `productId`, `durationDisplay`, negotiated `rentalPrice`, `isCustomDuration`, `isCustomPrice`, `itemOrder` |
 | `RentalRequest` | One booking; unique `requestId` (`FCR-R######`), customer and contact details, product snapshot, `rentalDuration`, `originalAmount`, `rewardId`, `rewardDiscount`, `discount`, `advanceAmount`, `status`, `paymentStatus`, `bookingSource`, verified-advance audit fields, `createdByAdmin`, `confirmedByAdmin`, `deletedAt`, `deletedBy` |
 | `RentalPayment` | Auditable payment ledger; `paymentType` (`Advance`/`Balance`), `amount`, `method`, `reference`, `verified`, `verifiedAt`, `verifiedBy`, `idempotencyKey` (unique per request) |

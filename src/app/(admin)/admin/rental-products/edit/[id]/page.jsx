@@ -9,38 +9,48 @@ import RentalProductForm from "@/components/admin/rental-products/RentalProductF
 export default function EditRentalProductPage() {
   const params = useParams();
   const router = useRouter();
+  const productId = params?.id;
 
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    fetchProduct();
-  }, []);
+    const controller = new AbortController();
+    let active = true;
 
-  const fetchProduct = async () => {
-    try {
-      const response = await fetch(`/api/rental-products/${params.id}`, {
-        cache: "no-store",
+    fetch(`/api/rental-products/${productId}`, {
+      cache: "no-store",
+      signal: controller.signal,
+    })
+      .then((response) => response.json())
+      .then((result) => {
+        if (active && result.success) {
+          setProduct(result.data);
+        }
+      })
+      .catch((error) => {
+        if (active && error.name !== "AbortError") {
+          console.error("Failed to load product:", error);
+        }
+      })
+      .finally(() => {
+        if (active) {
+          setLoading(false);
+        }
       });
 
-      const result = await response.json();
-
-      if (result.success) {
-        setProduct(result.data);
-      }
-    } catch (error) {
-      console.error("Failed to load product:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+    return () => {
+      active = false;
+      controller.abort();
+    };
+  }, [productId]);
 
   const handleSubmit = async (formData) => {
     try {
       setSaving(true);
 
-      const response = await fetch(`/api/rental-products/${params.id}`, {
+      const response = await fetch(`/api/rental-products/${productId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

@@ -1,9 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Trash2 } from "lucide-react";
 import ImageUploader from "@/components/common/ImageUploader";
 import { uploadProductImages } from "@/lib/upload";
+import {
+  normalizePackageIncludes,
+  PACKAGE_INCLUDES_LIMITS,
+  validatePackageIncludes,
+} from "@/lib/packageIncludes";
 
 const createPricingRow = () => ({
   id:
@@ -13,6 +18,15 @@ const createPricingRow = () => ({
   unit: "hour",
   duration: 1,
   price: 0,
+});
+
+const createPackageIncludesRow = (item = {}) => ({
+  id:
+    typeof crypto !== "undefined" && crypto.randomUUID
+      ? crypto.randomUUID()
+      : `package-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+  name: item.name || "",
+  quantity: item.quantity ?? 1,
 });
 
 const parsePricingKey = (key, price) => {
@@ -131,11 +145,6 @@ export default function RentalProductForm({
     [existingImages, newImages],
   );
 
-  useEffect(() => {
-    setExistingImages(normalizeExistingImages(initialData));
-    setNewImages([]);
-  }, [initialData?.id, initialData?.image, initialData?.images]);
-
   const setImageState = (updaterOrValue) => {
     const nextImages =
       typeof updaterOrValue === "function"
@@ -161,6 +170,12 @@ export default function RentalProductForm({
     pricing: normalizePricing(initialData.pricing),
   });
 
+  const [packageIncludes, setPackageIncludes] = useState(() =>
+    normalizePackageIncludes(initialData.packageIncludes).map(
+      createPackageIncludesRow,
+    ),
+  );
+  const [packageIncludesError, setPackageIncludesError] = useState("");
   const [pricingErrors, setPricingErrors] = useState({});
   const [pricingGlobalError, setPricingGlobalError] = useState("");
 
@@ -261,6 +276,34 @@ export default function RentalProductForm({
     };
   };
 
+  const addPackageIncludesRow = () => {
+    if (packageIncludes.length >= PACKAGE_INCLUDES_LIMITS.maxItems) {
+      return;
+    }
+
+    setPackageIncludes((prev) => [...prev, createPackageIncludesRow()]);
+    setPackageIncludesError("");
+  };
+
+  const updatePackageIncludesRow = (id, field, value) => {
+    setPackageIncludes((prev) =>
+      prev.map((item) =>
+        item.id === id
+          ? {
+              ...item,
+              [field]: field === "quantity" && value !== "" ? Number(value) : value,
+            }
+          : item,
+      ),
+    );
+    setPackageIncludesError("");
+  };
+
+  const removePackageIncludesRow = (id) => {
+    setPackageIncludes((prev) => prev.filter((item) => item.id !== id));
+    setPackageIncludesError("");
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -272,8 +315,18 @@ export default function RentalProductForm({
       return;
     }
 
+    const packageIncludesInput = packageIncludes.filter((item) =>
+      item.name.trim(),
+    );
+    const packageValidation = validatePackageIncludes(packageIncludesInput);
+    if (!packageValidation.valid) {
+      setPackageIncludesError(packageValidation.errors.join(" "));
+      return;
+    }
+
     setPricingErrors({});
     setPricingGlobalError("");
+    setPackageIncludesError("");
 
     const pricing = formData.pricing.reduce((acc, item) => {
       const key = formatPricingKey(item);
@@ -287,6 +340,8 @@ export default function RentalProductForm({
       acc[key] = price;
       return acc;
     }, {});
+    const normalizedPackageIncludes =
+      normalizePackageIncludes(packageIncludesInput);
 
     const mergedImages = [...existingImages, ...newImages];
 
@@ -305,6 +360,7 @@ export default function RentalProductForm({
         megapixels: formData.megapixels || "",
         batteries: formData.batteries || "",
       },
+      packageIncludes: normalizedPackageIncludes,
       image: payloadImages[0] || "",
       images: payloadImages.slice(1),
     });
@@ -407,6 +463,79 @@ export default function RentalProductForm({
           placeholder="Product Description"
           className="mt-3 w-full rounded-2xl border border-white/10 bg-black px-4 text-sm placeholder:text-sm min-h-[110px] md:min-h-[auto] py-2.5 md:py-3 text-white outline-none focus:border-[#F5A623]"
         />
+      </div>
+
+      {/* Package Includes */}
+      <div className="rounded-2xl border border-white/10 bg-zinc-950 p-4 md:p-6">
+        <div className="mb-4 flex items-center justify-between gap-3 md:mb-6">
+          <h2 className="text-lg font-semibold text-white md:text-xl">
+            Package Includes
+          </h2>
+
+          <button
+            type="button"
+            onClick={addPackageIncludesRow}
+            disabled={packageIncludes.length >= PACKAGE_INCLUDES_LIMITS.maxItems}
+            className="rounded-xl bg-[#F5A623] px-3 py-1.5 text-xs font-semibold text-black transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50 sm:px-4 sm:py-2 sm:text-sm"
+          >
+            + Add item
+          </button>
+        </div>
+
+        {packageIncludesError && (
+          <div className="mb-4 rounded-2xl border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-400">
+            {packageIncludesError}
+          </div>
+        )}
+
+        {packageIncludes.length === 0 ? (
+          <p className="text-sm text-zinc-500">No package items added.</p>
+        ) : (
+          <div className="space-y-3">
+            {packageIncludes.map((item) => (
+              <div
+                key={item.id}
+                className="grid grid-cols-[minmax(0,1fr)_88px_44px] items-start gap-2 sm:grid-cols-[minmax(0,1fr)_112px_44px] sm:gap-3"
+              >
+                <input
+                  type="text"
+                  value={item.name}
+                  maxLength={PACKAGE_INCLUDES_LIMITS.maxNameLength}
+                  onChange={(e) =>
+                    updatePackageIncludesRow(item.id, "name", e.target.value)
+                  }
+                  placeholder="Item name"
+                  aria-label="Package item name"
+                  className="h-10 min-w-0 rounded-xl border border-white/10 bg-black px-3 text-sm text-white outline-none placeholder:text-zinc-500 focus:border-[#F5A623]"
+                />
+                <input
+                  type="number"
+                  min={PACKAGE_INCLUDES_LIMITS.minQuantity}
+                  max={PACKAGE_INCLUDES_LIMITS.maxQuantity}
+                  step="1"
+                  value={item.quantity}
+                  onChange={(e) =>
+                    updatePackageIncludesRow(
+                      item.id,
+                      "quantity",
+                      e.target.value,
+                    )
+                  }
+                  aria-label="Package item quantity"
+                  className="h-10 min-w-0 rounded-xl border border-white/10 bg-black px-2 text-sm text-white outline-none focus:border-[#F5A623]"
+                />
+                <button
+                  type="button"
+                  onClick={() => removePackageIncludesRow(item.id)}
+                  aria-label={`Remove ${item.name || "package item"}`}
+                  className="flex h-10 w-11 items-center justify-center rounded-xl border border-red-500/30 bg-red-500/10 text-red-400 transition hover:bg-red-500/20"
+                >
+                  <Trash2 size={18} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Images */}
