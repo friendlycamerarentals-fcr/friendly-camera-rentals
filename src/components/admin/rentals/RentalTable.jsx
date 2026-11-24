@@ -85,7 +85,7 @@ export default function RentalTable({
             <col className="w-[140px]" />
             <col className="w-[200px]" />
             <col className="w-[120px]" />
-            <col className="w-[300px]" />
+            <col className="w-[250px]" />
             <col className="w-[120px]" />
             <col className="w-[100px]" />
             <col className="w-[145px]" />
