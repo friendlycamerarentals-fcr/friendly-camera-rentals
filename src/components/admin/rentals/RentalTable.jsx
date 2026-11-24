@@ -80,18 +80,31 @@ export default function RentalTable({
   return (
     <div className="overflow-hidden rounded-2xl border border-white/10 bg-zinc-950">
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[1300px] text-sm">
+        <table className="w-full min-w-[1354px] table-fixed text-sm">
+          <colgroup>
+            <col className="w-[140px]" />
+            <col className="w-[200px]" />
+            <col className="w-[120px]" />
+            <col className="w-[300px]" />
+            <col className="w-[120px]" />
+            <col className="w-[100px]" />
+            <col className="w-[145px]" />
+            <col className="w-[145px]" />
+            <col className="w-[184px]" />
+          </colgroup>
           <thead className="border-b border-white/10 bg-black/40">
             <tr className="text-left text-sm text-zinc-400">
-              <th className="px-6 py-3">Request ID</th>
-              <th className="px-6 py-3">Customer</th>
-              <th className="px-6 py-3">Phone</th>
-              <th className="px-6 py-3">Product</th>
-              <th className="px-6 py-3">Date</th>
-              <th className="px-6 py-3">Pickup</th>
-              <th className="px-6 py-3">Total</th>
-              <th className="px-6 py-3">Status</th>
-              <th className="px-6 py-3">Actions</th>
+              <th className="px-3 py-3">Request ID</th>
+              <th className="px-4 py-3">Customer</th>
+              <th className="px-3 py-3">Phone</th>
+              <th className="px-3 py-3">Product</th>
+              <th className="px-3 py-3">Date</th>
+              <th className="px-3 py-3">Pickup</th>
+              <th className="px-3 py-3">Total</th>
+              <th className="px-3 py-3">Status</th>
+              <th className="sticky right-0 z-20 bg-zinc-950 px-3 py-3">
+                Actions
+              </th>
             </tr>
           </thead>
 
@@ -99,9 +112,9 @@ export default function RentalTable({
             {pageRows.map((booking) => (
               <tr
                 key={booking.id}
-                className="border-b border-white/5 transition hover:bg-white/[0.02]"
+                className="group border-b border-white/5 transition hover:bg-white/[0.02]"
               >
-                <td className="px-6 py-5">
+                <td className="px-3 py-5">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="font-semibold text-[#F5A623]">
                       {booking.requestId}
@@ -114,7 +127,7 @@ export default function RentalTable({
                   </div>
                 </td>
 
-                <td className="px-6 py-5">
+                <td className="px-4 py-5">
                   <p className="font-medium text-white">{booking.fullName}</p>
                   <p className="mt-0.5 text-xs text-zinc-500">
                     {booking.email || "No email"}
@@ -126,30 +139,35 @@ export default function RentalTable({
                   )}
                 </td>
 
-                <td className="px-6 py-5 text-zinc-300">{booking.phone}</td>
+                <td className="px-3 py-5 text-zinc-300">{booking.phone}</td>
 
-                <td className="px-6 py-5 text-zinc-300">
-                  <div className="flex items-center gap-2">
+                <td className="px-3 py-5 text-zinc-300">
+                  <div className="flex min-w-0 items-center gap-2">
                     {booking.productImage ? (
                       <img
                         src={booking.productImage}
                         alt={booking.productName}
-                        className="h-8 w-8 rounded-lg object-cover"
+                        className="h-8 w-8 shrink-0 rounded-lg object-cover"
                       />
                     ) : null}
-                    <span className="line-clamp-1">{booking.productName}</span>
+                    <span
+                      title={booking.productName}
+                      className="line-clamp-2 min-h-10 min-w-0 break-words"
+                    >
+                      {booking.productName}
+                    </span>
                   </div>
                 </td>
 
-                <td className="px-6 py-5 text-zinc-300">
+                <td className="px-3 py-5 text-zinc-300">
                   {booking.bookingDate}
                 </td>
 
-                <td className="px-6 py-5 text-zinc-300">
+                <td className="px-3 py-5 text-zinc-300">
                   {booking.pickupTime || "—"}
                 </td>
 
-                <td className="px-6 py-5">
+                <td className="px-3 py-5">
                   <span className="font-bold text-white">
                     ₹{Number(booking.totalAmount || 0).toLocaleString("en-IN")}
                   </span>
@@ -170,7 +188,7 @@ export default function RentalTable({
                   )}
                 </td>
 
-                <td className="px-6 py-5">
+                <td className="px-3 py-5">
                   {["Completed", "Rejected", "Cancelled"].includes(
                     booking.status,
                   ) ? (
@@ -222,7 +240,7 @@ export default function RentalTable({
                   )}
                 </td>
 
-                <td className="px-6 py-5">
+                <td className="sticky right-0 z-10 bg-zinc-950 px-3 py-5 shadow-[-8px_0_12px_-10px_rgba(0,0,0,0.8)] group-hover:bg-zinc-900">
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => onView(booking)}
