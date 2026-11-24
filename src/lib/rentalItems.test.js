@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   getRentalItemsTotal,
   resolveConfiguredRentalPrice,
+  resolveCustomRentalItemPrice,
   validateAgreedRentalPrice,
   validateRentalQuantity,
 } from "./rentalItems.js";
@@ -50,6 +51,31 @@ test("validates quantities and sums item amounts with quantity", () => {
     ]),
     1300,
   );
+});
+
+test("resolves custom rental durations and requires a valid duration and agreed price", () => {
+  assert.deepEqual(
+    resolveCustomRentalItemPrice({ value: "3", unit: "Days" }, "5000"),
+    {
+      ok: true,
+      duration: { value: 3, unit: "Days" },
+      durationDisplay: "3 Days",
+      rentalPrice: 5000,
+      isCustomDuration: true,
+      isCustomPrice: true,
+    },
+  );
+  assert.equal(
+    resolveCustomRentalItemPrice({ value: "1", unit: "Hours" }, "250").durationDisplay,
+    "1 Hour",
+  );
+  assert.equal(resolveCustomRentalItemPrice({ value: "", unit: "Days" }, "500").ok, false);
+  assert.equal(resolveCustomRentalItemPrice({ value: "0", unit: "Days" }, "500").ok, false);
+  assert.equal(resolveCustomRentalItemPrice({ value: "1.5", unit: "Hours" }, "500").ok, false);
+  assert.equal(resolveCustomRentalItemPrice({ value: "3", unit: "Weeks" }, "500").ok, false);
+  assert.equal(resolveCustomRentalItemPrice({ value: "3", unit: "Days" }, "0").ok, false);
+  assert.equal(resolveCustomRentalItemPrice({ value: true, unit: "Days" }, "500").ok, false);
+  assert.equal(resolveCustomRentalItemPrice({ value: "3", unit: "Days" }, "0.001").ok, false);
 });
 
 test("validates agreed prices against the existing item price limit", () => {

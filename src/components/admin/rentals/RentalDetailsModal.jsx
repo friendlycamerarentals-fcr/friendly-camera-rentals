@@ -24,10 +24,12 @@ import {
   RENTAL_PAYMENT_TYPES,
 } from "@/lib/rentalPayment";
 import {
+  DURATION_UNITS,
   getStandardDurationOptions,
   parsePricingKey,
 } from "@/lib/rentalDuration";
 import {
+  CUSTOM_DURATION_KEY,
   MAX_RENTAL_ITEMS,
   MAX_RENTAL_ITEM_PRICE,
   validateAgreedRentalPrice,
@@ -70,6 +72,7 @@ export default function RentalDetailsModal({
   const [productPricingLoadedForBookingId, setProductPricingLoadedForBookingId] =
     useState(null);
   const [rentalItemForm, setRentalItemForm] = useState(null);
+  const [rentalItemErrors, setRentalItemErrors] = useState({});
   const [rentalItemSubmitting, setRentalItemSubmitting] = useState(false);
   const paymentSubmitLock = useRef(false);
   const paymentSubmissionKey = useRef(null);
@@ -262,6 +265,11 @@ export default function RentalDetailsModal({
   const getItemOptions = (productId) =>
     getStandardDurationOptions(rentalProductsById[productId]);
   const beginRentalItemEdit = (item) => {
+    const hasCustomDuration =
+      item.isCustomDuration === true &&
+      Number.isSafeInteger(Number(item.durationValue)) &&
+      Number(item.durationValue) >= 1 &&
+      [DURATION_UNITS.HOURS, DURATION_UNITS.DAYS].includes(item.durationUnit);
     const options = getStandardDurationOptions(
       rentalProductsById[item.productId],
     );
@@ -277,10 +285,17 @@ export default function RentalDetailsModal({
       mode: "edit",
       itemId: item.id || null,
       productId: item.productId,
-      durationKey: currentOption?.key || "",
+      durationKey: hasCustomDuration
+        ? CUSTOM_DURATION_KEY
+        : currentOption?.key || "",
+      customDurationValue: hasCustomDuration
+        ? String(item.durationValue)
+        : "",
+      customDurationUnit: hasCustomDuration ? item.durationUnit : "",
       agreedPrice: String(item.rentalPrice || ""),
       quantity: String(item.quantity || booking.quantity || 1),
     });
+    setRentalItemErrors({});
   };
   const beginRentalItemAdd = () => {
     const product = rentalProducts.find((entry) => entry.available !== false);
@@ -290,9 +305,12 @@ export default function RentalDetailsModal({
       itemId: null,
       productId: product?.id || "",
       durationKey: option?.key || "",
+      customDurationValue: "",
+      customDurationUnit: "",
       agreedPrice: option ? String(option.price) : "",
       quantity: "1",
     });
+    setRentalItemErrors({});
     rentalItemSubmissionKey.current = null;
   };
   const updateRentalItemProduct = (productId) => {
@@ -302,18 +320,40 @@ export default function RentalDetailsModal({
       ...previous,
       productId,
       durationKey: option?.key || "",
+      customDurationValue: "",
+      customDurationUnit: "",
       agreedPrice: option ? String(option.price) : "",
     }));
+    setRentalItemErrors({});
   };
   const updateRentalItemDuration = (durationKey) => {
+    if (durationKey === CUSTOM_DURATION_KEY) {
+      setRentalItemForm((previous) => ({
+        ...previous,
+        durationKey,
+        customDurationValue: "",
+        customDurationUnit: "",
+        agreedPrice: "",
+      }));
+      setRentalItemErrors({});
+      return;
+    }
+
     const option = getItemOptions(rentalItemForm.productId).find(
       (entry) => entry.key === durationKey,
     );
     setRentalItemForm((previous) => ({
       ...previous,
       durationKey,
+      customDurationValue: "",
+      customDurationUnit: "",
       agreedPrice: option ? String(option.price) : "",
     }));
+    setRentalItemErrors({});
+  };
+  const updateRentalItemField = (field, value) => {
+    setRentalItemForm((previous) => ({ ...previous, [field]: value }));
+    setRentalItemErrors((previous) => ({ ...previous, [field]: "" }));
   };
   const rentalItems = booking.items?.length
     ? booking.items
@@ -350,22 +390,51 @@ export default function RentalDetailsModal({
       return;
     }
 
-    const quantity = validateRentalQuantity(rentalItemForm.quantity);
-    if (!quantity.ok) {
-      toast.error(quantity.message);
-      return;
+    const isCustomDuration =
+      rentalItemForm.durationKey === CUSTOM_DURATION_KEY;
+    const errors = {};
+    if (isCustomDuration) {
+      const durationValue = Number(rentalItemForm.customDurationValue);
+      if (
+        rentalItemForm.customDurationValue === "" ||
+        !Number.isSafeInteger(durationValue) ||
+        durationValue < 1
+      ) {
+        errors.customDurationValue =
+          "Enter a whole-number duration of at least 1.";
+      }
+      if (
+        ![DURATION_UNITS.HOURS, DURATION_UNITS.DAYS].includes(
+          rentalItemForm.customDurationUnit,
+        )
+      ) {
+        errors.customDurationUnit = "Select Hours or Days.";
+      }
     }
     const agreedPrice = validateAgreedRentalPrice(
       rentalItemForm.agreedPrice,
     );
     if (!agreedPrice.ok) {
-      toast.error(agreedPrice.message);
+      errors.agreedPrice = agreedPrice.message;
+    }
+    if (Object.keys(errors).length) {
+      setRentalItemErrors(errors);
       return;
     }
-    if (!rentalItemForm.productId || !rentalItemForm.durationKey) {
+
+    const quantity = validateRentalQuantity(rentalItemForm.quantity);
+    if (!quantity.ok) {
+      toast.error(quantity.message);
+      return;
+    }
+    if (
+      !rentalItemForm.productId ||
+      (!isCustomDuration && !rentalItemForm.durationKey)
+    ) {
       toast.error("Select a rental product and configured duration.");
       return;
     }
+    setRentalItemErrors({});
 
     rentalItemSubmitLock.current = true;
     setRentalItemSubmitting(true);
@@ -373,7 +442,15 @@ export default function RentalDetailsModal({
       const payload = {
         itemId: rentalItemForm.itemId,
         productId: rentalItemForm.productId,
-        durationKey: rentalItemForm.durationKey,
+        durationKey: isCustomDuration
+          ? CUSTOM_DURATION_KEY
+          : rentalItemForm.durationKey,
+        ...(isCustomDuration && {
+          customDuration: {
+            value: Number(rentalItemForm.customDurationValue),
+            unit: rentalItemForm.customDurationUnit,
+          },
+        }),
         agreedPrice: agreedPrice.value,
         quantity: quantity.value,
       };
@@ -784,7 +861,7 @@ export default function RentalDetailsModal({
                             disabled={
                               rentalItemSubmitting ||
                               actionLoading ||
-                              formOptions.length === 0
+                              !rentalItemForm.productId
                             }
                             className={inputCls}
                           >
@@ -795,13 +872,95 @@ export default function RentalDetailsModal({
                                 {option.price.toLocaleString("en-IN")}
                               </option>
                             ))}
+                            <option value={CUSTOM_DURATION_KEY}>
+                              Custom duration
+                            </option>
                           </select>
                           {rentalItemForm.productId &&
+                            rentalItemForm.durationKey !==
+                              CUSTOM_DURATION_KEY &&
                             formOptions.length === 0 && (
                               <p className="mt-1 text-[11px] text-amber-300">
                                 The selected duration is not configured for this product.
                               </p>
                             )}
+                          {rentalItemForm.durationKey ===
+                            CUSTOM_DURATION_KEY && (
+                            <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                              <div>
+                                <label className={labelCls}>
+                                  Duration value
+                                </label>
+                                <input
+                                  type="number"
+                                  min="1"
+                                  step="1"
+                                  required
+                                  value={rentalItemForm.customDurationValue}
+                                  onChange={(event) =>
+                                    updateRentalItemField(
+                                      "customDurationValue",
+                                      event.target.value,
+                                    )
+                                  }
+                                  disabled={
+                                    rentalItemSubmitting || actionLoading
+                                  }
+                                  aria-invalid={Boolean(
+                                    rentalItemErrors.customDurationValue,
+                                  )}
+                                  className={inputCls}
+                                  placeholder="Enter duration"
+                                />
+                                {rentalItemErrors.customDurationValue && (
+                                  <p
+                                    role="alert"
+                                    className="mt-1 text-[11px] text-red-400"
+                                  >
+                                    {rentalItemErrors.customDurationValue}
+                                  </p>
+                                )}
+                              </div>
+                              <div>
+                                <label className={labelCls}>
+                                  Duration unit
+                                </label>
+                                <select
+                                  required
+                                  value={rentalItemForm.customDurationUnit}
+                                  onChange={(event) =>
+                                    updateRentalItemField(
+                                      "customDurationUnit",
+                                      event.target.value,
+                                    )
+                                  }
+                                  disabled={
+                                    rentalItemSubmitting || actionLoading
+                                  }
+                                  aria-invalid={Boolean(
+                                    rentalItemErrors.customDurationUnit,
+                                  )}
+                                  className={inputCls}
+                                >
+                                  <option value="">Select a unit</option>
+                                  <option value={DURATION_UNITS.HOURS}>
+                                    Hours
+                                  </option>
+                                  <option value={DURATION_UNITS.DAYS}>
+                                    Days
+                                  </option>
+                                </select>
+                                {rentalItemErrors.customDurationUnit && (
+                                  <p
+                                    role="alert"
+                                    className="mt-1 text-[11px] text-red-400"
+                                  >
+                                    {rentalItemErrors.customDurationUnit}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          )}
                         </div>
                         <div>
                           <label className={labelCls}>Agreed price per item</label>
@@ -810,17 +969,27 @@ export default function RentalDetailsModal({
                             min="0.01"
                             max={MAX_RENTAL_ITEM_PRICE}
                             step="0.01"
+                            required
                             value={rentalItemForm.agreedPrice}
                             onChange={(event) =>
-                              setRentalItemForm((previous) => ({
-                                ...previous,
-                                agreedPrice: event.target.value,
-                              }))
+                              updateRentalItemField(
+                                "agreedPrice",
+                                event.target.value,
+                              )
                             }
                             disabled={rentalItemSubmitting || actionLoading}
+                            aria-invalid={Boolean(rentalItemErrors.agreedPrice)}
                             className={inputCls}
                             placeholder="Enter agreed price"
                           />
+                          {rentalItemErrors.agreedPrice && (
+                            <p
+                              role="alert"
+                              className="mt-1 text-[11px] text-red-400"
+                            >
+                              {rentalItemErrors.agreedPrice}
+                            </p>
+                          )}
                           {configuredPrice != null && (
                             <p className="mt-1 text-[11px] text-zinc-500">
                               Configured price: ₹

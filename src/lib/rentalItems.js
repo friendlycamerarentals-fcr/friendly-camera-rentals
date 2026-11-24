@@ -1,4 +1,6 @@
 import {
+  DURATION_UNITS,
+  formatDuration,
   fromPaise,
   getDurationListingPrice,
   parsePricingKey,
@@ -8,6 +10,7 @@ import {
 
 export const MAX_RENTAL_ITEMS = 20;
 export const MAX_RENTAL_ITEM_PRICE = 10_000_000;
+export const CUSTOM_DURATION_KEY = "__custom__";
 
 export function validateRentalQuantity(rawQuantity = 1) {
   const quantity = Number(rawQuantity);
@@ -34,7 +37,14 @@ export function validateAgreedRentalPrice(rawPrice) {
       message: `Rental price exceeds the allowed limit of ₹${MAX_RENTAL_ITEM_PRICE.toLocaleString("en-IN")}.`,
     };
   }
-  return { ok: true, value: fromPaise(toPaise(price)) };
+  const roundedPrice = fromPaise(toPaise(price));
+  if (roundedPrice <= 0) {
+    return {
+      ok: false,
+      message: "Rental price must be a positive amount.",
+    };
+  }
+  return { ok: true, value: roundedPrice };
 }
 
 export function resolveConfiguredRentalPrice(product, durationKey, rawAgreedPrice) {
@@ -69,6 +79,37 @@ export function resolveConfiguredRentalPrice(product, durationKey, rawAgreedPric
     rentalPrice: agreedPrice.value,
     isCustomPrice:
       toPaise(agreedPrice.value) !== toPaise(configuredPrice),
+  };
+}
+
+export function resolveCustomRentalItemPrice(rawDuration, rawAgreedPrice) {
+  const value = Number(rawDuration?.value);
+  const unit = rawDuration?.unit;
+  if (
+    rawDuration?.value == null ||
+    rawDuration.value === "" ||
+    !["number", "string"].includes(typeof rawDuration.value) ||
+    !Number.isSafeInteger(value) ||
+    value < 1 ||
+    ![DURATION_UNITS.HOURS, DURATION_UNITS.DAYS].includes(unit)
+  ) {
+    return {
+      ok: false,
+      message: "Enter a whole-number duration of at least 1 and choose Hours or Days.",
+    };
+  }
+
+  const agreedPrice = validateAgreedRentalPrice(rawAgreedPrice);
+  if (!agreedPrice.ok) return agreedPrice;
+
+  const duration = { value, unit };
+  return {
+    ok: true,
+    duration,
+    durationDisplay: formatDuration(duration),
+    rentalPrice: agreedPrice.value,
+    isCustomDuration: true,
+    isCustomPrice: true,
   };
 }
 

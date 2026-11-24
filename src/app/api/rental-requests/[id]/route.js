@@ -23,9 +23,11 @@ import {
   withRentalPaymentSummary,
 } from "@/lib/rentalPayments";
 import {
+  CUSTOM_DURATION_KEY,
   MAX_RENTAL_ITEMS,
   getRentalItemsTotal,
   resolveConfiguredRentalPrice,
+  resolveCustomRentalItemPrice,
   validateRentalQuantity,
 } from "@/lib/rentalItems";
 import {
@@ -39,6 +41,18 @@ import {
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
+
+const resolveRentalItemPrice = (product, payload) =>
+  payload.durationKey.trim() === CUSTOM_DURATION_KEY
+    ? resolveCustomRentalItemPrice(
+        payload.customDuration,
+        payload.agreedPrice,
+      )
+    : resolveConfiguredRentalPrice(
+        product,
+        payload.durationKey.trim(),
+        payload.agreedPrice,
+      );
 
 export async function PATCH(request, { params }) {
   try {
@@ -98,7 +112,12 @@ export async function PATCH(request, { params }) {
         typeof rentalItemPayload.productId !== "string" ||
         !rentalItemPayload.productId.trim() ||
         typeof rentalItemPayload.durationKey !== "string" ||
-        !rentalItemPayload.durationKey.trim() ||
+        (rentalItemPayload.durationKey.trim() === CUSTOM_DURATION_KEY
+          ? !rentalItemPayload.customDuration ||
+            typeof rentalItemPayload.customDuration !== "object" ||
+            Array.isArray(rentalItemPayload.customDuration)
+          : !rentalItemPayload.durationKey.trim() ||
+            rentalItemPayload.customDuration != null) ||
         (hasRentalItemUpdate &&
           rentalItemPayload.itemId != null &&
           typeof rentalItemPayload.itemId !== "string") ||
@@ -465,18 +484,28 @@ export async function PATCH(request, { params }) {
             (item) => item.submissionKey === rentalItemPayload.submissionKey,
           );
           if (matchingSubmission) {
-            const requestedDuration = parsePricingKey(
-              rentalItemPayload.durationKey.trim(),
-            );
             const requestedPrice =
               rentalItemPayload.agreedPrice == null ||
               rentalItemPayload.agreedPrice === ""
                 ? null
                 : Number(rentalItemPayload.agreedPrice);
+            const customDurationSelected =
+              rentalItemPayload.durationKey.trim() === CUSTOM_DURATION_KEY;
+            const customResolution = customDurationSelected
+              ? resolveCustomRentalItemPrice(
+                  rentalItemPayload.customDuration,
+                  requestedPrice ?? matchingSubmission.rentalPrice,
+                )
+              : null;
+            const requestedDuration = customDurationSelected
+              ? customResolution?.duration
+              : parsePricingKey(rentalItemPayload.durationKey.trim());
             if (
               matchingSubmission.productId !== rentalItemPayload.productId.trim() ||
               matchingSubmission.durationDisplay !==
                 (requestedDuration ? formatDuration(requestedDuration) : "") ||
+              matchingSubmission.isCustomDuration !== customDurationSelected ||
+              (customDurationSelected && !customResolution?.ok) ||
               Number(matchingSubmission.quantity || 1) !== quantity ||
               (requestedPrice != null &&
                 (!Number.isFinite(requestedPrice) ||
@@ -516,10 +545,9 @@ export async function PATCH(request, { params }) {
               throw error;
             }
 
-            const resolvedPrice = resolveConfiguredRentalPrice(
+            const resolvedPrice = resolveRentalItemPrice(
               product,
-              rentalItemPayload.durationKey.trim(),
-              rentalItemPayload.agreedPrice,
+              rentalItemPayload,
             );
             if (!resolvedPrice.ok) {
               const error = new Error(resolvedPrice.message);
@@ -539,7 +567,7 @@ export async function PATCH(request, { params }) {
                  "category", "durationValue", "durationUnit", "durationDisplay",
                  "rentalPrice", "quantity", "isCustomDuration", "isCustomPrice",
                  "itemOrder", "submissionKey", "createdAt", "updatedAt"
-               ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, FALSE, $12, $13, $14, NOW(), NOW())
+               ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, NOW(), NOW())
                RETURNING *`,
               [
                 createId(),
@@ -553,6 +581,7 @@ export async function PATCH(request, { params }) {
                 formatDuration(resolvedPrice.duration),
                 resolvedPrice.rentalPrice,
                 quantity,
+                resolvedPrice.isCustomDuration === true,
                 resolvedPrice.isCustomPrice,
                 nextOrder,
                 rentalItemPayload.submissionKey.trim(),
@@ -620,10 +649,9 @@ export async function PATCH(request, { params }) {
             throw error;
           }
 
-          const resolvedPrice = resolveConfiguredRentalPrice(
+          const resolvedPrice = resolveRentalItemPrice(
             product,
-            rentalItemPayload.durationKey.trim(),
-            rentalItemPayload.agreedPrice,
+            rentalItemPayload,
           );
           if (!resolvedPrice.ok) {
             const error = new Error(resolvedPrice.message);
@@ -639,9 +667,9 @@ export async function PATCH(request, { params }) {
              SET "productId" = $1, "productName" = $2, "productImage" = $3,
                  "category" = $4, "durationValue" = $5, "durationUnit" = $6,
                  "durationDisplay" = $7, "rentalPrice" = $8, "quantity" = $9,
-                 "isCustomDuration" = FALSE, "isCustomPrice" = $10,
+                 "isCustomDuration" = $10, "isCustomPrice" = $11,
                  "updatedAt" = NOW()
-             WHERE "id" = $11`,
+             WHERE "id" = $12`,
             [
               product.id,
               product.name,
@@ -652,6 +680,7 @@ export async function PATCH(request, { params }) {
               formatDuration(resolvedPrice.duration),
               resolvedPrice.rentalPrice,
               quantity,
+              resolvedPrice.isCustomDuration === true,
               resolvedPrice.isCustomPrice,
               targetItem.id,
             ],
