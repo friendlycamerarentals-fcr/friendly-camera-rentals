@@ -24,6 +24,7 @@ import {
   validateAgreedRentalPrice,
 } from "@/lib/rentalItems";
 import {
+  ACTIVE_RENTAL_REQUEST_FILTER,
   RENTAL_REQUEST_COLUMNS,
   RENTAL_REQUEST_ITEM_COLUMNS,
 } from "@/lib/rentalDbColumns";
@@ -319,7 +320,8 @@ export async function POST(request) {
     const primaryItem = validatedItems[0];
     const existingRows = await query(
       `SELECT "id" FROM "RentalRequest"
-       WHERE "productId" = $1
+       WHERE ${ACTIVE_RENTAL_REQUEST_FILTER}
+         AND "productId" = $1
          AND "phone" = $2
          AND "bookingDate" = $3
          AND "pickupTime" IS NOT DISTINCT FROM $4
@@ -387,7 +389,8 @@ export async function POST(request) {
       );
       const duplicateRows = await client.query(
         `SELECT "id" FROM "RentalRequest"
-         WHERE "productId" = $1
+         WHERE ${ACTIVE_RENTAL_REQUEST_FILTER}
+           AND "productId" = $1
            AND "phone" = $2
            AND "bookingDate" = $3
            AND "pickupTime" IS NOT DISTINCT FROM $4

@@ -234,9 +234,16 @@ CREATE TABLE IF NOT EXISTS "RentalPayment" (
     "idempotencyKey"   TEXT NOT NULL,
     "source"           TEXT NOT NULL DEFAULT 'Admin',
     "createdAt"        TIMESTAMP(3) NOT NULL DEFAULT now(),
+    "deletedAt"        TIMESTAMP(3),
+    "deletedBy"        TEXT,
     CONSTRAINT "RentalPayment_rentalRequestId_idempotencyKey_key"
       UNIQUE ("rentalRequestId", "idempotencyKey")
 );
+
+-- 2026-11-24: Preserve deleted payment records for auditing.
+ALTER TABLE "RentalPayment"
+  ADD COLUMN IF NOT EXISTS "deletedAt" TIMESTAMP(3),
+  ADD COLUMN IF NOT EXISTS "deletedBy" TEXT;
 
 DO $$
 BEGIN
@@ -337,3 +344,80 @@ END $$;
 
 CREATE INDEX IF NOT EXISTS "idx_rentalextracharge_request_created"
   ON "RentalExtraCharge" ("rentalRequestId", "createdAt", "id");
+
+-- Preserve rental bookings and their related audit history when an admin
+-- removes them from the active rentals view.
+ALTER TABLE "RentalRequest"
+  ADD COLUMN IF NOT EXISTS "deletedAt" TIMESTAMP(3),
+  ADD COLUMN IF NOT EXISTS "deletedBy" TEXT;
+
+CREATE INDEX IF NOT EXISTS "idx_rentalrequest_active_created"
+  ON "RentalRequest" ("createdAt" DESC, "id" DESC)
+  WHERE "deletedAt" IS NULL;
+
+CREATE OR REPLACE FUNCTION trg_create_reward_on_completion() RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW."deletedAt" IS NULL
+       AND NEW."status" = 'Completed'
+       AND (OLD."status" IS DISTINCT FROM 'Completed') THEN
+        IF NOT EXISTS (
+            SELECT 1 FROM "Reward" WHERE "rentalRequestId" = NEW."requestId"
+        ) THEN
+            INSERT INTO "Reward" (
+                "rewardId", "customerId", "customerName", "contactNumber",
+                "rentalRequestId", "rentalDate", "rewardPercentage",
+                "rewardAmount", "status", "expireDate"
+            ) VALUES (
+                fn_generate_reward_id(),
+                COALESCE(NEW."customerId", ''),
+                NEW."fullName",
+                NEW."phone",
+                NEW."requestId",
+                NEW."bookingDate",
+                10,
+                ROUND((NEW."totalAmount" * 10 / 100)::NUMERIC, 2)::FLOAT8,
+                'Active',
+                now() + INTERVAL '3 months'
+            );
+        END IF;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE VIEW "view_admin_dashboard_summary" AS
+SELECT
+    (SELECT COUNT(*) FROM "RentalProduct" WHERE "available" = TRUE)          AS available_rental_products,
+    (SELECT COUNT(*) FROM "BuyProduct" WHERE "status" = 'In Stock')          AS in_stock_buy_products,
+    (SELECT COUNT(*) FROM "RentalRequest"
+       WHERE "deletedAt" IS NULL AND "status" = 'Pending')                   AS pending_rental_requests,
+    (SELECT COUNT(*) FROM "RentalRequest"
+       WHERE "deletedAt" IS NULL AND "status" = 'Completed')                 AS completed_rentals,
+    (SELECT COUNT(*) FROM "SellRequest" WHERE "status" = 'pending')           AS pending_sell_requests,
+    (SELECT COUNT(*) FROM "ServiceBooking" WHERE "status" = 'pending')        AS pending_service_bookings,
+    (SELECT COUNT(*) FROM "Testimonial" WHERE "status" = 'pending')           AS pending_testimonials,
+    (SELECT COUNT(*) FROM "Reward" WHERE "status" = 'Active')                 AS active_rewards,
+    (SELECT COALESCE(SUM("totalAmount"), 0) FROM "RentalRequest"
+       WHERE "deletedAt" IS NULL AND "paymentStatus" = 'Paid')               AS total_paid_revenue;
+
+CREATE OR REPLACE VIEW "view_rental_revenue_by_month" AS
+SELECT
+    date_trunc('month', "createdAt")                AS month,
+    COUNT(*)                                          AS total_requests,
+    COUNT(*) FILTER (WHERE "status" = 'Completed')    AS completed_requests,
+    COALESCE(SUM("totalAmount") FILTER (WHERE "paymentStatus" = 'Paid'), 0) AS revenue
+FROM "RentalRequest"
+WHERE "deletedAt" IS NULL
+GROUP BY date_trunc('month', "createdAt")
+ORDER BY month DESC;
+
+CREATE OR REPLACE VIEW "view_top_rental_products" AS
+SELECT
+    "productId",
+    "productName",
+    COUNT(*)                                       AS times_booked,
+    COALESCE(SUM("totalAmount"), 0)                AS total_revenue
+FROM "RentalRequest"
+WHERE "deletedAt" IS NULL
+GROUP BY "productId", "productName"
+ORDER BY times_booked DESC;

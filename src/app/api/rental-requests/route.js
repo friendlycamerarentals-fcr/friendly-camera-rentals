@@ -12,18 +12,17 @@ import {
   parsePricingKey,
 } from "@/lib/rentalDuration";
 import {
-  RENTAL_REQUEST_COLUMNS,
+  ACTIVE_RENTAL_REQUEST_FILTER,
   RENTAL_REQUEST_ITEM_COLUMNS,
 } from "@/lib/rentalDbColumns";
+import { getActiveRentalRequests } from "@/lib/rentalRequestQueries";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 export async function GET() {
   try {
-    const requests = await query(
-      `SELECT ${RENTAL_REQUEST_COLUMNS} FROM "RentalRequest" ORDER BY "createdAt" DESC`,
-    );
+    const requests = await getActiveRentalRequests(query);
 
     // Attach the persisted rental items (multi-item manual bookings) so the
     // admin list/details show every item of a booking in one response.
@@ -62,6 +61,7 @@ export async function GET() {
       const paymentRows = await query(
         `SELECT * FROM "RentalPayment"
          WHERE "rentalRequestId" = ANY($1)
+           AND "deletedAt" IS NULL
          ORDER BY "createdAt" ASC, "id" ASC`,
         [requestIds],
       );
@@ -178,7 +178,8 @@ export async function POST(request) {
 
     const existingRows = await query(
       `SELECT "id" FROM "RentalRequest"
-       WHERE "productId" = $1
+       WHERE ${ACTIVE_RENTAL_REQUEST_FILTER}
+         AND "productId" = $1
          AND "phone" = $2
          AND "bookingDate" = $3
          AND "pickupTime" IS NOT DISTINCT FROM $4

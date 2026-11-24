@@ -145,7 +145,9 @@ export async function generateReward(rentalRequestId) {
   try {
     return await transaction(async (client) => {
       const rentalResult = await client.query(
-        `SELECT ${RENTAL_REQUEST_COLUMNS} FROM "RentalRequest" WHERE "requestId" = $1 LIMIT 1 FOR UPDATE`,
+        `SELECT ${RENTAL_REQUEST_COLUMNS} FROM "RentalRequest"
+         WHERE "requestId" = $1 AND "deletedAt" IS NULL
+         LIMIT 1 FOR UPDATE`,
         [rentalRequestId],
       );
       const rental = rentalResult.rows[0];

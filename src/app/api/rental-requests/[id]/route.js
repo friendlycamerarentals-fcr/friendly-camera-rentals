@@ -33,7 +33,9 @@ import {
 import {
   RENTAL_REQUEST_COLUMNS,
   RENTAL_REQUEST_ITEM_COLUMNS,
+  ACTIVE_RENTAL_REQUEST_FILTER,
 } from "@/lib/rentalDbColumns";
+import { createRentalRequestDeleteHandler } from "@/lib/rentalRequestDelete";
 import {
   formatDuration,
   getDurationListingPrice,
@@ -44,6 +46,12 @@ import {
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
+
+const handleDelete = createRentalRequestDeleteHandler({
+  requireAdmin,
+  transaction,
+  releaseAppliedReward: releaseAppliedRewardInTransaction,
+});
 
 const resolveRentalItemPrice = (product, payload) =>
   payload.durationKey.trim() === CUSTOM_DURATION_KEY
@@ -182,7 +190,9 @@ export async function PATCH(request, { params }) {
 
     if (hasPaymentOperation) {
       const currentRentalRows = await query(
-        'SELECT "status" FROM "RentalRequest" WHERE "id" = $1 LIMIT 1',
+        `SELECT "status" FROM "RentalRequest"
+         WHERE "id" = $1 AND ${ACTIVE_RENTAL_REQUEST_FILTER}
+         LIMIT 1`,
         [id],
       );
       if (
@@ -204,7 +214,9 @@ export async function PATCH(request, { params }) {
 
     if (hasDurationUpdate) {
       const currentRentalRows = await query(
-        'SELECT "status" FROM "RentalRequest" WHERE "id" = $1 LIMIT 1',
+        `SELECT "status" FROM "RentalRequest"
+         WHERE "id" = $1 AND ${ACTIVE_RENTAL_REQUEST_FILTER}
+         LIMIT 1`,
         [id],
       );
       if (
@@ -283,7 +295,9 @@ export async function PATCH(request, { params }) {
 
     const result = await transaction(async (client) => {
       const existingRows = await client.query(
-        `SELECT ${RENTAL_REQUEST_COLUMNS} FROM "RentalRequest" WHERE "id" = $1 LIMIT 1 FOR UPDATE`,
+        `SELECT ${RENTAL_REQUEST_COLUMNS} FROM "RentalRequest"
+         WHERE "id" = $1 AND ${ACTIVE_RENTAL_REQUEST_FILTER}
+         LIMIT 1 FOR UPDATE`,
         [id],
       );
       const existing = existingRows.rows[0];
@@ -343,6 +357,7 @@ export async function PATCH(request, { params }) {
         await client.query(
           `SELECT * FROM "RentalPayment"
            WHERE "rentalRequestId" = $1
+             AND "deletedAt" IS NULL
            ORDER BY "createdAt" ASC, "id" ASC`,
           [existing.requestId],
         )
@@ -880,6 +895,23 @@ export async function PATCH(request, { params }) {
         const duplicatePayment = persistedPayments.find(
           (payment) => payment.idempotencyKey === idempotencyKey,
         );
+        if (!duplicatePayment) {
+          const deletedDuplicateRows = await client.query(
+            `SELECT "id" FROM "RentalPayment"
+             WHERE "rentalRequestId" = $1
+               AND "idempotencyKey" = $2
+               AND "deletedAt" IS NOT NULL
+             LIMIT 1`,
+            [existing.requestId, idempotencyKey],
+          );
+          if (deletedDuplicateRows.rows.length) {
+            const error = new Error(
+              "This payment submission was already deleted. Submit a new payment record.",
+            );
+            error.status = 409;
+            throw error;
+          }
+        }
         finalAmount =
           originalAmount + totalExtraCharges - rewardDiscount - otherDiscount;
         const remainingBalance = Math.max(
@@ -992,6 +1024,7 @@ export async function PATCH(request, { params }) {
         await client.query(
           `SELECT * FROM "RentalPayment"
            WHERE "rentalRequestId" = $1
+             AND "deletedAt" IS NULL
            ORDER BY "createdAt" ASC, "id" ASC`,
           [updated.requestId],
         )
@@ -1065,68 +1098,10 @@ export async function PATCH(request, { params }) {
   }
 }
 
-export async function DELETE(request, { params }) {
-  try {
-    await requireAdmin();
-
-    const resolvedParams = await params;
-    const id = resolvedParams?.id;
-
-    if (!id) {
-      return NextResponse.json(
-        { success: false, message: "Rental request ID is required." },
-        { status: 400 },
-      );
-    }
-
-    await transaction(async (client) => {
-      const rentalRows = await client.query(
-        'SELECT "rewardId", "rewardDiscount", "requestId" FROM "RentalRequest" WHERE "id" = $1 LIMIT 1 FOR UPDATE',
-        [id],
-      );
-      const rental = rentalRows.rows[0];
-      if (!rental) return;
-
-      const generatedRewardRows = await client.query(
-        'SELECT "id" FROM "Reward" WHERE "rentalRequestId" = $1 LIMIT 1',
-        [rental.requestId],
-      );
-
-      if (
-        rental.rewardId ||
-        Number(rental.rewardDiscount || 0) > 0 ||
-        generatedRewardRows.rows.length
-      ) {
-        const error = new Error(
-          "Reward-linked rentals cannot be deleted. Cancel or reject the rental to preserve its history and release the reward.",
-        );
-        error.status = 409;
-        throw error;
-      }
-
-      const paymentRows = await client.query(
-        'SELECT "id" FROM "RentalPayment" WHERE "rentalRequestId" = $1 LIMIT 1',
-        [rental.requestId],
-      );
-      if (paymentRows.rows.length) {
-        const error = new Error(
-          "Rental requests with recorded payments cannot be deleted. Cancel the request to preserve its payment history.",
-        );
-        error.status = 409;
-        throw error;
-      }
-
-      await client.query('DELETE FROM "RentalRequest" WHERE "id" = $1', [id]);
-    });
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error("[RENTAL_REQUEST_DELETE]", error);
-    return NextResponse.json(
-      {
-        success: false,
-        message: error.message || "Failed to delete rental request",
-      },
-      { status: error.status || 500 },
-    );
+export async function DELETE(request, context) {
+  const result = await handleDelete(request, context);
+  if (result.status >= 500) {
+    console.error("[RENTAL_REQUEST_DELETE]", result.body.message);
   }
+  return NextResponse.json(result.body, { status: result.status });
 }

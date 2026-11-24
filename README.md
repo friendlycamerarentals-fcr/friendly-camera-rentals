@@ -66,7 +66,7 @@ The application is a single Next.js project with route handlers as its backend, 
 | --- | --- | --- |
 | Dashboard | `/admin` | Seven live count cards (Bookings, Rentals, Buy Products, Sell Requests, Customers, Rewards, Testimonials) and the Recent Activity feed |
 | Bookings calendar | `/admin/bookings` | Month calendar with status-tinted days, legend, today shortcut, and per-day booking drill-down |
-| Rentals | `/admin/rentals` | Stats, search, status/time filters, sorting, rental table, details modal, catalog-priced duration edits, existing product edits, additional products on the same booking, verified payment history and excess handling, WhatsApp reply, delete with guards, and manual multi-item bookings |
+| Rentals | `/admin/rentals` | Stats, search, status/time filters, sorting, rental table, details modal, catalog-priced duration edits, existing product edits, additional products on the same booking, verified payment history and excess handling, WhatsApp reply, audited soft delete, and manual multi-item bookings |
 | Rental products | `/admin/rental-products` | Stats, filters, table, view modal, availability toggle, delete dialog, drag-and-drop reorder, add/edit forms with image upload and duration pricing |
 | Buy products | `/admin/buy-products` (also `/admin/buy`) | Stats, filters, table, view modal, status changes (`In Stock` / `Out of Stock` / `Sold`), delete, reorder, add/edit/detail pages |
 | Sell requests | `/admin/sell-requests` (also `/admin/sell` → redirect) | Stats, search, status filter, detail modal, status updates, delete |
@@ -132,7 +132,7 @@ Completed / Rejected / Cancelled → (terminal)
 
 ### Activity & Dashboard
 
-- **Dashboard cards** count rows in `RentalProduct`, `BuyProduct`, `SellRequest`, `RentalRequest`, `Testimonial`, `Customer`, and `Reward`.
+- **Dashboard cards** count active rental requests plus rows in `RentalProduct`, `BuyProduct`, `SellRequest`, `Testimonial`, `Customer`, and `Reward`.
 - **Recent Activity** (`/api/admin/dashboard/activity` + `buildRecentActivities`) merges the newest rental bookings, pending testimonials, sell requests, and buy-product "marked as sold" events into one time-sorted list (max 10), rendered with relative timestamps, loading skeleton, error/retry, and an empty state. It polls every 30 seconds only while the tab is visible.
 - **Admin notifications** are written whenever a rental booking, sell request, testimonial, or new customer arrives, and are surfaced through the header bell.
 
@@ -346,7 +346,7 @@ The data layer is plain PostgreSQL. Every statement in `database/*.sql` is idemp
 | --- | --- |
 | `RentalProduct` | Rental catalog; unique `slug`, `category`, `brand`, `model`, `available`, `images`/`specifications`/`pricing` JSONB, `display_order` |
 | `RentalRequestItem` | Items of a booking; `rentalRequestId`, `productId`, `durationDisplay`, negotiated `rentalPrice`, `isCustomDuration`, `isCustomPrice`, `itemOrder` |
-| `RentalRequest` | One booking; unique `requestId` (`FCR-R######`), customer and contact details, product snapshot, `rentalDuration`, `originalAmount`, `rewardId`, `rewardDiscount`, `discount`, `advanceAmount`, `status`, `paymentStatus`, `bookingSource`, verified-advance audit fields, `createdByAdmin`, `confirmedByAdmin` |
+| `RentalRequest` | One booking; unique `requestId` (`FCR-R######`), customer and contact details, product snapshot, `rentalDuration`, `originalAmount`, `rewardId`, `rewardDiscount`, `discount`, `advanceAmount`, `status`, `paymentStatus`, `bookingSource`, verified-advance audit fields, `createdByAdmin`, `confirmedByAdmin`, `deletedAt`, `deletedBy` |
 | `RentalPayment` | Auditable payment ledger; `paymentType` (`Advance`/`Balance`), `amount`, `method`, `reference`, `verified`, `verifiedAt`, `verifiedBy`, `idempotencyKey` (unique per request) |
 | `Customer` | Unique `customerId` (`FCR-C#####`) and unique `email`, `name`, `profileImage`, `phoneNumber`, `address` |
 | `BuyProduct` | Sale catalog; unique `slug`, `status` (`In Stock`/`Out of Stock`/`Sold`), `price`, `discountPrice`, `condition`, `warranty`, JSONB specs/accessories, `display_order` |
@@ -567,7 +567,8 @@ Deployment checklist:
 - **Service bookings and contact messages are not persisted.** The services form and the contact form open/acknowledge messages over WhatsApp and the contact endpoint respectively; the `ServiceBooking` table and the older `SERVICE_BOOKING_IMPLEMENTATION.md` note describe a module whose API routes and admin pages are no longer present in this codebase.
 - **Customer identity is client-asserted.** `/api/profile` trusts the `x-user-email` header, and the customer sync endpoint is intentionally public so first-time Google sign-ins can create their record. There is no server-side Firebase token verification in this project.
 - **WhatsApp number is hard-coded** in the cart, floating button, services form, and buy details components; it is not an environment variable.
-- **Payments are manual.** Cash/UPI receipts are recorded and verified by an admin; no payment gateway, refunds, or invoicing exists.
+- **Payments are manual.** Cash/UPI receipts are recorded and verified by an admin; deleted payment records are retained with `deletedAt`/`deletedBy` audit fields. Apply `database/migrations.sql` before deploying this schema change; no payment gateway, refunds, or invoicing exists.
+- **Rental deletions are soft deletes.** Admin-deleted bookings remain in the database with `deletedAt`/`deletedBy`; rental items, charges, and payment records remain attached for audit, but active lists and revenue reports exclude the booking. Apply `database/migrations.sql` before deploying.
 - **Unused dependencies.** `next-auth` and `socket.io`/`socket.io-client` are listed in `package.json` but are not imported anywhere in `src/`.
 - **Backup files.** Several `.bak` files (`src/app/api/contact/route.js.bak`, `src/app/rental/page.jsx.bak`, `src/components/admin/rental-products/RentalProductForm.jsx.bak`) and a root-level `test_security.js` remain in the working tree and are not part of the build.
 

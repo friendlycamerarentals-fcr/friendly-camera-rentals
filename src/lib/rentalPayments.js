@@ -68,7 +68,11 @@ export function summarizeRentalPayments(
     ),
     0,
   );
-  const verifiedPayments = paymentHistory.filter(
+  const activePayments = paymentHistory.filter(
+    (payment) =>
+      payment.deletedAt === null || payment.deletedAt === undefined,
+  );
+  const verifiedPayments = activePayments.filter(
     (payment) => payment.verified === true,
   );
   const totalVerifiedPayments = fromPaise(
@@ -85,6 +89,14 @@ export function summarizeRentalPayments(
         .map((payment) => payment.amount),
     ),
   );
+  const latestAdvancePayment = verifiedPayments
+    .filter((payment) => payment.paymentType === "Advance")
+    .sort(
+      (left, right) =>
+        new Date(left.createdAt || left.verifiedAt || 0) -
+        new Date(right.createdAt || right.verifiedAt || 0),
+    )
+    .at(-1);
 
   return {
     originalAmount,
@@ -93,6 +105,10 @@ export function summarizeRentalPayments(
     rewardDiscount,
     finalRent,
     advanceReceived,
+    advanceVerifiedAt: latestAdvancePayment?.verifiedAt || null,
+    advanceVerifiedBy: latestAdvancePayment?.verifiedBy || null,
+    advancePaymentMethod: latestAdvancePayment?.method || null,
+    advancePaymentRef: latestAdvancePayment?.reference || null,
     totalVerifiedPayments,
     overpaidAmount,
     remainingAmount: Math.max(
@@ -103,18 +119,26 @@ export function summarizeRentalPayments(
 }
 
 export function withRentalPaymentSummary(rental, paymentHistory = [], extraCharges = []) {
+  const activePaymentHistory = paymentHistory.filter(
+    (payment) =>
+      payment.deletedAt === null || payment.deletedAt === undefined,
+  );
   const paymentSummary = summarizeRentalPayments(
     rental,
-    paymentHistory,
+    activePaymentHistory,
     extraCharges,
   );
   return {
     ...rental,
     extraCharges,
-    paymentHistory,
+    paymentHistory: activePaymentHistory,
     paymentSummary,
     advanceAmount: paymentSummary.advanceReceived,
     advanceVerified: paymentSummary.advanceReceived > 0,
+    advanceVerifiedAt: paymentSummary.advanceVerifiedAt,
+    advanceVerifiedBy: paymentSummary.advanceVerifiedBy,
+    advancePaymentMethod: paymentSummary.advancePaymentMethod,
+    advancePaymentRef: paymentSummary.advancePaymentRef,
     totalVerifiedPayments: paymentSummary.totalVerifiedPayments,
     remainingAmount: paymentSummary.remainingAmount,
   };

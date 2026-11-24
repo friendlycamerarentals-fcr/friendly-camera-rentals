@@ -19,6 +19,15 @@ async function getCount(tableName) {
   return Number(rows[0]?.count ?? 0);
 }
 
+async function getActiveRentalBookingCount() {
+  const rows = await query(
+    `SELECT COUNT(*)::int AS count
+     FROM "RentalRequest"
+     WHERE "deletedAt" IS NULL`,
+  );
+  return Number(rows[0]?.count ?? 0);
+}
+
 export default async function AdminDashboard() {
   const [
     rentalsCount,
@@ -32,7 +41,7 @@ export default async function AdminDashboard() {
     getCount("RentalProduct"),
     getCount("BuyProduct"),
     getCount("SellRequest"),
-    getCount("RentalRequest"),
+    getActiveRentalBookingCount(),
     getCount("Testimonial"),
     getCount("Customer"),
     getCount("Reward"),

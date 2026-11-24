@@ -190,8 +190,14 @@ CREATE TABLE IF NOT EXISTS "RentalRequest" (
     "status"         TEXT NOT NULL DEFAULT 'Pending',
     "paymentStatus"  TEXT NOT NULL DEFAULT 'Pending',
     "createdAt"      TIMESTAMP(3) NOT NULL DEFAULT now(),
-    "updatedAt"      TIMESTAMP(3) NOT NULL DEFAULT now()
+    "updatedAt"      TIMESTAMP(3) NOT NULL DEFAULT now(),
+    "deletedAt"      TIMESTAMP(3),
+    "deletedBy"      TEXT
 );
+
+ALTER TABLE "RentalRequest"
+    ADD COLUMN IF NOT EXISTS "deletedAt" TIMESTAMP(3),
+    ADD COLUMN IF NOT EXISTS "deletedBy" TEXT;
 
 -- ----------------------------------------------------------------------------
 -- Testimonial
@@ -339,6 +345,9 @@ CREATE INDEX IF NOT EXISTS "idx_rentalrequest_payment_status" ON "RentalRequest"
 CREATE INDEX IF NOT EXISTS "idx_rentalrequest_customer_id"    ON "RentalRequest" ("customerId");
 CREATE INDEX IF NOT EXISTS "idx_rentalrequest_product_id"     ON "RentalRequest" ("productId");
 CREATE INDEX IF NOT EXISTS "idx_rentalrequest_created_at"     ON "RentalRequest" ("createdAt");
+CREATE INDEX IF NOT EXISTS "idx_rentalrequest_active_created"
+    ON "RentalRequest" ("createdAt" DESC, "id" DESC)
+    WHERE "deletedAt" IS NULL;
 
 CREATE INDEX IF NOT EXISTS "idx_testimonial_status"   ON "Testimonial" ("status");
 CREATE INDEX IF NOT EXISTS "idx_testimonial_featured" ON "Testimonial" ("featured");
@@ -542,7 +551,9 @@ CREATE TRIGGER "set_updated_at" BEFORE UPDATE ON "AdminNotification"
 
 CREATE OR REPLACE FUNCTION trg_create_reward_on_completion() RETURNS TRIGGER AS $$
 BEGIN
-    IF NEW."status" = 'Completed' AND (OLD."status" IS DISTINCT FROM 'Completed') THEN
+    IF NEW."deletedAt" IS NULL
+       AND NEW."status" = 'Completed'
+       AND (OLD."status" IS DISTINCT FROM 'Completed') THEN
         IF NOT EXISTS (
             SELECT 1 FROM "Reward" WHERE "rentalRequestId" = NEW."requestId"
         ) THEN
@@ -611,14 +622,14 @@ CREATE OR REPLACE VIEW "view_admin_dashboard_summary" AS
 SELECT
     (SELECT COUNT(*) FROM "RentalProduct" WHERE "available" = TRUE)          AS available_rental_products,
     (SELECT COUNT(*) FROM "BuyProduct" WHERE "status" = 'In Stock')          AS in_stock_buy_products,
-    (SELECT COUNT(*) FROM "RentalRequest" WHERE "status" = 'Pending')        AS pending_rental_requests,
-    (SELECT COUNT(*) FROM "RentalRequest" WHERE "status" = 'Completed')      AS completed_rentals,
+    (SELECT COUNT(*) FROM "RentalRequest" WHERE "deletedAt" IS NULL AND "status" = 'Pending')        AS pending_rental_requests,
+    (SELECT COUNT(*) FROM "RentalRequest" WHERE "deletedAt" IS NULL AND "status" = 'Completed')      AS completed_rentals,
     (SELECT COUNT(*) FROM "SellRequest" WHERE "status" = 'pending')         AS pending_sell_requests,
     (SELECT COUNT(*) FROM "ServiceBooking" WHERE "status" = 'pending')      AS pending_service_bookings,
     (SELECT COUNT(*) FROM "Testimonial" WHERE "status" = 'pending')         AS pending_testimonials,
     (SELECT COUNT(*) FROM "Reward" WHERE "status" = 'Active')               AS active_rewards,
     (SELECT COALESCE(SUM("totalAmount"), 0) FROM "RentalRequest"
-       WHERE "paymentStatus" = 'Paid')                                     AS total_paid_revenue;
+       WHERE "deletedAt" IS NULL AND "paymentStatus" = 'Paid')             AS total_paid_revenue;
 
 CREATE OR REPLACE VIEW "view_rental_revenue_by_month" AS
 SELECT
@@ -627,6 +638,7 @@ SELECT
     COUNT(*) FILTER (WHERE "status" = 'Completed')    AS completed_requests,
     COALESCE(SUM("totalAmount") FILTER (WHERE "paymentStatus" = 'Paid'), 0) AS revenue
 FROM "RentalRequest"
+WHERE "deletedAt" IS NULL
 GROUP BY date_trunc('month', "createdAt")
 ORDER BY month DESC;
 
@@ -637,6 +649,7 @@ SELECT
     COUNT(*)                                       AS times_booked,
     COALESCE(SUM("totalAmount"), 0)                AS total_revenue
 FROM "RentalRequest"
+WHERE "deletedAt" IS NULL
 GROUP BY "productId", "productName"
 ORDER BY times_booked DESC;
 
@@ -760,6 +773,8 @@ CREATE TABLE IF NOT EXISTS "RentalPayment" (
     "idempotencyKey"   TEXT NOT NULL,
     "source"           TEXT NOT NULL DEFAULT 'Admin',
     "createdAt"        TIMESTAMP(3) NOT NULL DEFAULT now(),
+    "deletedAt"        TIMESTAMP(3),
+    "deletedBy"        TEXT,
     CONSTRAINT "RentalPayment_rentalRequestId_idempotencyKey_key"
       UNIQUE ("rentalRequestId", "idempotencyKey")
 );

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   X,
   Phone,
@@ -48,6 +49,7 @@ export default function RentalDetailsModal({
   onDelete,
   onSave,
   onRecordPayment,
+  onDeletePayment,
   onWhatsApp,
   onAddExtraCharge,
   onEditRentalProduct,
@@ -68,6 +70,9 @@ export default function RentalDetailsModal({
   const [extraChargeFormOpen, setExtraChargeFormOpen] = useState(false);
   const [paymentSubmitting, setPaymentSubmitting] = useState(false);
   const [extraChargeSubmitting, setExtraChargeSubmitting] = useState(false);
+  const [paymentToDelete, setPaymentToDelete] = useState(null);
+  const [paymentDeleteSubmitting, setPaymentDeleteSubmitting] = useState(false);
+  const [paymentDeleteError, setPaymentDeleteError] = useState("");
   const [rentalProducts, setRentalProducts] = useState([]);
   const [productPricingLoadedForBookingId, setProductPricingLoadedForBookingId] =
     useState(null);
@@ -76,6 +81,9 @@ export default function RentalDetailsModal({
   const [rentalItemSubmitting, setRentalItemSubmitting] = useState(false);
   const paymentSubmitLock = useRef(false);
   const paymentSubmissionKey = useRef(null);
+  const paymentDeleteLock = useRef(false);
+  const paymentDeleteCancelRef = useRef(null);
+  const paymentDeleteTriggerRef = useRef(null);
   const rentalItemSubmitLock = useRef(false);
   const rentalItemSubmissionKey = useRef(null);
   const [confirmSubmitting, setConfirmSubmitting] = useState(false);
@@ -111,6 +119,23 @@ export default function RentalDetailsModal({
       active = false;
     };
   }, [open, booking?.id]);
+
+  useEffect(() => {
+    if (!paymentToDelete) {
+      paymentDeleteTriggerRef.current?.focus();
+      return;
+    }
+
+    paymentDeleteCancelRef.current?.focus();
+    const handleKeyDown = (event) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      event.stopPropagation();
+      if (!paymentDeleteLock.current) setPaymentToDelete(null);
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [paymentToDelete]);
 
   if (!open || !booking) return null;
 
@@ -170,11 +195,58 @@ export default function RentalDetailsModal({
   };
   const handleCall = () => window.open(`tel:${booking.phone}`);
   const closeModal = () => {
+    if (paymentDeleteLock.current) return;
     setExtraChargeForm({ extraHours: "", extraAmount: "", note: "" });
     setExtraChargeFormOpen(false);
     setRentalItemForm(null);
     rentalItemSubmissionKey.current = null;
+    setPaymentToDelete(null);
     onClose();
+  };
+
+  const requestPaymentDelete = (entry) => {
+    if (paymentDeleteLock.current || actionLoading) return;
+    paymentDeleteTriggerRef.current = document.activeElement;
+    setPaymentDeleteError("");
+    setPaymentToDelete(entry);
+  };
+
+  const confirmPaymentDelete = async () => {
+    if (
+      !paymentToDelete ||
+      !onDeletePayment ||
+      paymentDeleteLock.current ||
+      paymentDeleteSubmitting
+    ) {
+      return;
+    }
+
+    paymentDeleteLock.current = true;
+    setPaymentDeleteSubmitting(true);
+    setPaymentDeleteError("");
+    try {
+      const result = await onDeletePayment(booking.id, paymentToDelete.id);
+      if (!result?.success) {
+        setPaymentDeleteError(
+          result?.message || "Failed to delete payment record.",
+        );
+        return;
+      }
+      setPaymentToDelete(null);
+    } catch (error) {
+      setPaymentDeleteError(
+        error.message || "Failed to delete payment record.",
+      );
+    } finally {
+      paymentDeleteLock.current = false;
+      setPaymentDeleteSubmitting(false);
+    }
+  };
+
+  const closePaymentDelete = () => {
+    if (paymentDeleteLock.current) return;
+    setPaymentDeleteError("");
+    setPaymentToDelete(null);
   };
 
   const handleStatusAction = async (status) => {
@@ -1286,8 +1358,8 @@ export default function RentalDetailsModal({
               {overpaidAmount > 0 && (
                 <p className="mt-3 rounded-xl border border-amber-500/20 bg-amber-500/5 px-3 py-2 text-xs text-amber-300">
                   Verified payments exceed the current rental total by ₹
-                  {overpaidAmount.toLocaleString("en-IN")}. Payment history is
-                  unchanged; review this amount for any refund or credit.
+                  {overpaidAmount.toLocaleString("en-IN")}. Review this amount
+                  for any refund or credit.
                 </p>
               )}
 
@@ -1321,7 +1393,7 @@ export default function RentalDetailsModal({
                 </div>
                 {paymentHistory.length ? (
                   <div className="overflow-x-auto">
-                    <table className="w-full min-w-[620px] text-sm">
+                    <table className="w-full min-w-[700px] text-sm">
                       <thead className="bg-zinc-900 text-left text-[11px] uppercase tracking-wide text-zinc-500">
                         <tr>
                           <th className="px-3 py-2">Type</th>
@@ -1329,6 +1401,7 @@ export default function RentalDetailsModal({
                           <th className="px-3 py-2">Method</th>
                           <th className="px-3 py-2">Verification</th>
                           <th className="px-3 py-2">Recorded</th>
+                          <th className="px-3 py-2 text-right">Actions</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1360,6 +1433,18 @@ export default function RentalDetailsModal({
                                   ).toLocaleString("en-IN")
                                 : "—"}
                             </td>
+                            <td className="px-3 py-2 text-right">
+                              <button
+                                type="button"
+                                onClick={() => requestPaymentDelete(entry)}
+                                disabled={paymentDeleteSubmitting || actionLoading}
+                                title="Delete payment"
+                                aria-label="Delete payment"
+                                className="rounded-lg border border-white/10 bg-gradient-to-br from-red-500/20 to-rose-500/10 p-1.5 text-red-400 transition hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-50"
+                              >
+                                <Trash2 size={15} />
+                              </button>
+                            </td>
                           </tr>
                         ))}
                       </tbody>
@@ -1367,7 +1452,7 @@ export default function RentalDetailsModal({
                   </div>
                 ) : (
                   <p className="px-3 py-3 text-xs text-zinc-500">
-                    No payment transactions recorded.
+                    No payments recorded yet.
                   </p>
                 )}
               </div>
@@ -1480,6 +1565,98 @@ export default function RentalDetailsModal({
                   received. Each advance or balance payment is stored separately.
                 </p>
               </div>
+              {paymentToDelete &&
+                typeof document !== "undefined" &&
+                createPortal(
+                <div
+                  className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    if (event.target === event.currentTarget) closePaymentDelete();
+                  }}
+                >
+                  <div
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="delete-payment-title"
+                    aria-describedby="delete-payment-warning"
+                    onClick={(event) => event.stopPropagation()}
+                    className="w-full max-w-md rounded-2xl border border-white/10 bg-zinc-950 p-5 shadow-[0_0_60px_rgba(0,0,0,0.65)]"
+                  >
+                    <h2
+                      id="delete-payment-title"
+                      className="text-lg font-bold text-white"
+                    >
+                      Delete payment record?
+                    </h2>
+                    <dl className="mt-4 grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 rounded-xl border border-white/10 bg-zinc-900 p-3 text-sm">
+                      <dt className="text-zinc-500">Type</dt>
+                      <dd className="text-right text-zinc-200">
+                        {paymentToDelete.paymentType}
+                      </dd>
+                      <dt className="text-zinc-500">Amount</dt>
+                      <dd className="text-right font-semibold text-white">
+                        ₹{Number(paymentToDelete.amount || 0).toLocaleString("en-IN")}
+                      </dd>
+                      <dt className="text-zinc-500">Method</dt>
+                      <dd className="text-right text-zinc-200">
+                        {paymentToDelete.method || "—"}
+                      </dd>
+                      <dt className="text-zinc-500">Recorded</dt>
+                      <dd className="text-right text-zinc-200">
+                        {paymentToDelete.verifiedAt || paymentToDelete.createdAt
+                          ? new Date(
+                              paymentToDelete.verifiedAt || paymentToDelete.createdAt,
+                            ).toLocaleString("en-IN")
+                          : "—"}
+                      </dd>
+                    </dl>
+                    <p
+                      id="delete-payment-warning"
+                      className="mt-4 text-sm leading-6 text-amber-300"
+                    >
+                      This will remove this payment and recalculate the advance
+                      received, total payments and remaining balance. This action cannot
+                      be undone.
+                    </p>
+                    {paymentDeleteError && (
+                      <p
+                        role="alert"
+                        className="mt-3 rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-sm text-red-300"
+                      >
+                        {paymentDeleteError}
+                      </p>
+                    )}
+                    <div className="mt-5 flex justify-end gap-3">
+                      <button
+                        ref={paymentDeleteCancelRef}
+                        type="button"
+                        onClick={closePaymentDelete}
+                        disabled={paymentDeleteSubmitting}
+                        className="rounded-xl border border-white/10 px-4 py-2.5 text-sm font-semibold text-zinc-300 transition hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={confirmPaymentDelete}
+                        disabled={paymentDeleteSubmitting}
+                        className="flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {paymentDeleteSubmitting ? (
+                          <>
+                            <Loader2 size={15} className="animate-spin" />
+                            Deleting...
+                          </>
+                        ) : (
+                          "Delete Payment"
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                </div>,
+                document.body,
+              )}
             </div>
 
             {/* Status actions */}

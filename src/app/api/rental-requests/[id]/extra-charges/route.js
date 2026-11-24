@@ -6,7 +6,10 @@ import {
   getFinalRentalAmount,
   withRentalPaymentSummary,
 } from "@/lib/rentalPayments";
-import { RENTAL_REQUEST_COLUMNS } from "@/lib/rentalDbColumns";
+import {
+  ACTIVE_RENTAL_REQUEST_FILTER,
+  RENTAL_REQUEST_COLUMNS,
+} from "@/lib/rentalDbColumns";
 import { RENTAL_STATUSES_WITHOUT_EXTRA_CHARGES } from "@/constants/rentalStatus";
 
 export const dynamic = "force-dynamic";
@@ -25,7 +28,9 @@ export async function GET(_request, { params }) {
     }
 
     const rentalRows = await query(
-      'SELECT "requestId" FROM "RentalRequest" WHERE "id" = $1 LIMIT 1',
+      `SELECT "requestId" FROM "RentalRequest"
+       WHERE "id" = $1 AND ${ACTIVE_RENTAL_REQUEST_FILTER}
+       LIMIT 1`,
       [id],
     );
     const rental = rentalRows[0];
@@ -93,7 +98,9 @@ export async function POST(request, { params }) {
 
     const result = await transaction(async (client) => {
       const rentalRows = await client.query(
-        `SELECT ${RENTAL_REQUEST_COLUMNS} FROM "RentalRequest" WHERE "id" = $1 LIMIT 1 FOR UPDATE`,
+        `SELECT ${RENTAL_REQUEST_COLUMNS} FROM "RentalRequest"
+         WHERE "id" = $1 AND ${ACTIVE_RENTAL_REQUEST_FILTER}
+         LIMIT 1 FOR UPDATE`,
         [id],
       );
       const rental = rentalRows.rows[0];
@@ -155,6 +162,7 @@ export async function POST(request, { params }) {
       const paymentRows = await client.query(
         `SELECT * FROM "RentalPayment"
          WHERE "rentalRequestId" = $1
+           AND "deletedAt" IS NULL
          ORDER BY "createdAt" ASC, "id" ASC`,
         [rental.requestId],
       );

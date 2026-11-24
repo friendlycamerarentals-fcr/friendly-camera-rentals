@@ -27,12 +27,15 @@ const rewardSelect = `SELECT reward.*,
   END AS "generatedDate",
   (SELECT rental."requestId" FROM "RentalRequest" rental
    WHERE rental."rewardId" = reward."rewardId"
+     AND rental."deletedAt" IS NULL
   ORDER BY rental."createdAt" DESC LIMIT 1) AS "lastAppliedRentalId",
   (SELECT rental."status" FROM "RentalRequest" rental
    WHERE rental."rewardId" = reward."rewardId"
+     AND rental."deletedAt" IS NULL
   ORDER BY rental."createdAt" DESC LIMIT 1) AS "lastAppliedRentalStatus",
   (SELECT rental."updatedAt" FROM "RentalRequest" rental
    WHERE rental."rewardId" = reward."rewardId"
+     AND rental."deletedAt" IS NULL
   ORDER BY rental."createdAt" DESC LIMIT 1) AS "lastAppliedRentalUpdatedAt"
   FROM "Reward" reward`;
 

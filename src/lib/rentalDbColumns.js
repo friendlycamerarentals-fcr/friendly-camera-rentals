@@ -1,6 +1,8 @@
 const quoteColumns = (columns) =>
   columns.map((column) => `"${column}"`).join(", ");
 
+export const ACTIVE_RENTAL_REQUEST_FILTER = '"deletedAt" IS NULL';
+
 export const RENTAL_REQUEST_COLUMNS = quoteColumns([
   "id",
   "requestId",

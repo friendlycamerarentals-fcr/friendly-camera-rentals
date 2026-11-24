@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { query } from "@/db/query";
 import { requireAdmin } from "@/lib/adminAuth";
 import { buildRecentActivities } from "@/lib/adminActivity";
+import { ACTIVE_RENTAL_REQUEST_FILTER } from "@/lib/rentalDbColumns";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -17,6 +18,7 @@ export async function GET() {
         query(
           `SELECT "id", "requestId", "fullName", "productName", "createdAt"
            FROM "RentalRequest"
+           WHERE ${ACTIVE_RENTAL_REQUEST_FILTER}
            ORDER BY "createdAt" DESC, "id" DESC
            LIMIT $1`,
           [ACTIVITY_LIMIT],

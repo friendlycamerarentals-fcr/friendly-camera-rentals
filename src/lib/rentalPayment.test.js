@@ -11,6 +11,7 @@ import {
 import {
   getAdjustedRewardDiscount,
   summarizeRentalPayments,
+  withRentalPaymentSummary,
 } from "./rentalPayments.js";
 
 test("allows verified cash and UPI advances with optional references", () => {
@@ -283,6 +284,102 @@ test("reports verified payments above the revised rental total", () => {
   assert.equal(summary.totalVerifiedPayments, 500);
   assert.equal(summary.remainingAmount, 0);
   assert.equal(summary.overpaidAmount, 400);
+});
+
+test("deleting an advance reduces the collected total and clears verification when none remain", () => {
+  const summary = withRentalPaymentSummary(
+    { originalAmount: 1400 },
+    [
+      {
+        paymentType: "Advance",
+        amount: 500,
+        verified: true,
+        deletedAt: new Date(),
+      },
+      { paymentType: "Balance", amount: 100, verified: true },
+    ],
+  );
+
+  assert.equal(summary.advanceAmount, 0);
+  assert.equal(summary.advanceVerified, false);
+  assert.equal(summary.totalVerifiedPayments, 100);
+  assert.equal(summary.remainingAmount, 1300);
+  assert.equal(summary.advanceVerifiedBy, null);
+});
+
+test("deleting a balance recalculates total payments and remaining balance", () => {
+  const rental = { originalAmount: 1400 };
+  const payments = [
+    { paymentType: "Advance", amount: 500, verified: true },
+    { paymentType: "Balance", amount: 100, verified: true },
+  ];
+  const before = summarizeRentalPayments(rental, payments);
+  const after = summarizeRentalPayments(rental, [
+    payments[0],
+    { ...payments[1], deletedAt: new Date() },
+  ]);
+
+  assert.equal(before.totalVerifiedPayments, 600);
+  assert.equal(before.remainingAmount, 800);
+  assert.equal(after.totalVerifiedPayments, 500);
+  assert.equal(after.remainingAmount, 900);
+  assert.equal(after.advanceReceived, 500);
+});
+
+test("deleting the last payment restores the full remaining balance", () => {
+  const summary = withRentalPaymentSummary(
+    { originalAmount: 1400 },
+    [
+      {
+        paymentType: "Advance",
+        amount: 500,
+        verified: true,
+        deletedAt: new Date(),
+      },
+      {
+        paymentType: "Balance",
+        amount: 900,
+        verified: true,
+        deletedAt: new Date(),
+      },
+    ],
+  );
+
+  assert.equal(summary.paymentHistory.length, 0);
+  assert.equal(summary.advanceAmount, 0);
+  assert.equal(summary.totalVerifiedPayments, 0);
+  assert.equal(summary.remainingAmount, 1400);
+  assert.equal(summary.advanceVerified, false);
+  assert.equal(summary.advanceVerifiedBy, null);
+});
+
+test("retains verification details from the latest remaining advance", () => {
+  const summary = withRentalPaymentSummary(
+    { originalAmount: 1400 },
+    [
+      {
+        paymentType: "Advance",
+        amount: 200,
+        verified: true,
+        verifiedAt: "2026-11-20T10:00:00.000Z",
+        verifiedBy: "earlier-admin",
+        createdAt: "2026-11-20T10:00:00.000Z",
+      },
+      {
+        paymentType: "Advance",
+        amount: 300,
+        verified: true,
+        verifiedAt: "2026-11-21T10:00:00.000Z",
+        verifiedBy: "deleted-admin",
+        createdAt: "2026-11-21T10:00:00.000Z",
+        deletedAt: new Date(),
+      },
+    ],
+  );
+
+  assert.equal(summary.advanceVerified, true);
+  assert.equal(summary.advanceVerifiedBy, "earlier-admin");
+  assert.equal(summary.advanceVerifiedAt, "2026-11-20T10:00:00.000Z");
 });
 
 test("keeps reward discount within the amount remaining after other discounts and advances", () => {

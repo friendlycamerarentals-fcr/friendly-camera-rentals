@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import RentalStats from "@/components/admin/rentals/RentalStats";
 import RentalFilters from "@/components/admin/rentals/RentalFilters";
 import RentalTable from "@/components/admin/rentals/RentalTable";
 import RentalDetailsModal from "@/components/admin/rentals/RentalDetailsModal";
+import RentalDeleteConfirmation from "@/components/admin/rentals/RentalDeleteConfirmation";
 import ManualRentalForm from "@/components/admin/rentals/ManualRentalForm";
 import { openRentalWhatsApp } from "@/lib/whatsappBookingMessage";
 
@@ -63,7 +64,16 @@ export default function RentalsPage() {
   const [loading, setLoading] = useState(true);
   const [manualFormOpen, setManualFormOpen] = useState(false);
   const [actionLoadingId, setActionLoadingId] = useState(null);
+  const [rentalToDelete, setRentalToDelete] = useState(null);
+  const [rentalDeleteSubmitting, setRentalDeleteSubmitting] = useState(false);
+  const [rentalDeleteError, setRentalDeleteError] = useState("");
   const [now] = useState(() => Date.now());
+  const rentalDeleteLock = useRef(false);
+  const rentalDeleteTriggerRef = useRef(null);
+
+  useEffect(() => {
+    if (!rentalToDelete) rentalDeleteTriggerRef.current?.focus();
+  }, [rentalToDelete]);
 
   useEffect(() => {
     let active = true;
@@ -169,6 +179,66 @@ export default function RentalsPage() {
     }
   };
 
+  const refreshRentals = async (selectedId) => {
+    const response = await fetch("/api/rental-requests");
+    const result = await response.json();
+    if (!response.ok || !result.success) {
+      throw new Error(result.message || "Failed to refresh rental requests.");
+    }
+
+    const refreshedBookings = result.data || [];
+    setBookings(refreshedBookings);
+    if (selectedId && selectedBooking?.id === selectedId) {
+      const refreshedBooking = refreshedBookings.find(
+        (booking) => booking.id === selectedId,
+      );
+      if (refreshedBooking) setSelectedBooking(refreshedBooking);
+    }
+  };
+
+  const handleDeletePayment = async (id, paymentId) => {
+    try {
+      setActionLoadingId(id);
+      const response = await fetch(
+        `/api/admin/rentals/${id}/payments/${paymentId}`,
+        { method: "DELETE" },
+      );
+      const result = await response.json();
+      if (!response.ok || !result.success) {
+        if (response.status === 409) {
+          try {
+            await refreshRentals(id);
+          } catch (refreshError) {
+            console.error("[RENTAL_PAYMENT_DELETE_REFRESH]", refreshError);
+          }
+        }
+        return {
+          success: false,
+          message: result.message || "Failed to delete payment record.",
+        };
+      }
+
+      setBookings((prev) =>
+        prev.map((booking) =>
+          booking.id === id ? { ...booking, ...result.data } : booking,
+        ),
+      );
+      if (selectedBooking?.id === id) {
+        setSelectedBooking((prev) => ({ ...prev, ...result.data }));
+      }
+
+      toast.success("Payment record deleted.");
+      return { success: true };
+    } catch (error) {
+      return {
+        success: false,
+        message: error.message || "Failed to delete payment record.",
+      };
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
   const handleManualCreated = (booking) => {
     if (booking) {
       setBookings((prev) => [booking, ...prev]);
@@ -196,6 +266,70 @@ export default function RentalsPage() {
       toast.success("Rental request deleted.");
     } catch (error) {
       toast.error(error.message || "Failed to delete request");
+    }
+  };
+
+  const requestRentalDelete = (booking) => {
+    if (!booking || rentalDeleteLock.current || actionLoadingId === booking.id) {
+      return;
+    }
+    rentalDeleteTriggerRef.current =
+      typeof document === "undefined" ? null : document.activeElement;
+    setRentalDeleteError("");
+    setRentalToDelete(booking);
+  };
+
+  const closeRentalDelete = () => {
+    if (rentalDeleteLock.current) return;
+    setRentalDeleteError("");
+    setRentalToDelete(null);
+  };
+
+  const confirmRentalDelete = async () => {
+    if (!rentalToDelete || rentalDeleteLock.current) return;
+
+    rentalDeleteLock.current = true;
+    setRentalDeleteSubmitting(true);
+    setRentalDeleteError("");
+    try {
+      const response = await fetch(
+        `/api/rental-requests/${rentalToDelete.id}`,
+        { method: "DELETE" },
+      );
+      const result = await response.json();
+      if (!response.ok || !result.success) {
+        if (response.status === 404 || result.alreadyDeleted) {
+          try {
+            await refreshRentals();
+          } catch (refreshError) {
+            console.error("[RENTAL_DELETE_REFRESH]", refreshError);
+          }
+        }
+        setRentalDeleteError(
+          result.message || "Failed to delete rental booking.",
+        );
+        return;
+      }
+
+      setBookings((prev) =>
+        prev.filter((booking) => booking.id !== rentalToDelete.id),
+      );
+      if (selectedBooking?.id === rentalToDelete.id) handleCloseModal();
+      setRentalToDelete(null);
+      toast.success("Rental booking deleted.");
+      try {
+        await refreshRentals();
+      } catch (refreshError) {
+        console.error("[RENTAL_DELETE_REFRESH]", refreshError);
+        toast.error("Rental deleted, but the list could not be refreshed.");
+      }
+    } catch (error) {
+      setRentalDeleteError(
+        error.message || "Failed to delete rental booking.",
+      );
+    } finally {
+      rentalDeleteLock.current = false;
+      setRentalDeleteSubmitting(false);
     }
   };
 
@@ -340,7 +474,7 @@ export default function RentalsPage() {
           bookings={filteredBookings}
           onView={handleView}
           onStatusChange={handleStatusChange}
-          onDelete={handleDelete}
+          onDelete={requestRentalDelete}
           actionLoadingId={actionLoadingId}
         />
       )}
@@ -353,11 +487,37 @@ export default function RentalsPage() {
         onDelete={handleDelete}
         onSave={handleSavePayment}
         onRecordPayment={handleRecordPayment}
+        onDeletePayment={handleDeletePayment}
         onWhatsApp={handleWhatsAppAction}
         onAddExtraCharge={handleAddExtraCharge}
         onEditRentalProduct={handleEditRentalProduct}
         onAddRentalProduct={handleAddRentalProduct}
         actionLoading={Boolean(actionLoadingId)}
+      />
+
+      <RentalDeleteConfirmation
+        booking={rentalToDelete}
+        paymentTotal={
+          rentalToDelete
+            ? Array.isArray(rentalToDelete.paymentHistory) &&
+              rentalToDelete.paymentHistory.length
+              ? rentalToDelete.paymentHistory
+                  .filter((payment) => !payment.deletedAt)
+                  .reduce(
+                    (total, payment) => total + Number(payment.amount || 0),
+                    0,
+                  )
+              : Number(
+                  rentalToDelete.paymentSummary?.totalVerifiedPayments ??
+                    rentalToDelete.advanceAmount ??
+                    0,
+                )
+            : 0
+        }
+        deleting={rentalDeleteSubmitting}
+        error={rentalDeleteError}
+        onCancel={closeRentalDelete}
+        onConfirm={confirmRentalDelete}
       />
 
       <ManualRentalForm

@@ -9,23 +9,18 @@ import {
   RotateCcw,
 } from "lucide-react";
 import AdminGradientStatCard from "@/components/admin/AdminGradientStatCard";
+import { getRentalStats } from "@/lib/rentalStats";
 
 export default function RentalStats({ bookings = [] }) {
-  const totalBookings = bookings.length;
-
-  const pending = bookings.filter((b) => b.status === "Pending").length;
-
-  const confirmed = bookings.filter((b) => b.status === "Confirmed").length;
-
-  const completed = bookings.filter((b) => b.status === "Completed").length;
-
-  const cancelled = bookings.filter((b) => b.status === "Cancelled").length;
-
-  const rejected = bookings.filter((b) => b.status === "Rejected").length;
-
-  const revenue = bookings
-    .filter((b) => b.status === "Completed")
-    .reduce((sum, booking) => sum + (booking.totalAmount || 0), 0);
+  const {
+    totalBookings,
+    pending,
+    confirmed,
+    completed,
+    cancelled,
+    rejected,
+    revenue,
+  } = getRentalStats(bookings);
 
   const stats = [
     {
@@ -71,7 +66,7 @@ export default function RentalStats({ bookings = [] }) {
       tone: "rose",
     },
     {
-      title: "Revenue",
+      title: "Revenue Received",
       value: `₹${revenue.toLocaleString()}`,
       icon: IndianRupee,
       color: "text-emerald-400",

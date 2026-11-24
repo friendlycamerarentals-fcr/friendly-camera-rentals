@@ -75,7 +75,7 @@ export default function RentalTable({
     }
   };
 
-  const deleteBooking = (id) => onDelete?.(id);
+  const deleteBooking = (booking) => onDelete?.(booking);
 
   return (
     <div className="overflow-hidden rounded-2xl border border-white/10 bg-zinc-950">
@@ -152,6 +152,14 @@ export default function RentalTable({
                 <td className="px-6 py-5">
                   <span className="font-bold text-white">
                     ₹{Number(booking.totalAmount || 0).toLocaleString("en-IN")}
+                  </span>
+                  <span className="block text-xs text-zinc-500">
+                    Received ₹
+                    {Number(
+                      booking.paymentSummary?.totalVerifiedPayments ??
+                        booking.advanceAmount ??
+                        0,
+                    ).toLocaleString("en-IN")}
                   </span>
                   {booking.rewardDiscount > 0 && (
                     <span className="block text-xs text-emerald-400">
@@ -240,9 +248,11 @@ export default function RentalTable({
                       <FaWhatsapp size={16} />
                     </a>
                     <button
-                      onClick={() => deleteBooking(booking.id)}
-                      title="Delete"
-                      className="rounded-xl border border-white/10 bg-gradient-to-br from-red-500/20 to-rose-500/10 p-2 text-red-400 transition hover:bg-red-500/10"
+                      onClick={() => deleteBooking(booking)}
+                      disabled={actionLoadingId === booking.id}
+                      title="Delete rental booking"
+                      aria-label="Delete rental booking"
+                      className="rounded-xl border border-white/10 bg-gradient-to-br from-red-500/20 to-rose-500/10 p-2 text-red-400 transition hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       <Trash2 size={16} />
                     </button>

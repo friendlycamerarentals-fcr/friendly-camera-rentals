@@ -122,6 +122,7 @@ export async function completeAppliedRewardInTransaction(
     `SELECT customer."id" FROM "Customer" customer
      INNER JOIN "RentalRequest" rental ON rental."customerId" = customer."customerId"
      WHERE rental."requestId" = $1
+       AND rental."deletedAt" IS NULL
      LIMIT 1 FOR UPDATE OF customer`,
     [rentalRequestId],
   );
@@ -133,6 +134,7 @@ export async function completeAppliedRewardInTransaction(
        ON rental."requestId" = reward."appliedRentalId"
       AND rental."rewardId" = reward."rewardId"
      WHERE rental."requestId" = $1
+       AND rental."deletedAt" IS NULL
        AND rental."status" = 'Completed'
        AND (
          reward."status" = $2
@@ -177,7 +179,10 @@ export async function releaseAppliedRewardInTransaction(
        ON rental."requestId" = reward."appliedRentalId"
       AND rental."rewardId" = reward."rewardId"
      WHERE rental."requestId" = $1
-       AND rental."status" IN ('Cancelled', 'Rejected')
+       AND (
+         rental."deletedAt" IS NOT NULL
+         OR rental."status" IN ('Cancelled', 'Rejected')
+       )
        AND (
          reward."status" = $2
          OR (reward."status" = $3 AND reward."usedDate" IS NOT DISTINCT FROM reward."appliedDate")
@@ -230,7 +235,9 @@ export async function applyReward({
 
   return transaction(async (client) => {
     const rentalRows = await client.query(
-      `SELECT ${RENTAL_REQUEST_COLUMNS} FROM "RentalRequest" WHERE "requestId" = $1 LIMIT 1 FOR UPDATE`,
+      `SELECT ${RENTAL_REQUEST_COLUMNS} FROM "RentalRequest"
+       WHERE "requestId" = $1 AND "deletedAt" IS NULL
+       LIMIT 1 FOR UPDATE`,
       [rentalRequestId],
     );
     const rental = rentalRows.rows[0];
