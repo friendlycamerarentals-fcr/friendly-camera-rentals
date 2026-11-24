@@ -81,7 +81,13 @@ export async function GET() {
 
     return NextResponse.json({ success: true, data: requests });
   } catch (error) {
-    console.error("[RENTAL_REQUESTS_GET]", error);
+    console.error("[RENTAL_REQUESTS_GET]", {
+      message: error?.message || String(error),
+      stack: error?.stack,
+      code: error?.code,
+      detail: error?.detail,
+      hint: error?.hint,
+    });
     if (
       error.code === "42P01" &&
       error.message?.includes('"RentalExtraCharge"')
