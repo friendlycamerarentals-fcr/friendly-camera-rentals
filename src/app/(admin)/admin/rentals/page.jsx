@@ -341,7 +341,6 @@ export default function RentalsPage() {
           onView={handleView}
           onStatusChange={handleStatusChange}
           onDelete={handleDelete}
-          onWhatsApp={handleWhatsAppAction}
           actionLoadingId={actionLoadingId}
         />
       )}

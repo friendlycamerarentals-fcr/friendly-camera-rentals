@@ -12,9 +12,15 @@ import {
 import { FaWhatsapp } from "react-icons/fa";
 import RentalStatusBadge from "./RentalStatusBadge";
 import { RENTAL_STATUS_TRANSITIONS } from "@/constants/rentalStatus";
-import { openRentalWhatsApp } from "@/lib/whatsappBookingMessage";
 
 const PAGE_SIZE = 10;
+
+const normalizeCustomerPhone = (phone) => {
+  const digits = String(phone || "")
+    .replace(/\D/g, "")
+    .replace(/^0+/, "");
+  return digits.length === 10 ? `91${digits}` : digits;
+};
 
 const statusOptions = [
   { value: "Pending", color: "bg-yellow-500" },
@@ -32,7 +38,6 @@ export default function RentalTable({
   onView,
   onStatusChange,
   onDelete,
-  onWhatsApp,
   actionLoadingId,
 }) {
   const [page, setPage] = useState(1);
@@ -230,13 +235,15 @@ export default function RentalTable({
                     >
                       <Phone size={16} />
                     </a>
-                    <button
-                      onClick={() => (onWhatsApp ? onWhatsApp(booking) : openRentalWhatsApp(booking))}
-                      title={booking.status === "Confirmed" ? "Confirmed-booking WhatsApp message" : "Request status WhatsApp message"}
+                    <a
+                      href={`https://wa.me/${normalizeCustomerPhone(booking.phone)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title="Open WhatsApp chat"
                       className="rounded-xl border border-white/10 bg-gradient-to-br from-green-500/20 to-emerald-500/10 p-2 text-green-500 transition hover:bg-green-500/10"
                     >
                       <FaWhatsapp size={16} />
-                    </button>
+                    </a>
                     <button
                       onClick={() => deleteBooking(booking.id)}
                       title="Delete"
