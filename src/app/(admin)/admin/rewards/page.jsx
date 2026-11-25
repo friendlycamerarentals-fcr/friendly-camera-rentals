@@ -12,6 +12,7 @@ import RewardSkeleton from "@/components/admin/rewards/RewardSkeleton";
 import RewardPagination from "@/components/admin/rewards/RewardPagination";
 import RewardEmptyState from "@/components/admin/rewards/RewardEmptyState";
 import CreateManualRewardModal from "@/components/admin/rewards/CreateManualRewardModal";
+import { openRewardWhatsApp } from "@/lib/rewards/rewardWhatsAppMessage";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -111,6 +112,17 @@ export default function RewardsPage() {
     setSelectedReward(null);
   }
 
+  function handleWhatsApp(reward) {
+    const result = openRewardWhatsApp(reward);
+    if (!result.opened) {
+      if (result.error === "phone") {
+        toast.error("Customer phone number is not available.");
+      } else {
+        toast.error("Reward details are incomplete.");
+      }
+    }
+  }
+
   function handleSearchChange(value) {
     setSearch(value);
     setCurrentPage(1);
@@ -183,7 +195,11 @@ export default function RewardsPage() {
         <RewardEmptyState />
       ) : (
         <>
-          <RewardTable rewards={paginatedRewards} onView={handleView} />
+          <RewardTable
+            rewards={paginatedRewards}
+            onView={handleView}
+            onWhatsApp={handleWhatsApp}
+          />
 
           <RewardPagination
             currentPage={currentPage}

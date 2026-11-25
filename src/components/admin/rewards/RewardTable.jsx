@@ -1,10 +1,11 @@
 "use client";
 
 import { Eye, Gift } from "lucide-react";
+import { FaWhatsapp } from "react-icons/fa";
 import RewardStatusBadge from "./RewardStatusBadge";
 import { formatDate, formatRewardGeneratedDate } from "@/lib/rewards/rewardHelpers";
 
-export default function RewardTable({ rewards = [], onView }) {
+export default function RewardTable({ rewards = [], onView, onWhatsApp }) {
   if (!rewards.length) {
     return (
       <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-white/10 bg-zinc-950 py-20">
@@ -120,12 +121,22 @@ export default function RewardTable({ rewards = [], onView }) {
                 </td>
 
                 <td className="px-4 py-3.5 sm:px-6">
-                  <div className="flex justify-center">
+                  <div className="flex items-center justify-center gap-2">
                     <button
                       onClick={() => onView(reward)}
+                      title="View Details"
                       className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 text-zinc-300 transition hover:border-[#F5A623]/40 hover:bg-[#F5A623]/10 hover:text-[#F5A623]"
                     >
                       <Eye size={18} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onWhatsApp(reward)}
+                      title="Send Reward on WhatsApp"
+                      aria-label="Send Reward on WhatsApp"
+                      className="flex h-10 w-10 items-center justify-center rounded-xl border border-green-500/20 bg-green-500/10 text-green-400 transition hover:border-green-500/40 hover:bg-green-500/20"
+                    >
+                      <FaWhatsapp size={18} />
                     </button>
                   </div>
                 </td>
