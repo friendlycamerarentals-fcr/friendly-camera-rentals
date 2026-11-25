@@ -54,15 +54,10 @@ export function buildRewardWhatsAppMessage(reward = {}) {
   const amount = String(rewardAmount);
   return [
     `Dear ${customerName || "valuable customer"}`,
-    "",
     "Thank you for moving with FCR",
-    "",
-    `You got Reward points ${amount} For your last order`,
-    "",
+    `You got Reward points ₹${amount} For your last order`,
     "Claim this points on your next order",
-    "",
-    `Available balance ${amount}`,
-    "",
+    `Available balance ₹${amount}`,
     `Valid upto ${expiryDate}`,
   ].join("\n");
 }
